@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import CandidateDocumentFormModal from '@/components/CandidateDocumentFormModal';
 import { 
   faFileAlt,
   faPlus,
@@ -511,6 +512,16 @@ export default function DocumentsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Formulario de Documento */}
+      <CandidateDocumentFormModal 
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={(message) => {
+          alert(message);
+          fetchDocuments(); // Recargar documentos después de subir
+        }}
+      />
     </div>
   );
 }

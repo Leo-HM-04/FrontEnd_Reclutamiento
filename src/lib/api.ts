@@ -336,6 +336,23 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // ====== PROFILES ENDPOINTS ======
+
+  /**
+   * Get all profiles
+   */
+  async getProfiles(params?: Record<string, string>): Promise<any> {
+    const queryString = params ? `?${new URLSearchParams(params)}` : '';
+    return this.makeRequest<any>(`/api/profiles/profiles/${queryString}`);
+  }
+
+  /**
+   * Get single profile by ID
+   */
+  async getProfile(id: number): Promise<any> {
+    return this.makeRequest<any>(`/api/profiles/profiles/${id}/`);
+  }
 }
 
 // Create and export a default instance

@@ -76,50 +76,17 @@ export default function CandidatesPage() {
   const fetchCandidates = async () => {
     try {
       setLoading(true);
-      // Aquí llamaremos a la API real
       const response = await apiClient.getCandidates();
-      setCandidates((response as any)?.data || []);
+      console.log('Respuesta de candidatos:', response);
+      
+      // El backend devuelve los datos en diferentes formatos dependiendo de la paginación
+      const candidatesList = (response as any)?.results || (response as any)?.data || [];
+      console.log('Lista de candidatos:', candidatesList);
+      
+      setCandidates(candidatesList);
     } catch (error) {
       console.error('Error fetching candidates:', error);
-      // Datos de ejemplo mientras conectamos con la API
-      setCandidates([
-        {
-          id: 1,
-          first_name: 'Juan',
-          last_name: 'Pérez García',
-          email: 'juan.perez@email.com',
-          phone: '+52 55 1234 5678',
-          city: 'Ciudad de México',
-          state: 'CDMX',
-          current_position: 'Desarrollador Senior',
-          current_company: 'TechCorp',
-          years_of_experience: 5,
-          education_level: 'Licenciatura',
-          status: 'qualified',
-          created_at: '2024-11-01T10:00:00Z',
-          skills: ['React', 'Node.js', 'Python', 'PostgreSQL'],
-          salary_expectation_min: 45000,
-          salary_expectation_max: 55000,
-        },
-        {
-          id: 2,
-          first_name: 'María',
-          last_name: 'González López',
-          email: 'maria.gonzalez@email.com',
-          phone: '+52 55 8765 4321',
-          city: 'Guadalajara',
-          state: 'Jalisco',
-          current_position: 'Product Manager',
-          current_company: 'InnovateMax',
-          years_of_experience: 7,
-          education_level: 'Maestría',
-          status: 'interview',
-          created_at: '2024-11-02T14:30:00Z',
-          skills: ['Product Management', 'Agile', 'Scrum', 'Analytics'],
-          salary_expectation_min: 60000,
-          salary_expectation_max: 75000,
-        },
-      ]);
+      setCandidates([]);
     } finally {
       setLoading(false);
     }
@@ -179,26 +146,10 @@ export default function CandidatesPage() {
     return sortDirection === 'asc' ? faSortUp : faSortDown;
   };
 
-  const handleSaveCandidate = async (candidateData: any) => {
-    try {
-      if (selectedCandidate) {
-        // Update existing candidate
-        await apiClient.updateCandidate(selectedCandidate.id, candidateData);
-      } else {
-        // Create new candidate
-        await apiClient.createCandidate(candidateData);
-      }
-      
-      // Refresh candidates list
-      await fetchCandidates();
-      
-      // Reset state
-      setSelectedCandidate(null);
-      setShowAddModal(false);
-    } catch (error) {
-      console.error('Error saving candidate:', error);
-      // Here you could show an error message to the user
-    }
+  const handleSuccess = (message: string) => {
+    // Aquí podrías mostrar un toast notification
+    console.log(message);
+    alert(message);
   };
 
   const handleDeleteCandidate = async (candidateId: number) => {
@@ -442,7 +393,8 @@ export default function CandidatesPage() {
           setSelectedCandidate(null);
         }}
         candidate={selectedCandidate}
-        onSave={handleSaveCandidate}
+        onSuccess={handleSuccess}
+        onRefresh={fetchCandidates}
       />
 
       {/* Candidate Detail Modal */}
