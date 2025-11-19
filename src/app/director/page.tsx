@@ -8,6 +8,7 @@ import ApplicationFormModal from "@/components/ApplicationFormModal";
 import DirectorCandidateFormModal from "@/components/DirectorCandidateFormModal";
 import CandidateDocumentFormModal from "@/components/CandidateDocumentFormModal";
 import CandidateNoteFormModal from "@/components/CandidateNoteFormModal";
+import ClientFormModal from "@/components/ClientFormModal";
 
 type Stats = {
   activeProcesses: number;
@@ -217,6 +218,7 @@ export default function Page() {
   const [showCandidateForm, setShowCandidateForm] = useState(false);
   const [showDocumentForm, setShowDocumentForm] = useState(false);
   const [showNoteForm, setShowNoteForm] = useState(false);
+  const [showClientForm, setShowClientForm] = useState(false);
   
   // Estado para fases expandidas en client-progress
   const [expandedPhases, setExpandedPhases] = useState<Set<number>>(new Set());
@@ -445,7 +447,7 @@ export default function Page() {
   const refreshProcesses = () => info("Actualizando procesos...");
   const exportCandidates = () => info("Exportando candidatos...");
   const viewCandidateDetails = (id: number) => info(`Viendo detalles del candidato ${id}...`);
-  const addNewClient = () => info("Abriendo formulario de nuevo cliente...");
+  const addNewClient = () => setShowClientForm(true);
   const viewClientDetails = (id: number) => info(`Viendo detalles del cliente ${id}...`);
   const addTeamMember = () => info("Abriendo formulario para agregar miembro...");
   const viewTeamMemberProfile = (id: number) => info(`Viendo perfil del miembro ${id}...`);
@@ -3316,7 +3318,7 @@ export default function Page() {
                     <i className="fas fa-sync-alt mr-2" />
                     Actualizar
                   </button>
-                  <button onClick={() => info("Abriendo formulario de nuevo cliente...")} className="px-4 py-2 btn-primary text-white rounded-lg">
+                  <button onClick={addNewClient} className="px-4 py-2 btn-primary text-white rounded-lg">
                     <i className="fas fa-plus mr-2" />
                     Nuevo Cliente
                   </button>
@@ -3631,6 +3633,13 @@ export default function Page() {
         <CandidateNoteFormModal 
           isOpen={showNoteForm}
           onClose={() => setShowNoteForm(false)}
+          onSuccess={success}
+        />
+
+        {/* Modal Formulario Agregar Cliente */}
+        <ClientFormModal 
+          isOpen={showClientForm}
+          onClose={() => setShowClientForm(false)}
           onSuccess={success}
         />
       </div>
