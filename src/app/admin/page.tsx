@@ -54,6 +54,32 @@ export default function AdminDashboard() {
     linkedin_url: '',
     notes: '',
   });
+
+  // Client State
+const [clients, setClients] = useState<any[]>([]);
+const [selectedClient, setSelectedClient] = useState<any | null>(null);
+const [showClientModal, setShowClientModal] = useState(false);
+
+// Client Filter State
+const [clientFilters, setClientFilters] = useState({
+  search: '',
+  status: 'all',
+});
+
+// Client Form State
+const [clientForm, setClientForm] = useState({
+  name: '',
+  industry: '',
+  size: '',
+  website: '',
+  address: '',
+  city: '',
+  state: '',
+  country: 'México',
+  phone: '',
+  email: '',
+  notes: '',
+});
   
   // Modal State
   const [showUserModal, setShowUserModal] = useState(false);
@@ -164,6 +190,18 @@ export default function AdminDashboard() {
         } catch (error) {
           console.error('Error loading candidates:', error);
           setCandidates([]);
+        }
+        break;
+
+        case 'clients':
+        try {
+          console.log('🔵 Cargando clientes...');
+          const clientsData: any = await apiClient.getClients(clientFilters);
+          console.log('🟢 Clientes recibidos:', clientsData);
+          setClients(clientsData.results || clientsData);
+        } catch (error: any) {
+          console.error('❌ Error loading clients:', error);
+          setClients([]);
         }
         break;
           
@@ -427,6 +465,123 @@ export default function AdminDashboard() {
   });
 
   // ============================================================
+// CLIENT MANAGEMENT FUNCTIONS
+// ============================================================
+
+const openClientModal = (mode: 'create' | 'edit' = 'create', client?: any) => {
+  setModalMode(mode);
+  
+  if (mode === 'edit' && client) {
+    setSelectedClient(client);
+    setClientForm({
+      name: client.name,
+      industry: client.industry || '',
+      size: client.size || '',
+      website: client.website || '',
+      address: client.address || '',
+      city: client.city || '',
+      state: client.state || '',
+      country: client.country || 'México',
+      phone: client.phone || '',
+      email: client.email || '',
+      notes: client.notes || '',
+    });
+  } else {
+    setSelectedClient(null);
+    setClientForm({
+      name: '',
+      industry: '',
+      size: '',
+      website: '',
+      address: '',
+      city: '',
+      state: '',
+      country: 'México',
+      phone: '',
+      email: '',
+      notes: '',
+    });
+  }
+  
+  setShowClientModal(true);
+};
+
+const closeClientModal = () => {
+  setShowClientModal(false);
+  setSelectedClient(null);
+  setClientForm({
+    name: '',
+    industry: '',
+    size: '',
+    website: '',
+    address: '',
+    city: '',
+    state: '',
+    country: 'México',
+    phone: '',
+    email: '',
+    notes: '',
+  });
+};
+
+const handleClientSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  try {
+    setLoading(true);
+    
+    if (modalMode === 'create') {
+      await apiClient.createClient(clientForm);
+      alert('Cliente creado exitosamente');
+    } else {
+      await apiClient.updateClient(selectedClient!.id, clientForm);
+      alert('Cliente actualizado exitosamente');
+    }
+    
+    closeClientModal();
+    await refreshData();
+    
+  } catch (error: any) {
+    console.error('Error saving client:', error);
+    alert(error?.details?.message || 'Error al guardar cliente');
+  } finally {
+    setLoading(false);
+  }
+};
+
+const deleteClient = async (client: any) => {
+  if (!confirm(`¿Eliminar cliente ${client.name}? Esta acción no se puede deshacer.`)) {
+    return;
+  }
+  
+  try {
+    setLoading(true);
+    await apiClient.deleteClient(client.id);
+    alert('Cliente eliminado exitosamente');
+    await refreshData();
+  } catch (error) {
+    console.error('Error deleting client:', error);
+    alert('Error al eliminar cliente');
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Filtrar clientes
+const filteredClients = clients.filter(client => {
+  const matchesSearch = 
+    client.name?.toLowerCase().includes(clientFilters.search.toLowerCase()) ||
+    client.email?.toLowerCase().includes(clientFilters.search.toLowerCase());
+  
+  const matchesStatus = 
+    clientFilters.status === 'all' ||
+    (clientFilters.status === 'active' && client.is_active) ||
+    (clientFilters.status === 'inactive' && !client.is_active);
+  
+  return matchesSearch && matchesStatus;
+});
+
+  // ============================================================
   // UTILITY FUNCTIONS
   // ============================================================
   
@@ -455,6 +610,31 @@ export default function AdminDashboard() {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const getCompanySizeBadgeClass = (size: string) => {
+  switch (size) {
+    case 'small':
+      return 'bg-blue-100 text-blue-800';
+    case 'medium':
+      return 'bg-purple-100 text-purple-800';
+    case 'large':
+      return 'bg-orange-100 text-orange-800';
+    case 'enterprise':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getCompanySizeDisplay = (size: string) => {
+  switch (size) {
+    case 'small': return 'Pequeña (1-50)';
+    case 'medium': return 'Mediana (51-250)';
+    case 'large': return 'Grande (251-1000)';
+    case 'enterprise': return 'Empresa (1000+)';
+    default: return size;
+  }
+};
 
   const getStatusBadgeClass = (isActive: boolean) => {
     return isActive
@@ -1093,12 +1273,205 @@ export default function AdminDashboard() {
           {/* OTHER VIEWS - Placeholder */}
           {/* ============================================================ */}
           {currentView === 'clients' && (
-            <div className="text-center py-12">
-              <i className="fas fa-building text-6xl text-gray-300 mb-4"></i>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">Gestión de Clientes</h3>
-              <p className="text-gray-500">Próximamente disponible</p>
+          <div className="space-y-6">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900">Gestión de Clientes</h2>
+                <p className="text-gray-600 mt-1">Administra empresas y clientes del sistema</p>
+              </div>
+              <div className="mt-4 sm:mt-0">
+                <button 
+                  onClick={() => openClientModal('create')}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm"
+                >
+                  <i className="fas fa-plus mr-2"></i>
+                  Agregar Cliente
+                </button>
+              </div>
             </div>
-          )}
+
+            {/* Filters */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-1">
+                  <input 
+                    type="text" 
+                    value={clientFilters.search}
+                    onChange={(e) => setClientFilters({...clientFilters, search: e.target.value})}
+                    placeholder="Buscar por nombre o email..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <select
+                    value={clientFilters.status}
+                    onChange={(e) => setClientFilters({...clientFilters, status: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="all">Todos los estados</option>
+                    <option value="active">Activos</option>
+                    <option value="inactive">Inactivos</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <button
+                    onClick={refreshData}
+                    disabled={loading}
+                    className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
+                  >
+                    <i className={`fas fa-sync mr-2 ${loading ? 'animate-spin' : ''}`}></i>
+                    Actualizar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Clients Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Cliente
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Contacto
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Industria
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tamaño
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Estado
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Registro
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center">
+                          <div className="flex justify-center items-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                            <span className="ml-3 text-gray-600">Cargando clientes...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredClients.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                          {clientFilters.search || clientFilters.status !== 'all' 
+                            ? 'No se encontraron clientes con los filtros aplicados'
+                            : 'No hay clientes registrados. Agrega el primero usando el botón "Agregar Cliente"'
+                          }
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredClients.map((client) => (
+                        <tr key={client.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                                  {client.name?.[0]?.toUpperCase()}
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {client.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  ID: {client.id}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          
+                          <td className="px-6 py-4">
+                            {client.email && (
+                              <div className="text-sm text-gray-900">{client.email}</div>
+                            )}
+                            {client.phone && (
+                              <div className="text-xs text-gray-500">{client.phone}</div>
+                            )}
+                            {!client.email && !client.phone && (
+                              <span className="text-xs text-gray-400">Sin contacto</span>
+                            )}
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {client.industry || 'N/A'}
+                            </div>
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {client.size ? (
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getCompanySizeBadgeClass(client.size)}`}>
+                                {getCompanySizeDisplay(client.size)}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(client.is_active)}`}>
+                              {client.is_active ? 'Activo' : 'Inactivo'}
+                            </span>
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {client.created_at ? new Date(client.created_at).toLocaleDateString('es-MX') : 'N/A'}
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={() => openClientModal('edit', client)}
+                                className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Editar"
+                              >
+                                <i className="fas fa-edit"></i>
+                              </button>
+                              
+                              <button
+                                onClick={() => deleteClient(client)}
+                                className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Eliminar"
+                              >
+                                <i className="fas fa-trash"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination Info */}
+              <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
+                <div className="text-sm text-gray-700">
+                  Mostrando <span className="font-medium">{filteredClients.length}</span> de{' '}
+                  <span className="font-medium">{clients.length}</span> clientes
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
           {currentView === 'profiles' && (
             <div className="text-center py-12">
@@ -1726,6 +2099,222 @@ export default function AdminDashboard() {
                       <>
                         <i className="fas fa-save mr-2"></i>
                         {modalMode === 'create' ? 'Crear Candidato' : 'Guardar Cambios'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        {/* ============================================================ */}
+        {/* CLIENT MODAL */}
+        {/* ============================================================ */}
+        {showClientModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
+                <h3 className="text-xl font-semibold text-white flex items-center">
+                  <i className={`fas fa-${modalMode === 'create' ? 'plus' : 'edit'} mr-3`}></i>
+                  {modalMode === 'create' ? 'Agregar Nuevo Cliente' : 'Editar Cliente'}
+                </h3>
+                <button 
+                  onClick={closeClientModal}
+                  className="text-white hover:text-gray-200 transition-colors"
+                >
+                  <i className="fas fa-times text-2xl"></i>
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form onSubmit={handleClientSubmit} className="p-6">
+                <div className="space-y-4">
+                  {/* Nombre */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre de la Empresa <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={clientForm.name}
+                      onChange={(e) => setClientForm({...clientForm, name: e.target.value})}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="TechCorp S.A. de C.V."
+                    />
+                  </div>
+
+                  {/* Industria y Tamaño */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Industria
+                      </label>
+                      <input
+                        type="text"
+                        value={clientForm.industry}
+                        onChange={(e) => setClientForm({...clientForm, industry: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Tecnología"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tamaño de la Empresa
+                      </label>
+                      <select
+                        value={clientForm.size}
+                        onChange={(e) => setClientForm({...clientForm, size: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="small">Pequeña (1-50 empleados)</option>
+                        <option value="medium">Mediana (51-250 empleados)</option>
+                        <option value="large">Grande (251-1000 empleados)</option>
+                        <option value="enterprise">Empresa (1000+ empleados)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Email y Teléfono */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={clientForm.email}
+                        onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="contacto@empresa.com"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Teléfono
+                      </label>
+                      <input
+                        type="tel"
+                        value={clientForm.phone}
+                        onChange={(e) => setClientForm({...clientForm, phone: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="+52 123 456 7890"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Website */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Sitio Web
+                    </label>
+                    <input
+                      type="url"
+                      value={clientForm.website}
+                      onChange={(e) => setClientForm({...clientForm, website: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="https://www.empresa.com"
+                    />
+                  </div>
+
+                  {/* Dirección */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Dirección
+                    </label>
+                    <input
+                      type="text"
+                      value={clientForm.address}
+                      onChange={(e) => setClientForm({...clientForm, address: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Calle Principal #123, Colonia Centro"
+                    />
+                  </div>
+
+                  {/* Ciudad, Estado, País */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ciudad
+                      </label>
+                      <input
+                        type="text"
+                        value={clientForm.city}
+                        onChange={(e) => setClientForm({...clientForm, city: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Ciudad de México"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Estado
+                      </label>
+                      <input
+                        type="text"
+                        value={clientForm.state}
+                        onChange={(e) => setClientForm({...clientForm, state: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="CDMX"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        País
+                      </label>
+                      <input
+                        type="text"
+                        value={clientForm.country}
+                        onChange={(e) => setClientForm({...clientForm, country: e.target.value})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="México"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Notas */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Notas Internas
+                    </label>
+                    <textarea
+                      value={clientForm.notes}
+                      onChange={(e) => setClientForm({...clientForm, notes: e.target.value})}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Información adicional sobre el cliente..."
+                    />
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 mt-6 pt-6 border-t">
+                  <button
+                    type="button"
+                    onClick={closeClientModal}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin mr-2"></i>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save mr-2"></i>
+                        {modalMode === 'create' ? 'Crear Cliente' : 'Guardar Cambios'}
                       </>
                     )}
                   </button>

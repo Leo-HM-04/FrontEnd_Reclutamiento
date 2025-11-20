@@ -272,9 +272,24 @@ class ApiClient {
   /**
    * Get all clients
    */
-  async getClients(params?: any): Promise<any> {
-    const queryString = params ? `?${new URLSearchParams(params)}` : '';
-    return this.makeRequest<any>(`/api/clients${queryString}`);
+  async getClients(params?: Record<string, string>) {
+    // No enviar parámetros si están vacíos o son 'all'
+    const cleanParams: Record<string, string> = {};
+    
+    if (params) {
+      if (params.search && params.search.trim() !== '') {
+        cleanParams.search = params.search;
+      }
+      if (params.status && params.status !== 'all') {
+        cleanParams.is_active = params.status === 'active' ? 'true' : 'false';
+      }
+    }
+    
+    const queryString = Object.keys(cleanParams).length > 0
+      ? '?' + new URLSearchParams(cleanParams).toString()
+      : '';
+    
+    return this.makeRequest<any>(`/api/clients/${queryString}`);
   }
 
   /**
