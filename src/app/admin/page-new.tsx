@@ -21,39 +21,14 @@ export default function AdminDashboard() {
   
   // UI State
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'users' | 'clients' | 'profiles' | 'candidates' | 'settings' | 'logs' | 'backups' | 'monitoring'>('dashboard');  const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'users' | 'clients' | 'profiles' | 'candidates' | 'settings'>('dashboard');
+  const [loading, setLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   
   // Data State
   const [dashboardData, setDashboardData] = useState<AdminDashboardStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-  // Candidate State
-  const [candidates, setCandidates] = useState<any[]>([]);
-  const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
-  const [showCandidateModal, setShowCandidateModal] = useState(false);
-
-  // Candidate Filter State
-  const [candidateFilters, setCandidateFilters] = useState({
-    search: '',
-    status: 'all',
-  });
-
-  // Candidate Form State
-  const [candidateForm, setCandidateForm] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    alternative_phone: '',
-    current_position: '',
-    current_company: '',
-    years_experience: 0,
-    desired_salary: 0,
-    linkedin_url: '',
-    notes: '',
-  });
   
   // Modal State
   const [showUserModal, setShowUserModal] = useState(false);
@@ -141,10 +116,6 @@ export default function AdminDashboard() {
   const loadViewData = async () => {
     try {
       setLoading(true);
-
-      const token = localStorage.getItem('authToken');
-      console.log('🔑 Token presente:', token ? 'SÍ' : 'NO');
-      console.log('🔑 Token (primeros 20 chars):', token?.substring(0, 20) + '...');
       
       switch (currentView) {
         case 'dashboard':
@@ -156,16 +127,6 @@ export default function AdminDashboard() {
           const usersData = await apiClient.getUsers(userFilters);
           setUsers(usersData.results || usersData);
           break;
-
-        case 'candidates':
-        try {
-          const candidatesData: any = await apiClient.getCandidates(candidateFilters);
-          setCandidates(candidatesData.results || candidatesData);
-        } catch (error) {
-          console.error('Error loading candidates:', error);
-          setCandidates([]);
-        }
-        break;
           
         // Agregar más casos según sea necesario
         default:
@@ -311,120 +272,6 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
-
-  // ============================================================
-  // CANDIDATE MANAGEMENT FUNCTIONS
-  // ============================================================
-
-  const openCandidateModal = (mode: 'create' | 'edit' = 'create', candidate?: any) => {
-    setModalMode(mode);
-    
-    if (mode === 'edit' && candidate) {
-      setSelectedCandidate(candidate);
-      setCandidateForm({
-        first_name: candidate.first_name,
-        last_name: candidate.last_name,
-        email: candidate.email,
-        phone: candidate.phone || '',
-        alternative_phone: candidate.alternative_phone || '',
-        current_position: candidate.current_position || '',
-        current_company: candidate.current_company || '',
-        years_experience: candidate.years_experience || 0,
-        desired_salary: candidate.desired_salary || 0,
-        linkedin_url: candidate.linkedin_url || '',
-        notes: candidate.notes || '',
-      });
-    } else {
-      setSelectedCandidate(null);
-      setCandidateForm({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        alternative_phone: '',
-        current_position: '',
-        current_company: '',
-        years_experience: 0,
-        desired_salary: 0,
-        linkedin_url: '',
-        notes: '',
-      });
-    }
-    
-    setShowCandidateModal(true);
-  };
-
-  const closeCandidateModal = () => {
-    setShowCandidateModal(false);
-    setSelectedCandidate(null);
-    setCandidateForm({
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      alternative_phone: '',
-      current_position: '',
-      current_company: '',
-      years_experience: 0,
-      desired_salary: 0,
-      linkedin_url: '',
-      notes: '',
-    });
-  };
-
-  const handleCandidateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      setLoading(true);
-      
-      if (modalMode === 'create') {
-        await apiClient.createCandidate(candidateForm);
-        alert('Candidato creado exitosamente');
-      } else {
-        await apiClient.updateCandidate(selectedCandidate!.id, candidateForm);
-        alert('Candidato actualizado exitosamente');
-      }
-      
-      closeCandidateModal();
-      await refreshData();
-      
-    } catch (error: any) {
-      console.error('Error saving candidate:', error);
-      alert(error?.details?.message || 'Error al guardar candidato');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteCandidate = async (candidate: any) => {
-    if (!confirm(`¿Eliminar candidato ${candidate.full_name}? Esta acción no se puede deshacer.`)) {
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      await apiClient.deleteCandidate(candidate.id);
-      alert('Candidato eliminado exitosamente');
-      await refreshData();
-    } catch (error) {
-      console.error('Error deleting candidate:', error);
-      alert('Error al eliminar candidato');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Filtrar candidatos
-  const filteredCandidates = candidates.filter(candidate => {
-    const matchesSearch = 
-      candidate.full_name?.toLowerCase().includes(candidateFilters.search.toLowerCase()) ||
-      candidate.email?.toLowerCase().includes(candidateFilters.search.toLowerCase());
-    
-    const matchesStatus = candidateFilters.status === 'all' || candidate.status === candidateFilters.status;
-    
-    return matchesSearch && matchesStatus;
-  });
 
   // ============================================================
   // UTILITY FUNCTIONS
@@ -643,11 +490,6 @@ export default function AdminDashboard() {
                 <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sistema</p>
               </li>
               
-              {/* Sistema */}
-              <li className="pt-4 pb-2">
-                <p className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sistema</p>
-              </li>
-              
               <li>
                 <button
                   onClick={() => setCurrentView('settings')}
@@ -655,36 +497,6 @@ export default function AdminDashboard() {
                 >
                   <i className="fas fa-cog mr-3 w-5"></i>
                   Configuración
-                </button>
-              </li>
-              
-              <li>
-                <button
-                  onClick={() => setCurrentView('logs')}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full text-left ${getNavItemClass('logs')}`}
-                >
-                  <i className="fas fa-file-alt mr-3 w-5"></i>
-                  Logs del Sistema
-                </button>
-              </li>
-              
-              <li>
-                <button
-                  onClick={() => setCurrentView('backups')}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full text-left ${getNavItemClass('backups')}`}
-                >
-                  <i className="fas fa-database mr-3 w-5"></i>
-                  Backups
-                </button>
-              </li>
-              
-              <li>
-                <button
-                  onClick={() => setCurrentView('monitoring')}
-                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full text-left ${getNavItemClass('monitoring')}`}
-                >
-                  <i className="fas fa-server mr-3 w-5"></i>
-                  Monitoreo
                 </button>
               </li>
             </ul>
@@ -1109,211 +921,12 @@ export default function AdminDashboard() {
           )}
 
           {currentView === 'candidates' && (
-          <div className="space-y-6">
-            {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900">Gestión de Candidatos</h2>
-                <p className="text-gray-600 mt-1">Administra la base de datos de candidatos</p>
-              </div>
-              <div className="mt-4 sm:mt-0">
-                <button 
-                  onClick={() => openCandidateModal('create')}
-                  className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm"
-                >
-                  <i className="fas fa-user-plus mr-2"></i>
-                  Agregar Candidato
-                </button>
-              </div>
+            <div className="text-center py-12">
+              <i className="fas fa-user-graduate text-6xl text-gray-300 mb-4"></i>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">Gestión de Candidatos</h3>
+              <p className="text-gray-500">Próximamente disponible</p>
             </div>
-
-            {/* Filters */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-1">
-                  <input 
-                    type="text" 
-                    value={candidateFilters.search}
-                    onChange={(e) => setCandidateFilters({...candidateFilters, search: e.target.value})}
-                    placeholder="Buscar por nombre o email..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <select
-                    value={candidateFilters.status}
-                    onChange={(e) => setCandidateFilters({...candidateFilters, status: e.target.value})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  >
-                    <option value="all">Todos los estados</option>
-                    <option value="new">Nuevo</option>
-                    <option value="screening">En Revisión</option>
-                    <option value="qualified">Calificado</option>
-                    <option value="interview">En Entrevista</option>
-                    <option value="offer">Oferta</option>
-                    <option value="hired">Contratado</option>
-                    <option value="rejected">Rechazado</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <button
-                    onClick={refreshData}
-                    disabled={loading}
-                    className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
-                  >
-                    <i className={`fas fa-sync mr-2 ${loading ? 'animate-spin' : ''}`}></i>
-                    Actualizar
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Candidates Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Candidato
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Contacto
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Posición Actual
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Experiencia
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Estado
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Registro
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {loading ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center">
-                          <div className="flex justify-center items-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-                            <span className="ml-3 text-gray-600">Cargando candidatos...</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : filteredCandidates.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                          {candidateFilters.search || candidateFilters.status !== 'all' 
-                            ? 'No se encontraron candidatos con los filtros aplicados'
-                            : 'No hay candidatos registrados. Agrega el primero usando el botón "Agregar Candidato"'
-                          }
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredCandidates.map((candidate) => (
-                        <tr key={candidate.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-semibold">
-                                  {candidate.first_name?.[0]}{candidate.last_name?.[0]}
-                                </div>
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {candidate.full_name || `${candidate.first_name} ${candidate.last_name}`}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  ID: {candidate.id}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{candidate.email}</div>
-                            {candidate.phone && (
-                              <div className="text-xs text-gray-500">{candidate.phone}</div>
-                            )}
-                          </td>
-                          
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900">
-                              {candidate.current_position || 'N/A'}
-                            </div>
-                            {candidate.current_company && (
-                              <div className="text-xs text-gray-500">{candidate.current_company}</div>
-                            )}
-                          </td>
-                          
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {candidate.years_experience ? `${candidate.years_experience} años` : 'N/A'}
-                            </div>
-                          </td>
-                          
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              candidate.status === 'new' ? 'bg-blue-100 text-blue-800' :
-                              candidate.status === 'qualified' ? 'bg-green-100 text-green-800' :
-                              candidate.status === 'interview' ? 'bg-purple-100 text-purple-800' :
-                              candidate.status === 'hired' ? 'bg-emerald-100 text-emerald-800' :
-                              candidate.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {candidate.status_display || candidate.status}
-                            </span>
-                          </td>
-                          
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {candidate.created_at ? new Date(candidate.created_at).toLocaleDateString('es-MX') : 'N/A'}
-                          </td>
-                          
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex justify-end space-x-2">
-                              <button
-                                onClick={() => openCandidateModal('edit', candidate)}
-                                className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Editar"
-                              >
-                                <i className="fas fa-edit"></i>
-                              </button>
-                              
-                              <button
-                                onClick={() => deleteCandidate(candidate)}
-                                className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Eliminar"
-                              >
-                                <i className="fas fa-trash"></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Pagination Info */}
-              <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
-                <div className="text-sm text-gray-700">
-                  Mostrando <span className="font-medium">{filteredCandidates.length}</span> de{' '}
-                  <span className="font-medium">{candidates.length}</span> candidatos
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
 
           {currentView === 'settings' && (
             <div className="text-center py-12">
@@ -1322,30 +935,6 @@ export default function AdminDashboard() {
               <p className="text-gray-500">Próximamente disponible</p>
             </div>
           )}
-
-          {currentView === 'logs' && (
-          <div className="text-center py-12">
-            <i className="fas fa-file-alt text-6xl text-gray-300 mb-4"></i>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Logs del Sistema</h3>
-            <p className="text-gray-500">Próximamente disponible</p>
-          </div>
-        )}
-
-        {currentView === 'backups' && (
-          <div className="text-center py-12">
-            <i className="fas fa-database text-6xl text-gray-300 mb-4"></i>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Backups</h3>
-            <p className="text-gray-500">Próximamente disponible</p>
-          </div>
-        )}
-
-        {currentView === 'monitoring' && (
-          <div className="text-center py-12">
-            <i className="fas fa-server text-6xl text-gray-300 mb-4"></i>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">Monitoreo del Sistema</h3>
-            <p className="text-gray-500">Próximamente disponible</p>
-          </div>
-        )}
         </main>
 
         {/* ============================================================ */}
@@ -1507,225 +1096,6 @@ export default function AdminDashboard() {
                       <>
                         <i className="fas fa-save mr-2"></i>
                         {modalMode === 'create' ? 'Crear Usuario' : 'Guardar Cambios'}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-        {/* ============================================================ */}
-        {/* CANDIDATE MODAL */}
-        {/* ============================================================ */}
-        {showCandidateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-              {/* Modal Header */}
-              <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
-                <h3 className="text-xl font-semibold text-white flex items-center">
-                  <i className={`fas fa-${modalMode === 'create' ? 'user-plus' : 'user-edit'} mr-3`}></i>
-                  {modalMode === 'create' ? 'Agregar Nuevo Candidato' : 'Editar Candidato'}
-                </h3>
-                <button 
-                  onClick={closeCandidateModal}
-                  className="text-white hover:text-gray-200 transition-colors"
-                >
-                  <i className="fas fa-times text-2xl"></i>
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <form onSubmit={handleCandidateSubmit} className="p-6">
-                <div className="space-y-4">
-                  {/* Nombres */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nombre(s) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={candidateForm.first_name}
-                        onChange={(e) => setCandidateForm({...candidateForm, first_name: e.target.value})}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="Juan"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Apellido(s) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={candidateForm.last_name}
-                        onChange={(e) => setCandidateForm({...candidateForm, last_name: e.target.value})}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="Pérez"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={candidateForm.email}
-                      onChange={(e) => setCandidateForm({...candidateForm, email: e.target.value})}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      placeholder="candidato@ejemplo.com"
-                    />
-                  </div>
-
-                  {/* Teléfonos */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Teléfono Principal
-                      </label>
-                      <input
-                        type="tel"
-                        value={candidateForm.phone}
-                        onChange={(e) => setCandidateForm({...candidateForm, phone: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="+52 123 456 7890"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Teléfono Alternativo
-                      </label>
-                      <input
-                        type="tel"
-                        value={candidateForm.alternative_phone}
-                        onChange={(e) => setCandidateForm({...candidateForm, alternative_phone: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="+52 123 456 7890"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Posición y Empresa Actual */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Posición Actual
-                      </label>
-                      <input
-                        type="text"
-                        value={candidateForm.current_position}
-                        onChange={(e) => setCandidateForm({...candidateForm, current_position: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="Desarrollador Senior"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Empresa Actual
-                      </label>
-                      <input
-                        type="text"
-                        value={candidateForm.current_company}
-                        onChange={(e) => setCandidateForm({...candidateForm, current_company: e.target.value})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="TechCorp"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Experiencia y Salario */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Años de Experiencia
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="50"
-                        value={candidateForm.years_experience}
-                        onChange={(e) => setCandidateForm({...candidateForm, years_experience: parseInt(e.target.value) || 0})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="5"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Salario Deseado (MXN)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={candidateForm.desired_salary}
-                        onChange={(e) => setCandidateForm({...candidateForm, desired_salary: parseInt(e.target.value) || 0})}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="50000"
-                      />
-                    </div>
-                  </div>
-
-                  {/* LinkedIn */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      LinkedIn URL
-                    </label>
-                    <input
-                      type="url"
-                      value={candidateForm.linkedin_url}
-                      onChange={(e) => setCandidateForm({...candidateForm, linkedin_url: e.target.value})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      placeholder="https://linkedin.com/in/usuario"
-                    />
-                  </div>
-
-                  {/* Notas */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Notas Internas
-                    </label>
-                    <textarea
-                      value={candidateForm.notes}
-                      onChange={(e) => setCandidateForm({...candidateForm, notes: e.target.value})}
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      placeholder="Observaciones sobre el candidato..."
-                    />
-                  </div>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="flex justify-end space-x-3 mt-6 pt-6 border-t">
-                  <button
-                    type="button"
-                    onClick={closeCandidateModal}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? (
-                      <>
-                        <i className="fas fa-spinner fa-spin mr-2"></i>
-                        Guardando...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-save mr-2"></i>
-                        {modalMode === 'create' ? 'Crear Candidato' : 'Guardar Cambios'}
                       </>
                     )}
                   </button>

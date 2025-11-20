@@ -63,6 +63,13 @@ class ApiClient {
       };
     }
 
+    // AGREGAR ESTE LOG TEMPORAL
+  console.log('🌐 API Request:', {
+    url,
+    method: options.method || 'GET',
+    hasToken: !!token
+  });
+
     try {
       const response = await fetch(url, config);
       
@@ -120,8 +127,23 @@ class ApiClient {
    * Get candidates list
    */
   async getCandidates(params?: any) {
-    const queryString = params ? new URLSearchParams(params).toString() : '';
-    return this.makeRequest(`/api/candidates/candidates/${queryString ? `?${queryString}` : ''}`);
+    // Filtrar parámetros vacíos
+    if (params) {
+      const filteredParams: any = {};
+      Object.keys(params).forEach(key => {
+        if (params[key] && params[key] !== '' && params[key] !== 'all') {
+          filteredParams[key] = params[key];
+        }
+      });
+      
+      const queryString = Object.keys(filteredParams).length > 0 
+        ? '?' + new URLSearchParams(filteredParams).toString()
+        : '';
+      
+      return this.makeRequest(`/api/candidates/candidates/${queryString}`);
+    }
+    
+    return this.makeRequest('/api/candidates/candidates/');
   }
 
   /**
@@ -353,10 +375,320 @@ class ApiClient {
   async getProfile(id: number): Promise<any> {
     return this.makeRequest<any>(`/api/profiles/profiles/${id}/`);
   }
+
+  // ====== ADMIN DASHBOARD ======
+
+/**
+ * Get admin dashboard statistics
+ */
+async getAdminDashboard(): Promise<AdminDashboardStats> {
+  try {
+    // Cargar datos en paralelo
+    const [users, clients, profiles, candidates, activities]: [any, any, any, any, any] = await Promise.all([
+      this.getUsers(),
+      this.getClients(),
+      this.getProfiles(),
+      this.getCandidates(),
+      this.getUserActivities({ limit: 10 })
+    ]);
+
+    // Procesar usuarios
+    const usersList = users.results || users;
+    const usersStats = {
+      total: usersList.length,
+      active: usersList.filter((u: User) => u.is_active).length,
+      inactive: usersList.filter((u: User) => !u.is_active).length,
+      by_role: {
+        admin: usersList.filter((u: User) => u.role === 'admin').length,
+        director: usersList.filter((u: User) => u.role === 'director').length,
+        supervisor: usersList.filter((u: User) => u.role === 'supervisor').length,
+      }
+    };
+
+    // Procesar clientes
+    const clientsList = clients.results || clients;
+    const clientsStats = {
+      total: clientsList.length,
+      active: clientsList.filter((c: Client) => c.is_active).length,
+      inactive: clientsList.filter((c: Client) => !c.is_active).length,
+    };
+
+    // Procesar perfiles
+    const profilesList = profiles.results || profiles;
+    const profilesStats = {
+      total: profilesList.length,
+      by_status: profilesList.reduce((acc: Record<string, number>, p: Profile) => {
+        acc[p.status] = (acc[p.status] || 0) + 1;
+        return acc;
+      }, {})
+    };
+
+    // Procesar candidatos
+    const candidatesList = candidates.results || candidates;
+    const candidatesStats = {
+      total: candidatesList.length,
+      by_status: candidatesList.reduce((acc: Record<string, number>, c: Candidate) => {
+        acc[c.status] = (acc[c.status] || 0) + 1;
+        return acc;
+      }, {})
+    };
+
+    return {
+      users: usersStats,
+      clients: clientsStats,
+      profiles: profilesStats,
+      candidates: candidatesStats,
+      recent_activities: activities.results || activities
+    };
+  } catch (error) {
+    console.error('Error loading admin dashboard:', error);
+    throw error;
+  }
+}
+
+// ====== USERS MANAGEMENT ======
+
+/**
+ * Get all users with optional filters
+ */
+async getUsers(params?: Record<string, string>): Promise<any> {
+  const queryString = params ? `?${new URLSearchParams(params)}` : '';
+  return this.makeRequest<any>(`/api/accounts/users/${queryString}`);
+}
+
+/**
+ * Get single user by ID
+ */
+async getUser(id: number): Promise<User> {
+  return this.makeRequest<User>(`/api/accounts/users/${id}/`);
+}
+
+/**
+ * Create new user
+ */
+async createUser(userData: CreateUserData): Promise<User> {
+  return this.makeRequest<User>('/api/accounts/users/', {
+    method: 'POST',
+    body: JSON.stringify(userData),
+  });
+}
+
+/**
+ * Create new profile
+ */
+async createProfile(profileData: Partial<Profile>): Promise<Profile> {
+  return this.makeRequest<Profile>('/api/profiles/profiles/', {
+    method: 'POST',
+    body: JSON.stringify(profileData),
+  });
+}
+
+/**
+ * Update profile
+ */
+async updateProfile(id: number, profileData: Partial<Profile>): Promise<Profile> {
+  return this.makeRequest<Profile>(`/api/profiles/profiles/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(profileData),
+  });
+}
+
+/**
+ * Delete profile
+ */
+async deleteProfile(id: number): Promise<void> {
+  return this.makeRequest<void>(`/api/profiles/profiles/${id}/`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Update user
+ */
+async updateUser(id: number, userData: UpdateUserData): Promise<User> {
+  return this.makeRequest<User>(`/api/accounts/users/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(userData),
+  });
+}
+
+/**
+ * Delete user (soft delete - set inactive)
+ */
+async deleteUser(id: number): Promise<void> {
+  return this.makeRequest<void>(`/api/accounts/users/${id}/`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Toggle user active status
+ */
+async toggleUserStatus(id: number, isActive: boolean): Promise<User> {
+  return this.updateUser(id, { is_active: isActive });
+}
+
+/**
+ * Get user activities
+ */
+async getUserActivities(params?: Record<string, any>): Promise<any> {
+  const queryParams = params ? `?${new URLSearchParams(params)}` : '';
+  return this.makeRequest<any>(`/api/accounts/activities/${queryParams}`);
+}
+
+/**
+ * Get activities for specific user
+ */
+async getUserActivityById(userId: number): Promise<UserActivity[]> {
+  return this.makeRequest<UserActivity[]>(`/api/accounts/users/${userId}/activities/`);
+}
+
+// ====== SYSTEM STATS ======
+
+/**
+ * Get system statistics
+ */
+async getSystemStats(): Promise<any> {
+  return this.makeRequest<any>('/api/accounts/users/stats/');
+}
+
+}
+
+
+
+export interface User {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  role: 'admin' | 'director' | 'supervisor';
+  role_display: string;
+  phone?: string;
+  avatar?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+
+export interface UserActivity {
+  id: number;
+  user: number;
+  user_email: string;
+  user_name: string;
+  action: string;
+  description: string;
+  ip_address: string;
+  timestamp: string;
+}
+
+export interface Client {
+  id: number;
+  name: string;
+  industry: string;
+  size: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country: string;
+  phone?: string;
+  email?: string;
+  assigned_to?: number;
+  assigned_to_name?: string;
+  notes?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Profile {
+  id: number;
+  client: number;
+  client_name: string;
+  position_title: string;
+  status: string;
+  status_display: string;
+  priority: string;
+  service_type: string;
+  assigned_to?: number;
+  assigned_to_name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Candidate {
+  id: number;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  status: string;
+  status_display: string;
+  current_position?: string;
+  current_company?: string;
+  years_experience?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminDashboardStats {
+  users: {
+    total: number;
+    active: number;
+    inactive: number;
+    by_role: {
+      admin: number;
+      director: number;
+      supervisor: number;
+    };
+  };
+  clients: {
+    total: number;
+    active: number;
+    inactive: number;
+  };
+  profiles: {
+    total: number;
+    by_status: Record<string, number>;
+  };
+  candidates: {
+    total: number;
+    by_status: Record<string, number>;
+  };
+  recent_activities: UserActivity[];
+}
+
+export interface CreateUserData {
+  email: string;
+  password: string;
+  password_confirm: string;
+  first_name: string;
+  last_name: string;
+  role: 'admin' | 'director' | 'supervisor';
+  phone?: string;
+}
+
+
+
+export interface UpdateUserData {
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  role?: 'admin' | 'director' | 'supervisor';
+  phone?: string;
+  is_active?: boolean;
 }
 
 // Create and export a default instance
 export const apiClient = new ApiClient();
 
 // Export types for use in components
-export type { LoginCredentials, LoginResponse, ApiError };
+export type { LoginCredentials, LoginResponse, ApiError,  };
+
+
+
+
+
