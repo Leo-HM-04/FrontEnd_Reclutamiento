@@ -68,16 +68,20 @@ const [clientFilters, setClientFilters] = useState({
 
 // Client Form State
 const [clientForm, setClientForm] = useState({
-  name: '',
+  company_name: '',      // ← CAMBIAR de 'name'
   industry: '',
   size: '',
   website: '',
-  address: '',
-  city: '',
-  state: '',
-  country: 'México',
-  phone: '',
-  email: '',
+  address_street: '',    // ← CAMBIAR de 'address'
+  address_city: '',      // ← CAMBIAR de 'city'
+  address_state: '',     // ← CAMBIAR de 'state'
+  address_country: 'México',  // ← CAMBIAR de 'country'
+  address_zip: '',       // ← AGREGAR
+  contact_phone: '',     // ← CAMBIAR de 'phone'
+  contact_email: '',     // ← CAMBIAR de 'email'
+  contact_name: '',      // ← AGREGAR
+  contact_position: '',  // ← AGREGAR
+  rfc: '',              // ← AGREGAR
   notes: '',
 });
   
@@ -199,9 +203,13 @@ const [clientForm, setClientForm] = useState({
           const clientsData: any = await apiClient.getClients(clientFilters);
           console.log('🟢 Clientes recibidos:', clientsData);
           setClients(clientsData.results || clientsData);
+          console.log('🟢 Clientes recibidos:', clientsData);
+          console.log('📊 Primer cliente:', (clientsData.results || clientsData)[0]);
+          setClients(clientsData.results || clientsData);
         } catch (error: any) {
           console.error('❌ Error loading clients:', error);
           setClients([]);
+          
         }
         break;
           
@@ -474,31 +482,39 @@ const openClientModal = (mode: 'create' | 'edit' = 'create', client?: any) => {
   if (mode === 'edit' && client) {
     setSelectedClient(client);
     setClientForm({
-      name: client.name,
+      company_name: client.company_name || '',
       industry: client.industry || '',
       size: client.size || '',
       website: client.website || '',
-      address: client.address || '',
-      city: client.city || '',
-      state: client.state || '',
-      country: client.country || 'México',
-      phone: client.phone || '',
-      email: client.email || '',
+      address_street: client.address_street || '',
+      address_city: client.address_city || '',
+      address_state: client.address_state || '',
+      address_country: client.address_country || 'México',
+      address_zip: client.address_zip || '',
+      contact_phone: client.contact_phone || '',
+      contact_email: client.contact_email || '',
+      contact_name: client.contact_name || '',
+      contact_position: client.contact_position || '',
+      rfc: client.rfc || '',
       notes: client.notes || '',
     });
   } else {
     setSelectedClient(null);
     setClientForm({
-      name: '',
+      company_name: '',
       industry: '',
       size: '',
       website: '',
-      address: '',
-      city: '',
-      state: '',
-      country: 'México',
-      phone: '',
-      email: '',
+      address_street: '',
+      address_city: '',
+      address_state: '',
+      address_country: 'México',
+      address_zip: '',
+      contact_phone: '',
+      contact_email: '',
+      contact_name: '',
+      contact_position: '',
+      rfc: '',
       notes: '',
     });
   }
@@ -510,16 +526,20 @@ const closeClientModal = () => {
   setShowClientModal(false);
   setSelectedClient(null);
   setClientForm({
-    name: '',
+    company_name: '',
     industry: '',
     size: '',
     website: '',
-    address: '',
-    city: '',
-    state: '',
-    country: 'México',
-    phone: '',
-    email: '',
+    address_street: '',
+    address_city: '',
+    address_state: '',
+    address_country: 'México',
+    address_zip: '',
+    contact_phone: '',
+    contact_email: '',
+    contact_name: '',
+    contact_position: '',
+    rfc: '',
     notes: '',
   });
 };
@@ -550,7 +570,7 @@ const handleClientSubmit = async (e: React.FormEvent) => {
 };
 
 const deleteClient = async (client: any) => {
-  if (!confirm(`¿Eliminar cliente ${client.name}? Esta acción no se puede deshacer.`)) {
+  if (!confirm(`¿Eliminar cliente ${client.company_name}? Esta acción no se puede deshacer.`)) {
     return;
   }
   
@@ -567,12 +587,17 @@ const deleteClient = async (client: any) => {
   }
 };
 
+
 // Filtrar clientes
 const filteredClients = clients.filter(client => {
+  // Si no hay búsqueda, o el campo coincide con la búsqueda
   const matchesSearch = 
-    client.name?.toLowerCase().includes(clientFilters.search.toLowerCase()) ||
-    client.email?.toLowerCase().includes(clientFilters.search.toLowerCase());
+    !clientFilters.search ||
+    clientFilters.search.trim() === '' ||
+    client.company_name?.toLowerCase().includes(clientFilters.search.toLowerCase()) ||
+    client.contact_email?.toLowerCase().includes(clientFilters.search.toLowerCase());
   
+    // Si el filtro es 'all', o coincide con el estado
   const matchesStatus = 
     clientFilters.status === 'all' ||
     (clientFilters.status === 'active' && client.is_active) ||
@@ -1383,33 +1408,37 @@ const getCompanySizeDisplay = (size: string) => {
                           <td className="px-6 py-4">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                                  {client.name?.[0]?.toUpperCase()}
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                                  {client.company_name?.[0]?.toUpperCase() || 'C'}
                                 </div>
                               </div>
                               <div className="ml-4">
                                 <div className="text-sm font-medium text-gray-900">
-                                  {client.name}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  ID: {client.id}
+                                  {client.company_name || 'Sin nombre'}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          
                           <td className="px-6 py-4">
-                            {client.email && (
-                              <div className="text-sm text-gray-900">{client.email}</div>
-                            )}
-                            {client.phone && (
-                              <div className="text-xs text-gray-500">{client.phone}</div>
-                            )}
-                            {!client.email && !client.phone && (
-                              <span className="text-xs text-gray-400">Sin contacto</span>
-                            )}
+                            <div className="space-y-1">
+                              {client.contact_email ? (
+                                <div className="text-sm text-gray-900 flex items-center">
+                                  <i className="fas fa-envelope text-gray-400 mr-2 text-xs"></i>
+                                  {client.contact_email}
+                                </div>
+                              ) : null}
+                              {client.contact_phone ? (
+                                <div className="text-sm text-gray-600 flex items-center">
+                                  <i className="fas fa-phone text-gray-400 mr-2 text-xs"></i>
+                                  {client.contact_phone}
+                                </div>
+                              ) : null}
+                              {!client.contact_email && !client.contact_phone ? (
+                                <span className="text-sm text-gray-400 italic">Sin contacto</span>
+                              ) : null}
+                            </div>
                           </td>
-                          
+                                                    
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
                               {client.industry || 'N/A'}
@@ -2132,18 +2161,18 @@ const getCompanySizeDisplay = (size: string) => {
                 <div className="space-y-4">
                   {/* Nombre */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nombre de la Empresa <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={clientForm.name}
-                      onChange={(e) => setClientForm({...clientForm, name: e.target.value})}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      placeholder="TechCorp S.A. de C.V."
-                    />
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre de la Empresa <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={clientForm.company_name}
+                    onChange={(e) => setClientForm({...clientForm, company_name: e.target.value})}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="TechCorp S.A. de C.V."
+                  />
+                </div>
 
                   {/* Industria y Tamaño */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2186,8 +2215,8 @@ const getCompanySizeDisplay = (size: string) => {
                       </label>
                       <input
                         type="email"
-                        value={clientForm.email}
-                        onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
+                        value={clientForm.contact_email}
+                        onChange={(e) => setClientForm({...clientForm, contact_email: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="contacto@empresa.com"
                       />
@@ -2199,8 +2228,8 @@ const getCompanySizeDisplay = (size: string) => {
                       </label>
                       <input
                         type="tel"
-                        value={clientForm.phone}
-                        onChange={(e) => setClientForm({...clientForm, phone: e.target.value})}
+                        value={clientForm.contact_phone}
+                        onChange={(e) => setClientForm({...clientForm, contact_phone: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="+52 123 456 7890"
                       />
@@ -2228,8 +2257,8 @@ const getCompanySizeDisplay = (size: string) => {
                     </label>
                     <input
                       type="text"
-                      value={clientForm.address}
-                      onChange={(e) => setClientForm({...clientForm, address: e.target.value})}
+                     value={clientForm.address_street}
+                      onChange={(e) => setClientForm({...clientForm, address_street: e.target.value})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Calle Principal #123, Colonia Centro"
                     />
@@ -2243,8 +2272,8 @@ const getCompanySizeDisplay = (size: string) => {
                       </label>
                       <input
                         type="text"
-                        value={clientForm.city}
-                        onChange={(e) => setClientForm({...clientForm, city: e.target.value})}
+                        value={clientForm.address_city}
+                        onChange={(e) => setClientForm({...clientForm, address_city: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="Ciudad de México"
                       />
@@ -2256,8 +2285,8 @@ const getCompanySizeDisplay = (size: string) => {
                       </label>
                       <input
                         type="text"
-                        value={clientForm.state}
-                        onChange={(e) => setClientForm({...clientForm, state: e.target.value})}
+                        value={clientForm.address_state}
+                        onChange={(e) => setClientForm({...clientForm, address_state: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="CDMX"
                       />
@@ -2269,8 +2298,8 @@ const getCompanySizeDisplay = (size: string) => {
                       </label>
                       <input
                         type="text"
-                        value={clientForm.country}
-                        onChange={(e) => setClientForm({...clientForm, country: e.target.value})}
+                        value={clientForm.address_country}
+                        onChange={(e) => setClientForm({...clientForm, address_country: e.target.value})}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="México"
                       />
