@@ -195,6 +195,7 @@ export default function Page() {
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [processes, setProcesses] = useState<Process[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [candidatesOverview, setCandidatesOverview] = useState<any>(null);
   const [clients, setClients] = useState<ClientCard[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [documents, setDocuments] = useState<DocItem[]>([]);
@@ -559,12 +560,29 @@ export default function Page() {
 
   const loadCandidatesData = async () => {
     try {
-      console.log('🔵 Cargando candidatos del director...');
-      const response = await apiClient.getCandidates({
-        search: searchQuery,
-      });
-      console.log('🟢 Candidatos recibidos:', response);
-      setCandidates(response.results || response);
+      console.log('🔵 Cargando candidatos y estadísticas del director...');
+      
+      // Cargar candidatos y overview en paralelo
+      const [candidatesResponse, overviewResponse] = await Promise.all([
+        apiClient.getCandidates({ search: searchQuery }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/director/candidates/overview/`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json',
+          },
+        }).then(res => res.json())
+      ]);
+      
+      console.log('🟢 Candidatos recibidos:', candidatesResponse);
+      console.log('🟢 Overview recibido:', overviewResponse);
+      
+      const typedCandidatesResponse = candidatesResponse as { results?: Candidate[] } | Candidate[];
+      setCandidates(
+        Array.isArray(typedCandidatesResponse)
+          ? typedCandidatesResponse
+          : typedCandidatesResponse.results || []
+      );
+      setCandidatesOverview(overviewResponse);
     } catch (error: any) {
       console.error('❌ Error loading candidates:', error);
       if (error?.status === 401) {
@@ -1456,7 +1474,17 @@ export default function Page() {
                   <p className="text-gray-600 mt-1">Visualiza y administra todos los candidatos en el sistema</p>
                 </div>
                 <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={exportCandidates} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                  <button 
+                    onClick={async () => {
+                      setLoading(true);
+                      await loadCandidatesData();
+                      setLoading(false);
+                      success("Datos actualizados correctamente");
+                    }} 
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                    disabled={loading}
+                  >
+                    <i className={`fas fa-sync mr-2 ${loading ? 'fa-spin' : ''}`} />
                     <i className="fas fa-download mr-2" />
                     Exportar
                   </button>
@@ -1472,116 +1500,149 @@ export default function Page() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-blue-100">
-                      <i className="fas fa-user-tie text-blue-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Candidatos</p>
-                      <p className="text-2xl font-bold text-gray-900">1,247</p>
-                    </div>
+              {/* Total Candidatos */}
+              <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-full bg-blue-100">
+                    <i className="fas fa-users text-blue-600 text-xl" />
                   </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-100">
-                      <i className="fas fa-check-circle text-green-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Aprobados</p>
-                      <p className="text-2xl font-bold text-gray-900">289</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-yellow-100">
-                      <i className="fas fa-clock text-yellow-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">En Proceso</p>
-                      <p className="text-2xl font-bold text-gray-900">156</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-purple-100">
-                      <i className="fas fa-star text-purple-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Top Rated</p>
-                      <p className="text-2xl font-bold text-gray-900">67</p>
-                    </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Candidatos</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {candidatesOverview?.total || candidates.length || 0}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Grid candidatos */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {candidates.map((c) => (
-                  <div key={c.id} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center">
-                        <img
-                          className="h-12 w-12 rounded-full border-2 border-gray-200"
-                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=3b82f6&color=fff`}
-                          alt={c.name}
-                        />
-                        <div className="ml-3">
-                          <h3 className="text-sm font-semibold text-gray-900">{c.name}</h3>
-                          <p className="text-xs text-gray-500">{c.position}</p>
-                        </div>
-                      </div>
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          c.score >= 90 ? "bg-green-100 text-green-800" : c.score >= 80 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {c.score}%
-                      </span>
-                    </div>
-                    <div className="space-y-2 mb-4 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Email:</span>
-                        <span className="text-gray-900">{c.email}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Teléfono:</span>
-                        <span className="text-gray-900">{c.phone}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Experiencia:</span>
-                        <span className="text-gray-900">{c.experience}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div className="flex space-x-2">
-                        <button onClick={() => viewCandidateDetails(c.id)} className="text-blue-600 hover:text-blue-700 p-1 rounded" title="Ver detalles">
-                          <i className="fas fa-eye text-sm" />
-                        </button>
-                        <button onClick={() => downloadDocument(c.id)} className="text-green-600 hover:text-green-700 p-1 rounded" title="Descargar CV">
-                          <i className="fas fa-download text-sm" />
-                        </button>
-                        <button onClick={() => info(`Contactando candidato ${c.id}...`)} className="text-purple-600 hover:text-purple-700 p-1 rounded" title="Contactar">
-                          <i className="fas fa-envelope text-sm" />
-                        </button>
-                      </div>
-                      <span className="text-xs text-gray-500">{c.uploadedAt}</span>
-                    </div>
+              {/* Candidatos Activos */}
+              <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-full bg-green-100">
+                    <i className="fas fa-check-circle text-green-600 text-xl" />
                   </div>
-                ))}
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Activos</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {candidatesOverview?.by_status?.find((s: any) => s.status === 'qualified')?.count || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-                {candidates.length === 0 && (
-                  <div className="col-span-full text-center py-12 empty-state">
-                    <i className="fas fa-user-tie text-6xl text-gray-300 mb-4" />
-                    <p className="text-gray-500">No hay candidatos registrados</p>
+              {/* En Evaluación */}
+              <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-full bg-yellow-100">
+                    <i className="fas fa-clipboard-check text-yellow-600 text-xl" />
                   </div>
-                )}
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">En Evaluación</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {candidatesOverview?.by_status?.find((s: any) => s.status === 'screening')?.count || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contratados */}
+              <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div className="flex items-center">
+                  <div className="p-3 rounded-full bg-purple-100">
+                    <i className="fas fa-user-check text-purple-600 text-xl" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Contratados</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {candidatesOverview?.by_status?.find((s: any) => s.status === 'hired')?.count || 0}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
+
+              {/* Grid candidatos */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {loading ? (
+                    <div className="col-span-full flex justify-center items-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                      <span className="ml-3 text-gray-600">Cargando candidatos...</span>
+                    </div>
+                  ) : candidates.length === 0 ? (
+                    <div className="col-span-full text-center py-12 empty-state">
+                      <i className="fas fa-user-tie text-6xl text-gray-300 mb-4" />
+                      <p className="text-gray-500">No hay candidatos registrados</p>
+                    </div>
+                  ) : (
+                    candidates.map((c: any) => (
+                      <div key={c.id} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center">
+                            <img
+                              className="h-12 w-12 rounded-full border-2 border-gray-200"
+                              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(c.full_name || `${c.first_name} ${c.last_name}`)}&background=3b82f6&color=fff`}
+                              alt={c.full_name || `${c.first_name} ${c.last_name}`}
+                            />
+                            <div className="ml-3">
+                              <h3 className="text-sm font-semibold text-gray-900">
+                                {c.full_name || `${c.first_name} ${c.last_name}`}
+                              </h3>
+                              <p className="text-xs text-gray-500">{c.current_position || 'Sin posición'}</p>
+                            </div>
+                          </div>
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            c.status === 'hired' ? 'bg-green-100 text-green-800' :
+                            c.status === 'qualified' ? 'bg-blue-100 text-blue-800' :
+                            c.status === 'interview' ? 'bg-purple-100 text-purple-800' :
+                            c.status === 'screening' ? 'bg-yellow-100 text-yellow-800' :
+                            c.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {c.status_display || c.status || 'Nuevo'}
+                          </span>
+                        </div>
+                        <div className="space-y-2 mb-4 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Email:</span>
+                            <span className="text-gray-900 truncate ml-2">{c.email}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Teléfono:</span>
+                            <span className="text-gray-900">{c.phone || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Experiencia:</span>
+                            <span className="text-gray-900">{c.years_experience || 0} años</span>
+                          </div>
+                          {c.current_company && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Empresa:</span>
+                              <span className="text-gray-900 truncate ml-2">{c.current_company}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                          <div className="flex space-x-2">
+                            <button onClick={() => viewCandidateDetails(c.id)} className="text-blue-600 hover:text-blue-700 p-1 rounded" title="Ver detalles">
+                              <i className="fas fa-eye text-sm" />
+                            </button>
+                            <button onClick={() => downloadDocument(c.id)} className="text-green-600 hover:text-green-700 p-1 rounded" title="Descargar CV">
+                              <i className="fas fa-download text-sm" />
+                            </button>
+                            <button onClick={() => info(`Contactando candidato ${c.id}...`)} className="text-purple-600 hover:text-purple-700 p-1 rounded" title="Contactar">
+                              <i className="fas fa-envelope text-sm" />
+                            </button>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {new Date(c.created_at).toLocaleDateString('es-MX')}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                </div>
+                )}
 
           {/* APPLICATIONS */}
           {currentView === "applications" && (
