@@ -276,28 +276,6 @@ useEffect(() => {
   return () => window.removeEventListener('resize', handleResize);
 }, [mounted]);
 
-  // Manejar resize de ventana y persistencia
-  useEffect(() => {
-    // Función para verificar si es desktop
-    const checkDesktop = () => {
-      const isDesktop = window.innerWidth >= 1024;
-      if (isDesktop && !sidebarOpen) {
-        // En desktop, sidebar siempre visible
-        setSidebarOpen(true);
-        localStorage.setItem('sidebarOpen', 'true');
-      }
-    };
-
-    // Verificar al montar
-    checkDesktop();
-
-    // Listener para cambios de tamaño
-    const handleResize = () => checkDesktop();
-    window.addEventListener('resize', handleResize);
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, [sidebarOpen]);
-
   // ====== Chart.js ======
   const processChartRef = useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = useRef<any>(null);
