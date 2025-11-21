@@ -47,42 +47,233 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
     e.preventDefault();
     
     try {
-      // Preparar datos para enviar al backend
+      // Validaciones básicas
+      if (!candidateForm.nombres.trim()) {
+        alert('El nombre es requerido');
+        return;
+      }
+      if (!candidateForm.apellidos.trim()) {
+        alert('Los apellidos son requeridos');
+        return;
+      }
+      if (!candidateForm.correoElectronico.trim()) {
+        alert('El correo electrónico es requerido');
+        return;
+      }
+
+      // Mapear estados del frontend a backend
+      const statusMap: Record<string, string> = {
+        'Nuevo': 'new',
+        'En Proceso': 'screening',
+        'Calificado': 'qualified',
+        'No Calificado': 'rejected'
+      };
+
+      // ========================================
+      // PREPARAR DATOS COMPLETOS
+      // ========================================
       const candidateData: any = {
+        // 1. INFORMACIÓN PERSONAL (REQUERIDOS)
         first_name: candidateForm.nombres.trim(),
         last_name: candidateForm.apellidos.trim(),
         email: candidateForm.correoElectronico.trim(),
+        
+        // 2. UBICACIÓN (REQUERIDOS)
         city: candidateForm.ciudad.trim() || 'No especificado',
         state: candidateForm.estado.trim() || 'No especificado',
+        country: candidateForm.pais.trim() || 'México',
+        
+        // 3. EDUCACIÓN (REQUERIDO)
         education_level: candidateForm.nivelEstudios.trim() || 'No especificado',
       };
 
-      // Agregar campos opcionales solo si tienen valor
-      if (candidateForm.telefono) candidateData.phone = candidateForm.telefono.trim();
-      if (candidateForm.pais) candidateData.country = candidateForm.pais.trim();
-      if (candidateForm.posicionActual) candidateData.current_position = candidateForm.posicionActual.trim();
-      if (candidateForm.empresaActual) candidateData.current_company = candidateForm.empresaActual.trim();
-      if (candidateForm.anosExperiencia) candidateData.years_of_experience = parseInt(candidateForm.anosExperiencia.toString()) || 0;
-      if (candidateForm.universidad) candidateData.university = candidateForm.universidad.trim();
+      // CAMPOS OPCIONALES - Solo agregar si tienen valor
+      
+      // Contacto
+      if (candidateForm.telefono) {
+        candidateData.phone = candidateForm.telefono.trim();
+      }
+      if (candidateForm.telefonoAlternativo) {
+        candidateData.alternative_phone = candidateForm.telefonoAlternativo.trim();
+      }
+      if (candidateForm.direccionCompleta) {
+        candidateData.address = candidateForm.direccionCompleta.trim();
+      }
 
-      console.log('📝 Guardando candidato en el backend...', candidateData);
+      // Información Profesional
+      if (candidateForm.posicionActual) {
+        candidateData.current_position = candidateForm.posicionActual.trim();
+      }
+      if (candidateForm.empresaActual) {
+        candidateData.current_company = candidateForm.empresaActual.trim();
+      }
+      if (candidateForm.anosExperiencia) {
+        const years = parseInt(candidateForm.anosExperiencia.toString());
+        candidateData.years_of_experience = isNaN(years) ? 0 : years;
+      }
+      if (candidateForm.universidad) {
+        candidateData.university = candidateForm.universidad.trim();
+      }
+      if (candidateForm.carreraTitulo) {
+        candidateData.degree = candidateForm.carreraTitulo.trim();
+      }
+
+      // Habilidades y Competencias (JSON Arrays)
+      if (candidateForm.habilidades) {
+        const skillsArray = candidateForm.habilidades
+          .split(',')
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
+        if (skillsArray.length > 0) {
+          candidateData.skills = skillsArray;
+        }
+      }
+      
+      if (candidateForm.idiomas) {
+        const languagesArray = candidateForm.idiomas
+          .split(',')
+          .map(l => l.trim())
+          .filter(l => l.length > 0);
+        if (languagesArray.length > 0) {
+          candidateData.languages = languagesArray;
+        }
+      }
+      
+      if (candidateForm.certificaciones) {
+        const certsArray = candidateForm.certificaciones
+          .split(',')
+          .map(c => c.trim())
+          .filter(c => c.length > 0);
+        if (certsArray.length > 0) {
+          candidateData.certifications = certsArray;
+        }
+      }
+
+      // Expectativas Salariales
+      if (candidateForm.expectativaSalarialMinima) {
+        const minSalary = parseFloat(candidateForm.expectativaSalarialMinima);
+        if (!isNaN(minSalary) && minSalary > 0) {
+          candidateData.salary_expectation_min = minSalary;
+        }
+      }
+      if (candidateForm.expectativaSalarialMaxima) {
+        const maxSalary = parseFloat(candidateForm.expectativaSalarialMaxima);
+        if (!isNaN(maxSalary) && maxSalary > 0) {
+          candidateData.salary_expectation_max = maxSalary;
+        }
+      }
+      if (candidateForm.moneda) {
+        candidateData.salary_currency = candidateForm.moneda;
+      }
+
+      // Disponibilidad
+      if (candidateForm.disponibleDesde) {
+        candidateData.available_from = candidateForm.disponibleDesde;
+      }
+      if (candidateForm.diasPreviso) {
+        const days = parseInt(candidateForm.diasPreviso);
+        if (!isNaN(days) && days > 0) {
+          candidateData.notice_period_days = days;
+        }
+      }
+
+      // Gestión
+      if (candidateForm.estadoCandidato) {
+        candidateData.status = statusMap[candidateForm.estadoCandidato] || 'new';
+      }
+      if (candidateForm.asignadoA && candidateForm.asignadoA !== '') {
+        const assignedId = parseInt(candidateForm.asignadoA);
+        if (!isNaN(assignedId)) {
+          candidateData.assigned_to = assignedId;
+        }
+      }
+      if (candidateForm.fuenteReclutamiento) {
+        candidateData.source = candidateForm.fuenteReclutamiento.trim();
+      }
+      if (candidateForm.notasInternas) {
+        candidateData.internal_notes = candidateForm.notasInternas.trim();
+      }
+
+      // Redes Sociales / URLs
+      if (candidateForm.linkedin) {
+        candidateData.linkedin_url = candidateForm.linkedin.trim();
+      }
+      if (candidateForm.portfolio) {
+        candidateData.portfolio_url = candidateForm.portfolio.trim();
+      }
+      if (candidateForm.github) {
+        candidateData.github_url = candidateForm.github.trim();
+      }
+
+      // Análisis de IA
+      if (candidateForm.resumenGeneradoIA) {
+        candidateData.ai_summary = candidateForm.resumenGeneradoIA.trim();
+      }
+      if (candidateForm.puntuacionCoincidenciaIA) {
+        const score = parseInt(candidateForm.puntuacionCoincidenciaIA);
+        if (!isNaN(score) && score >= 0 && score <= 100) {
+          candidateData.ai_match_score = score;
+        }
+      }
+      if (candidateForm.analisisCompletoIA) {
+        try {
+          // Intentar parsear como JSON si es posible
+          candidateData.ai_analysis = JSON.parse(candidateForm.analisisCompletoIA);
+        } catch {
+          // Si no es JSON, guardarlo como objeto con el texto
+          candidateData.ai_analysis = { analysis: candidateForm.analisisCompletoIA };
+        }
+      }
+
+      console.log('📝 Guardando candidato COMPLETO en el backend...');
+      console.log('📦 Datos a enviar:', candidateData);
       
       // Guardar en el backend
       const response = await apiClient.createCandidate(candidateData);
       
-      console.log('✅ Candidato guardado:', response);
+      console.log('✅ Candidato guardado exitosamente:', response);
       
       if (onSuccess) {
-        onSuccess("Candidato agregado exitosamente a la base de datos");
+        onSuccess("✅ Candidato agregado exitosamente con TODOS sus datos");
       }
       
       // Cerrar modal y limpiar formulario
-      resetForm();
       onClose();
+      resetForm();
+      
     } catch (error: any) {
       console.error('❌ Error al guardar candidato:', error);
-      console.error('📋 Detalles completos del error:', JSON.stringify(error.details, null, 2));
-      alert(`Error al guardar candidato: ${JSON.stringify(error.details) || error.message || 'Error desconocido'}`);
+      console.error('🔍 Detalles del error:', error.details || error.message);
+      
+      // Mostrar error detallado al usuario
+      let errorMessage = 'Error al guardar el candidato';
+      
+      if (error.details) {
+        // Extraer errores específicos de cada campo
+        const errorDetails = Object.entries(error.details)
+          .map(([field, messages]: [string, any]) => {
+            const fieldName = field === 'email' ? 'Correo electrónico' :
+                            field === 'first_name' ? 'Nombre' :
+                            field === 'last_name' ? 'Apellidos' :
+                            field === 'city' ? 'Ciudad' :
+                            field === 'state' ? 'Estado' :
+                            field === 'education_level' ? 'Nivel de estudios' : field;
+            
+            const message = Array.isArray(messages) ? messages[0] : messages;
+            return `${fieldName}: ${message}`;
+          })
+          .join('\n');
+        
+        errorMessage = `Error al guardar:\n\n${errorDetails}`;
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      alert(errorMessage);
+      
+      if (onSuccess) {
+        onSuccess(`❌ ${errorMessage}`);
+      }
     }
   };
 
@@ -743,7 +934,24 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center">
-                          <button className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm mr-2 hover:bg-blue-700 transition-colors">
+                          <input
+                            type="file"
+                            id="candidateDocumentFile"
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                console.log('📎 Archivo seleccionado:', file.name);
+                                // Aquí puedes manejar el archivo si lo necesitas
+                              }
+                            }}
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => document.getElementById('candidateDocumentFile')?.click()}
+                            className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm mr-2 hover:bg-blue-700 transition-colors"
+                          >
                             Elegir archivo
                           </button>
                           <span className="text-xs text-gray-500">No hay archivo</span>

@@ -167,6 +167,8 @@ function useToasts() {
   };
 }
 
+
+
 export default function Page() {
   const router = useRouter();
   const { toasts, info, success, warning, error } = useToasts();
@@ -177,6 +179,7 @@ export default function Page() {
   >("dashboard");
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [stats, setStats] = useState<Stats>({
@@ -240,6 +243,61 @@ export default function Page() {
     razonRechazo: ''
   });
 
+  // Inicializar sidebar después de hidratación (evita hydration mismatch)
+useEffect(() => {
+  setMounted(true);
+  
+  // Detectar si es desktop
+  const isDesktop = window.innerWidth >= 1024;
+  
+  if (isDesktop) {
+    // En desktop, siempre abierto
+    setSidebarOpen(true);
+  } else {
+    // En móvil, recuperar de localStorage
+    const saved = localStorage.getItem('sidebarOpen');
+    setSidebarOpen(saved === 'true');
+  }
+}, []);
+
+// Listener para resize de ventana
+useEffect(() => {
+  if (!mounted) return;
+
+  const handleResize = () => {
+    const isDesktop = window.innerWidth >= 1024;
+    if (isDesktop) {
+      setSidebarOpen(true);
+      localStorage.setItem('sidebarOpen', 'true');
+    }
+  };
+
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, [mounted]);
+
+  // Manejar resize de ventana y persistencia
+  useEffect(() => {
+    // Función para verificar si es desktop
+    const checkDesktop = () => {
+      const isDesktop = window.innerWidth >= 1024;
+      if (isDesktop && !sidebarOpen) {
+        // En desktop, sidebar siempre visible
+        setSidebarOpen(true);
+        localStorage.setItem('sidebarOpen', 'true');
+      }
+    };
+
+    // Verificar al montar
+    checkDesktop();
+
+    // Listener para cambios de tamaño
+    const handleResize = () => checkDesktop();
+    window.addEventListener('resize', handleResize);
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarOpen]);
+
   // ====== Chart.js ======
   const processChartRef = useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = useRef<any>(null);
@@ -263,6 +321,8 @@ export default function Page() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+ 
 
   useEffect(() => {
   if (currentView === 'candidates' && !loading) {
@@ -797,7 +857,13 @@ export default function Page() {
             {/* Logo y Título */}
             <div className="flex items-center">
               <button 
-                onClick={() => setSidebarOpen(!sidebarOpen)}
+                onClick={() => {
+                  const newState = !sidebarOpen;
+                  setSidebarOpen(newState);
+                  if (window.innerWidth < 1024) {
+                    localStorage.setItem('sidebarOpen', String(newState));
+                  }
+                }}
                 className="lg:hidden mr-4 text-gray-600 hover:text-gray-900"
               >
                 <i className="fas fa-bars text-xl"></i>
@@ -915,7 +981,7 @@ export default function Page() {
       {/* Layout: Sidebar + Main Content */}
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 top-16 w-64 bg-white border-r border-gray-200 overflow-y-auto transition-transform duration-300 ease-in-out z-20 ${
+        <aside className={`fixed inset-y-0 left-0 top-16 w-64 bg-white border-r border-gray-200 overflow-y-auto ${mounted ? 'transition-transform duration-300' : ''} ease-in-out z-20 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
           {/* Sidebar Header */}
