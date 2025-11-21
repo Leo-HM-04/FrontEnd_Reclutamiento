@@ -84,6 +84,40 @@ const [clientForm, setClientForm] = useState({
   rfc: '',              // ← AGREGAR
   notes: '',
 });
+
+// Profile State
+const [profiles, setProfiles] = useState<any[]>([]);
+const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+const [showProfileModal, setShowProfileModal] = useState(false);
+
+// Profile Filter State
+const [profileFilters, setProfileFilters] = useState({
+  search: '',
+  status: 'all',
+  priority: 'all',
+});
+
+// Profile Form State
+const [profileForm, setProfileForm] = useState({
+  client: 0,
+  position_title: '',
+  department: '',
+  location: '',
+  employment_type: 'full_time',
+  salary_min: 0,
+  salary_max: 0,
+  status: 'draft',
+  priority: 'medium',
+  service_type: 'contingency',
+  required_experience: 0,
+  required_education: '',
+  job_description: '',
+  requirements: '',
+  responsibilities: '',
+  benefits: '',
+  deadline_date: '',
+  notes: '',
+});
   
   // Modal State
   const [showUserModal, setShowUserModal] = useState(false);
@@ -210,6 +244,19 @@ const [clientForm, setClientForm] = useState({
           console.error('❌ Error loading clients:', error);
           setClients([]);
           
+        }
+        break;
+
+        case 'profiles':
+        try {
+          console.log('🔵 Cargando perfiles...');
+          const profilesData: any = await apiClient.getProfiles(profileFilters);
+          console.log('🟢 Perfiles recibidos:', profilesData);
+          console.log('📊 Primer perfil:', (profilesData.results || profilesData)[0]);
+          setProfiles(profilesData.results || profilesData);
+        } catch (error: any) {
+          console.error('❌ Error loading profiles:', error);
+          setProfiles([]);
         }
         break;
           
@@ -473,32 +520,57 @@ const [clientForm, setClientForm] = useState({
   });
 
   // ============================================================
-// CLIENT MANAGEMENT FUNCTIONS
-// ============================================================
+  // CLIENT MANAGEMENT FUNCTIONS
+  // ============================================================
 
-const openClientModal = (mode: 'create' | 'edit' = 'create', client?: any) => {
-  setModalMode(mode);
-  
-  if (mode === 'edit' && client) {
-    setSelectedClient(client);
-    setClientForm({
-      company_name: client.company_name || '',
-      industry: client.industry || '',
-      size: client.size || '',
-      website: client.website || '',
-      address_street: client.address_street || '',
-      address_city: client.address_city || '',
-      address_state: client.address_state || '',
-      address_country: client.address_country || 'México',
-      address_zip: client.address_zip || '',
-      contact_phone: client.contact_phone || '',
-      contact_email: client.contact_email || '',
-      contact_name: client.contact_name || '',
-      contact_position: client.contact_position || '',
-      rfc: client.rfc || '',
-      notes: client.notes || '',
-    });
-  } else {
+  const openClientModal = (mode: 'create' | 'edit' = 'create', client?: any) => {
+    setModalMode(mode);
+    
+    if (mode === 'edit' && client) {
+      setSelectedClient(client);
+      setClientForm({
+        company_name: client.company_name || '',
+        industry: client.industry || '',
+        size: client.size || '',
+        website: client.website || '',
+        address_street: client.address_street || '',
+        address_city: client.address_city || '',
+        address_state: client.address_state || '',
+        address_country: client.address_country || 'México',
+        address_zip: client.address_zip || '',
+        contact_phone: client.contact_phone || '',
+        contact_email: client.contact_email || '',
+        contact_name: client.contact_name || '',
+        contact_position: client.contact_position || '',
+        rfc: client.rfc || '',
+        notes: client.notes || '',
+      });
+    } else {
+      setSelectedClient(null);
+      setClientForm({
+        company_name: '',
+        industry: '',
+        size: '',
+        website: '',
+        address_street: '',
+        address_city: '',
+        address_state: '',
+        address_country: 'México',
+        address_zip: '',
+        contact_phone: '',
+        contact_email: '',
+        contact_name: '',
+        contact_position: '',
+        rfc: '',
+        notes: '',
+      });
+    }
+    
+    setShowClientModal(true);
+  };
+
+  const closeClientModal = () => {
+    setShowClientModal(false);
     setSelectedClient(null);
     setClientForm({
       company_name: '',
@@ -517,94 +589,207 @@ const openClientModal = (mode: 'create' | 'edit' = 'create', client?: any) => {
       rfc: '',
       notes: '',
     });
-  }
-  
-  setShowClientModal(true);
-};
+  };
 
-const closeClientModal = () => {
-  setShowClientModal(false);
-  setSelectedClient(null);
-  setClientForm({
-    company_name: '',
-    industry: '',
-    size: '',
-    website: '',
-    address_street: '',
-    address_city: '',
-    address_state: '',
-    address_country: 'México',
-    address_zip: '',
-    contact_phone: '',
-    contact_email: '',
-    contact_name: '',
-    contact_position: '',
-    rfc: '',
-    notes: '',
-  });
-};
-
-const handleClientSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  try {
-    setLoading(true);
+  const handleClientSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    if (modalMode === 'create') {
-      await apiClient.createClient(clientForm);
-      alert('Cliente creado exitosamente');
-    } else {
-      await apiClient.updateClient(selectedClient!.id, clientForm);
-      alert('Cliente actualizado exitosamente');
+    try {
+      setLoading(true);
+      
+      if (modalMode === 'create') {
+        await apiClient.createClient(clientForm);
+        alert('Cliente creado exitosamente');
+      } else {
+        await apiClient.updateClient(selectedClient!.id, clientForm);
+        alert('Cliente actualizado exitosamente');
+      }
+      
+      closeClientModal();
+      await refreshData();
+      
+    } catch (error: any) {
+      console.error('Error saving client:', error);
+      alert(error?.details?.message || 'Error al guardar cliente');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteClient = async (client: any) => {
+    if (!confirm(`¿Eliminar cliente ${client.company_name}? Esta acción no se puede deshacer.`)) {
+      return;
     }
     
-    closeClientModal();
-    await refreshData();
+    try {
+      setLoading(true);
+      await apiClient.deleteClient(client.id);
+      alert('Cliente eliminado exitosamente');
+      await refreshData();
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      alert('Error al eliminar cliente');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  // Filtrar clientes
+  const filteredClients = clients.filter(client => {
+    // Si no hay búsqueda, o el campo coincide con la búsqueda
+    const matchesSearch = 
+      !clientFilters.search ||
+      clientFilters.search.trim() === '' ||
+      client.company_name?.toLowerCase().includes(clientFilters.search.toLowerCase()) ||
+      client.contact_email?.toLowerCase().includes(clientFilters.search.toLowerCase());
     
-  } catch (error: any) {
-    console.error('Error saving client:', error);
-    alert(error?.details?.message || 'Error al guardar cliente');
-  } finally {
-    setLoading(false);
-  }
-};
+      // Si el filtro es 'all', o coincide con el estado
+    const matchesStatus = 
+      clientFilters.status === 'all' ||
+      (clientFilters.status === 'active' && client.is_active) ||
+      (clientFilters.status === 'inactive' && !client.is_active);
+    
+    return matchesSearch && matchesStatus;
+  });
 
-const deleteClient = async (client: any) => {
-  if (!confirm(`¿Eliminar cliente ${client.company_name}? Esta acción no se puede deshacer.`)) {
-    return;
-  }
-  
-  try {
-    setLoading(true);
-    await apiClient.deleteClient(client.id);
-    alert('Cliente eliminado exitosamente');
-    await refreshData();
-  } catch (error) {
-    console.error('Error deleting client:', error);
-    alert('Error al eliminar cliente');
-  } finally {
-    setLoading(false);
-  }
-};
+  // ============================================================
+  // PROFILE MANAGEMENT FUNCTIONS
+  // ============================================================
 
+  const openProfileModal = (mode: 'create' | 'edit' = 'create', profile?: any) => {
+    setModalMode(mode);
+    
+    if (mode === 'edit' && profile) {
+      setSelectedProfile(profile);
+      setProfileForm({
+        client: profile.client || 0,
+        position_title: profile.position_title || '',
+        department: profile.department || '',
+        location: profile.location || '',
+        employment_type: profile.employment_type || 'full_time',
+        salary_min: profile.salary_min || 0,
+        salary_max: profile.salary_max || 0,
+        status: profile.status || 'draft',
+        priority: profile.priority || 'medium',
+        service_type: profile.service_type || 'contingency',
+        required_experience: profile.required_experience || 0,
+        required_education: profile.required_education || '',
+        job_description: profile.job_description || '',
+        requirements: profile.requirements || '',
+        responsibilities: profile.responsibilities || '',
+        benefits: profile.benefits || '',
+        deadline_date: profile.deadline_date || '',
+        notes: profile.notes || '',
+      });
+    } else {
+      setSelectedProfile(null);
+      setProfileForm({
+        client: 0,
+        position_title: '',
+        department: '',
+        location: '',
+        employment_type: 'full_time',
+        salary_min: 0,
+        salary_max: 0,
+        status: 'draft',
+        priority: 'medium',
+        service_type: 'contingency',
+        required_experience: 0,
+        required_education: '',
+        job_description: '',
+        requirements: '',
+        responsibilities: '',
+        benefits: '',
+        deadline_date: '',
+        notes: '',
+      });
+    }
+    
+    setShowProfileModal(true);
+  };
 
-// Filtrar clientes
-const filteredClients = clients.filter(client => {
-  // Si no hay búsqueda, o el campo coincide con la búsqueda
-  const matchesSearch = 
-    !clientFilters.search ||
-    clientFilters.search.trim() === '' ||
-    client.company_name?.toLowerCase().includes(clientFilters.search.toLowerCase()) ||
-    client.contact_email?.toLowerCase().includes(clientFilters.search.toLowerCase());
-  
-    // Si el filtro es 'all', o coincide con el estado
-  const matchesStatus = 
-    clientFilters.status === 'all' ||
-    (clientFilters.status === 'active' && client.is_active) ||
-    (clientFilters.status === 'inactive' && !client.is_active);
-  
-  return matchesSearch && matchesStatus;
-});
+  const closeProfileModal = () => {
+    setShowProfileModal(false);
+    setSelectedProfile(null);
+    setProfileForm({
+      client: 0,
+      position_title: '',
+      department: '',
+      location: '',
+      employment_type: 'full_time',
+      salary_min: 0,
+      salary_max: 0,
+      status: 'draft',
+      priority: 'medium',
+      service_type: 'contingency',
+      required_experience: 0,
+      required_education: '',
+      job_description: '',
+      requirements: '',
+      responsibilities: '',
+      benefits: '',
+      deadline_date: '',
+      notes: '',
+    });
+  };
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      setLoading(true);
+      
+      if (modalMode === 'create') {
+        await apiClient.createProfile(profileForm);
+        alert('Perfil creado exitosamente');
+      } else {
+        await apiClient.updateProfile(selectedProfile!.id, profileForm);
+        alert('Perfil actualizado exitosamente');
+      }
+      
+      closeProfileModal();
+      await refreshData();
+      
+    } catch (error: any) {
+      console.error('Error saving profile:', error);
+      alert(error?.details?.message || 'Error al guardar perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteProfile = async (profile: any) => {
+    if (!confirm(`¿Eliminar perfil "${profile.position_title}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await apiClient.deleteProfile(profile.id);
+      alert('Perfil eliminado exitosamente');
+      await refreshData();
+    } catch (error) {
+      console.error('Error deleting profile:', error);
+      alert('Error al eliminar perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filtrar perfiles
+  const filteredProfiles = profiles.filter(profile => {
+    const matchesSearch = 
+      !profileFilters.search ||
+      profileFilters.search.trim() === '' ||
+      profile.position_title?.toLowerCase().includes(profileFilters.search.toLowerCase()) ||
+      profile.client_name?.toLowerCase().includes(profileFilters.search.toLowerCase());
+    
+    const matchesStatus = profileFilters.status === 'all' || profile.status === profileFilters.status;
+    const matchesPriority = profileFilters.priority === 'all' || profile.priority === profileFilters.priority;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
 
   // ============================================================
   // UTILITY FUNCTIONS
@@ -658,6 +843,62 @@ const getCompanySizeDisplay = (size: string) => {
     case 'large': return 'Grande (251-1000)';
     case 'enterprise': return 'Empresa (1000+)';
     default: return size;
+  }
+};
+
+const getProfileStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case 'draft':
+      return 'bg-gray-100 text-gray-800';
+    case 'open':
+      return 'bg-green-100 text-green-800';
+    case 'in_progress':
+      return 'bg-blue-100 text-blue-800';
+    case 'on_hold':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'filled':
+      return 'bg-purple-100 text-purple-800';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getProfileStatusDisplay = (status: string) => {
+  switch (status) {
+    case 'draft': return 'Borrador';
+    case 'open': return 'Abierto';
+    case 'in_progress': return 'En Proceso';
+    case 'on_hold': return 'En Espera';
+    case 'filled': return 'Cubierto';
+    case 'cancelled': return 'Cancelado';
+    default: return status;
+  }
+};
+
+const getPriorityBadgeClass = (priority: string) => {
+  switch (priority) {
+    case 'low':
+      return 'bg-blue-100 text-blue-800';
+    case 'medium':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'high':
+      return 'bg-orange-100 text-orange-800';
+    case 'urgent':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getPriorityDisplay = (priority: string) => {
+  switch (priority) {
+    case 'low': return 'Baja';
+    case 'medium': return 'Media';
+    case 'high': return 'Alta';
+    case 'urgent': return 'Urgente';
+    default: return priority;
   }
 };
 
@@ -1503,12 +1744,215 @@ const getCompanySizeDisplay = (size: string) => {
         )}
 
           {currentView === 'profiles' && (
-            <div className="text-center py-12">
-              <i className="fas fa-briefcase text-6xl text-gray-300 mb-4"></i>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">Gestión de Perfiles</h3>
-              <p className="text-gray-500">Próximamente disponible</p>
+          <div className="space-y-6">
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900">Gestión de Perfiles</h2>
+                <p className="text-gray-600 mt-1">Administra posiciones abiertas y requisiciones</p>
+              </div>
+              <div className="mt-4 sm:mt-0">
+                <button 
+                  onClick={() => openProfileModal('create')}
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                >
+                  <i className="fas fa-plus mr-2"></i>
+                  Nuevo Perfil
+                </button>
+              </div>
             </div>
-          )}
+
+            {/* Filters */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <input 
+                    type="text" 
+                    value={profileFilters.search}
+                    onChange={(e) => setProfileFilters({...profileFilters, search: e.target.value})}
+                    placeholder="Buscar posición o cliente..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <select
+                    value={profileFilters.status}
+                    onChange={(e) => setProfileFilters({...profileFilters, status: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="all">Todos los estados</option>
+                    <option value="draft">Borrador</option>
+                    <option value="open">Abierto</option>
+                    <option value="in_progress">En Proceso</option>
+                    <option value="on_hold">En Espera</option>
+                    <option value="filled">Cubierto</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <select
+                    value={profileFilters.priority}
+                    onChange={(e) => setProfileFilters({...profileFilters, priority: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="all">Todas las prioridades</option>
+                    <option value="low">Baja</option>
+                    <option value="medium">Media</option>
+                    <option value="high">Alta</option>
+                    <option value="urgent">Urgente</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <button
+                    onClick={refreshData}
+                    disabled={loading}
+                    className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
+                  >
+                    <i className={`fas fa-sync mr-2 ${loading ? 'animate-spin' : ''}`}></i>
+                    Actualizar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Profiles Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Posición
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Cliente
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ubicación
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Prioridad
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Estado
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Creado
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center">
+                          <div className="flex justify-center items-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                            <span className="ml-3 text-gray-600">Cargando perfiles...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredProfiles.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                          {profileFilters.search || profileFilters.status !== 'all' || profileFilters.priority !== 'all'
+                            ? 'No se encontraron perfiles con los filtros aplicados'
+                            : 'No hay perfiles registrados. Crea el primero usando el botón "Nuevo Perfil"'
+                          }
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProfiles.map((profile) => (
+                        <tr key={profile.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-semibold text-sm">
+                                  <i className="fas fa-briefcase"></i>
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {profile.position_title || 'Sin título'}
+                                </div>
+                                {profile.department && (
+                                  <div className="text-xs text-gray-500">
+                                    {profile.department}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {profile.client_name || 'N/A'}
+                            </div>
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {profile.location || 'N/A'}
+                            </div>
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPriorityBadgeClass(profile.priority)}`}>
+                              {getPriorityDisplay(profile.priority)}
+                            </span>
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getProfileStatusBadgeClass(profile.status)}`}>
+                              {getProfileStatusDisplay(profile.status)}
+                            </span>
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {profile.created_at ? new Date(profile.created_at).toLocaleDateString('es-MX') : 'N/A'}
+                          </td>
+                          
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end space-x-2">
+                              <button
+                                onClick={() => openProfileModal('edit', profile)}
+                                className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Editar"
+                              >
+                                <i className="fas fa-edit"></i>
+                              </button>
+                              
+                              <button
+                                onClick={() => deleteProfile(profile)}
+                                className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Eliminar"
+                              >
+                                <i className="fas fa-trash"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination Info */}
+              <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
+                <div className="text-sm text-gray-700">
+                  Mostrando <span className="font-medium">{filteredProfiles.length}</span> de{' '}
+                  <span className="font-medium">{profiles.length}</span> perfiles
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
           {currentView === 'candidates' && (
           <div className="space-y-6">
@@ -2344,6 +2788,380 @@ const getCompanySizeDisplay = (size: string) => {
                       <>
                         <i className="fas fa-save mr-2"></i>
                         {modalMode === 'create' ? 'Crear Cliente' : 'Guardar Cambios'}
+                      </>
+                    )}
+                    
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* PROFILE MODAL */}
+        {/* ============================================================ */}
+        {showProfileModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex items-center justify-between rounded-t-xl sticky top-0 z-10">
+                <h3 className="text-xl font-semibold text-white flex items-center">
+                  <i className={`fas fa-${modalMode === 'create' ? 'plus' : 'edit'} mr-3`}></i>
+                  {modalMode === 'create' ? 'Crear Nuevo Perfil' : 'Editar Perfil'}
+                </h3>
+                <button 
+                  onClick={closeProfileModal}
+                  className="text-white hover:text-gray-200 transition-colors"
+                >
+                  <i className="fas fa-times text-2xl"></i>
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <form onSubmit={handleProfileSubmit} className="p-6">
+                <div className="space-y-6">
+                  
+                  {/* Información Básica */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <i className="fas fa-info-circle text-indigo-600 mr-2"></i>
+                      Información Básica
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      {/* Cliente */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Cliente <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                        value={profileForm.client}
+                        onChange={(e) => setProfileForm({...profileForm, client: parseInt(e.target.value) || 0})}
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      >
+                        <option value="0">Seleccionar cliente...</option>
+                        {clients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.company_name || client.name}
+                          </option>
+                        ))}
+                      </select>
+                      </div>
+
+                      {/* Título de Posición */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Título de la Posición <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={profileForm.position_title}
+                          onChange={(e) => setProfileForm({...profileForm, position_title: e.target.value})}
+                          required
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="Ej: Desarrollador Full Stack Senior"
+                        />
+                      </div>
+
+                      {/* Departamento y Ubicación */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Departamento
+                          </label>
+                          <input
+                            type="text"
+                            value={profileForm.department}
+                            onChange={(e) => setProfileForm({...profileForm, department: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="Ej: Tecnología"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Ubicación
+                          </label>
+                          <input
+                            type="text"
+                            value={profileForm.location}
+                            onChange={(e) => setProfileForm({...profileForm, location: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="Ej: Ciudad de México (Remoto)"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Tipo de Empleo y Servicio */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Tipo de Empleo
+                          </label>
+                          <select
+                            value={profileForm.employment_type}
+                            onChange={(e) => setProfileForm({...profileForm, employment_type: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          >
+                            <option value="full_time">Tiempo Completo</option>
+                            <option value="part_time">Medio Tiempo</option>
+                            <option value="contract">Contrato</option>
+                            <option value="temporary">Temporal</option>
+                            <option value="internship">Pasantía</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Tipo de Servicio
+                          </label>
+                          <select
+                            value={profileForm.service_type}
+                            onChange={(e) => setProfileForm({...profileForm, service_type: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          >
+                            <option value="contingency">Contingencia</option>
+                            <option value="retained">Retainer</option>
+                            <option value="exclusive">Exclusivo</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Rango Salarial */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Salario Mínimo (MXN/mes)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={profileForm.salary_min}
+                            onChange={(e) => setProfileForm({...profileForm, salary_min: parseInt(e.target.value) || 0})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="30000"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Salario Máximo (MXN/mes)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={profileForm.salary_max}
+                            onChange={(e) => setProfileForm({...profileForm, salary_max: parseInt(e.target.value) || 0})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="50000"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Estado y Prioridad */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Estado
+                          </label>
+                          <select
+                            value={profileForm.status}
+                            onChange={(e) => setProfileForm({...profileForm, status: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          >
+                            <option value="draft">Borrador</option>
+                            <option value="open">Abierto</option>
+                            <option value="in_progress">En Proceso</option>
+                            <option value="on_hold">En Espera</option>
+                            <option value="filled">Cubierto</option>
+                            <option value="cancelled">Cancelado</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Prioridad
+                          </label>
+                          <select
+                            value={profileForm.priority}
+                            onChange={(e) => setProfileForm({...profileForm, priority: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          >
+                            <option value="low">Baja</option>
+                            <option value="medium">Media</option>
+                            <option value="high">Alta</option>
+                            <option value="urgent">Urgente</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Requisitos */}
+                  <div className="border-t pt-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <i className="fas fa-clipboard-check text-indigo-600 mr-2"></i>
+                      Requisitos
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      {/* Experiencia y Educación */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Años de Experiencia Requeridos
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="50"
+                            value={profileForm.required_experience}
+                            onChange={(e) => setProfileForm({...profileForm, required_experience: parseInt(e.target.value) || 0})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder="5"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Nivel Educativo Requerido
+                          </label>
+                          <select
+                            value={profileForm.required_education}
+                            onChange={(e) => setProfileForm({...profileForm, required_education: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          >
+                            <option value="">Seleccionar...</option>
+                            <option value="high_school">Preparatoria</option>
+                            <option value="associate">Técnico/Asociado</option>
+                            <option value="bachelor">Licenciatura</option>
+                            <option value="master">Maestría</option>
+                            <option value="doctorate">Doctorado</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Fecha Límite */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Fecha Límite para Cubrir
+                        </label>
+                        <input
+                          type="date"
+                          value={profileForm.deadline_date}
+                          onChange={(e) => setProfileForm({...profileForm, deadline_date: e.target.value})}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Descripciones */}
+                  <div className="border-t pt-6">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <i className="fas fa-file-alt text-indigo-600 mr-2"></i>
+                      Descripciones Detalladas
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      {/* Descripción del Trabajo */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Descripción del Puesto
+                        </label>
+                        <textarea
+                          value={profileForm.job_description}
+                          onChange={(e) => setProfileForm({...profileForm, job_description: e.target.value})}
+                          rows={4}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="Descripción general del puesto y sus objetivos..."
+                        />
+                      </div>
+
+                      {/* Requisitos */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Requisitos Específicos
+                        </label>
+                        <textarea
+                          value={profileForm.requirements}
+                          onChange={(e) => setProfileForm({...profileForm, requirements: e.target.value})}
+                          rows={4}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="Habilidades técnicas, conocimientos específicos, certificaciones..."
+                        />
+                      </div>
+
+                      {/* Responsabilidades */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Responsabilidades Principales
+                        </label>
+                        <textarea
+                          value={profileForm.responsibilities}
+                          onChange={(e) => setProfileForm({...profileForm, responsibilities: e.target.value})}
+                          rows={4}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="Tareas y responsabilidades diarias del puesto..."
+                        />
+                      </div>
+
+                      {/* Beneficios */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Beneficios Ofrecidos
+                        </label>
+                        <textarea
+                          value={profileForm.benefits}
+                          onChange={(e) => setProfileForm({...profileForm, benefits: e.target.value})}
+                          rows={3}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="Prestaciones, beneficios, bonos, etc..."
+                        />
+                      </div>
+
+                      {/* Notas Internas */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Notas Internas
+                        </label>
+                        <textarea
+                          value={profileForm.notes}
+                          onChange={(e) => setProfileForm({...profileForm, notes: e.target.value})}
+                          rows={3}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          placeholder="Notas privadas para uso interno del equipo..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex justify-end space-x-3 mt-6 pt-6 border-t sticky bottom-0 bg-white">
+                  <button
+                    type="button"
+                    onClick={closeProfileModal}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg hover:from-indigo-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin mr-2"></i>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-save mr-2"></i>
+                        {modalMode === 'create' ? 'Crear Perfil' : 'Guardar Cambios'}
                       </>
                     )}
                   </button>
