@@ -263,6 +263,16 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+  if (currentView === 'candidates' && !loading) {
+    loadCandidatesData();
+  }
+}, [currentView]);useEffect(() => {
+  if (currentView === 'candidates' && !loading) {
+    loadCandidatesData();
+  }
+}, [currentView]);
+
   // Cargar datos de Celery cuando la vista sea "tasks"
   useEffect(() => {
     if (currentView === "tasks") {
@@ -281,6 +291,8 @@ export default function Page() {
       loadContactsData();
     }
   }, [currentView]);
+
+  
 
   function setupCharts() {
     const anyChart = (window as any).Chart;
@@ -387,10 +399,7 @@ export default function Page() {
       },
     ]);
 
-    setCandidates([
-      { id: 1, name: "Juan Pérez", email: "juan.perez@email.com", phone: "+52 555 123 4567", position: "Desarrollador Senior", experience: "5 años", score: 95, status: "approved", uploadedAt: "Hace 2 horas" },
-      { id: 2, name: "María González", email: "maria.gonzalez@email.com", phone: "+52 555 987 6543", position: "Product Manager", experience: "3 años", score: 88, status: "in-process", uploadedAt: "Hace 1 día" },
-    ]);
+    await loadCandidatesData();
 
     setClients([
       { id: 1, name: "TechCorp", industry: "Tecnología", contact: "María González", email: "maria@techcorp.com", phone: "+52 555 987 6543", status: "active", activeProcesses: 5, totalCandidates: 45, lastActivity: "Hace 2 días" },
@@ -545,6 +554,28 @@ export default function Page() {
       error("Error al actualizar datos de tareas");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCandidatesData = async () => {
+    try {
+      console.log('🔵 Cargando candidatos del director...');
+      const response = await apiClient.getCandidates({
+        search: searchQuery,
+      });
+      console.log('🟢 Candidatos recibidos:', response);
+      setCandidates(response.results || response);
+    } catch (error: any) {
+      console.error('❌ Error loading candidates:', error);
+      if (error?.status === 401) {
+        warning('Sesión expirada. Redirigiendo al login...');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        router.push('/auth');
+      } else {
+        error('Error al cargar candidatos');
+      }
     }
   };
 
@@ -1103,7 +1134,7 @@ export default function Page() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-600">Candidatos Finalizados</p>
-                      <p className="text-3xl font-bold text-gray-900 mt-2">{stats.completedCandidates}</p>
+                      <p className="text-3xl font-bold text-gray-900 mt-2">{candidates.length}</p>
                       <div className="flex items-center mt-2 text-sm">
                         <span className="text-green-600 flex items-center">
                           <i className="fas fa-arrow-up mr-1" /> +8%
