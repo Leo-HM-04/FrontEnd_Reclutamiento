@@ -1,5 +1,6 @@
 /**
  * API client utilities for the recruitment system
+ * Actualizado con funciones completas de Candidatos, Aplicaciones, Documentos y Notas
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -63,12 +64,11 @@ class ApiClient {
       };
     }
 
-    // AGREGAR ESTE LOG TEMPORAL
-  console.log('🌐 API Request:', {
-    url,
-    method: options.method || 'GET',
-    hasToken: !!token
-  });
+    console.log('🌐 API Request:', {
+      url,
+      method: options.method || 'GET',
+      hasToken: !!token
+    });
 
     try {
       const response = await fetch(url, config);
@@ -95,6 +95,8 @@ class ApiClient {
       } as ApiError;
     }
   }
+
+  // ====== AUTHENTICATION ======
 
   /**
    * Login user with email and password
@@ -124,10 +126,21 @@ class ApiClient {
   }
 
   /**
-   * Get candidates list
+   * Logout user (clear tokens)
+   */
+  logout(): void {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+  }
+
+  // ====== CANDIDATES ENDPOINTS ======
+
+  /**
+   * Get candidates list with optional filters
    */
   async getCandidates(params?: any) {
-    // Filtrar parámetros vacíos
     if (params) {
       const filteredParams: any = {};
       Object.keys(params).forEach(key => {
@@ -182,6 +195,8 @@ class ApiClient {
     });
   }
 
+  // ====== APPLICATIONS (CANDIDATEPROFILE) ENDPOINTS ======
+
   /**
    * Get candidate applications
    */
@@ -190,6 +205,13 @@ class ApiClient {
       ? `/api/candidates/applications/?candidate=${candidateId}` 
       : '/api/candidates/applications/';
     return this.makeRequest(endpoint);
+  }
+
+  /**
+   * Get application by ID
+   */
+  async getCandidateApplication(id: number) {
+    return this.makeRequest(`/api/candidates/applications/${id}/`);
   }
 
   /**
@@ -203,6 +225,27 @@ class ApiClient {
   }
 
   /**
+   * Update candidate application
+   */
+  async updateCandidateApplication(id: number, applicationData: any) {
+    return this.makeRequest(`/api/candidates/applications/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(applicationData),
+    });
+  }
+
+  /**
+   * Delete candidate application
+   */
+  async deleteCandidateApplication(id: number) {
+    return this.makeRequest(`/api/candidates/applications/${id}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ====== DOCUMENTS ENDPOINTS ======
+
+  /**
    * Get candidate documents
    */
   async getCandidateDocuments(candidateId?: number) {
@@ -213,15 +256,47 @@ class ApiClient {
   }
 
   /**
+   * Get document by ID
+   */
+  async getCandidateDocument(id: number) {
+    return this.makeRequest(`/api/candidates/documents/${id}/`);
+  }
+
+  /**
    * Upload candidate document
    */
   async uploadCandidateDocument(formData: FormData) {
-    return this.makeRequest('/api/candidates/documents/', {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${this.baseURL}/api/candidates/documents/`, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
       body: formData,
-      headers: {}, // Don't set Content-Type for FormData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw {
+        message: errorData.message || 'Error al subir documento',
+        status: response.status,
+        details: errorData,
+      } as ApiError;
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Delete candidate document
+   */
+  async deleteCandidateDocument(id: number) {
+    return this.makeRequest(`/api/candidates/documents/${id}/`, {
+      method: 'DELETE',
     });
   }
+
+  // ====== NOTES ENDPOINTS ======
 
   /**
    * Get candidate notes
@@ -231,6 +306,13 @@ class ApiClient {
       ? `/api/candidates/notes/?candidate=${candidateId}` 
       : '/api/candidates/notes/';
     return this.makeRequest(endpoint);
+  }
+
+  /**
+   * Get note by ID
+   */
+  async getCandidateNote(id: number) {
+    return this.makeRequest(`/api/candidates/notes/${id}/`);
   }
 
   /**
@@ -244,14 +326,25 @@ class ApiClient {
   }
 
   /**
-   * Logout user (clear tokens)
+   * Update candidate note
    */
-  logout(): void {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userRole');
+  async updateCandidateNote(id: number, noteData: any) {
+    return this.makeRequest(`/api/candidates/notes/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(noteData),
+    });
   }
+
+  /**
+   * Delete candidate note
+   */
+  async deleteCandidateNote(id: number) {
+    return this.makeRequest(`/api/candidates/notes/${id}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ====== CELERY TASKS ======
 
   /**
    * Get Celery tasks status and statistics
@@ -273,7 +366,6 @@ class ApiClient {
    * Get all clients
    */
   async getClients(params?: Record<string, string>) {
-    // No enviar parámetros si están vacíos o son 'all'
     const cleanParams: Record<string, string> = {};
     
     if (params) {
@@ -328,8 +420,6 @@ class ApiClient {
     });
   }
 
-
-
   // ====== CONTACTS ENDPOINTS ======
   
   /**
@@ -382,7 +472,6 @@ class ApiClient {
    * Get all profiles
    */
   async getProfiles(params?: Record<string, string>) {
-    // No enviar parámetros si están vacíos o son 'all'
     const cleanParams: Record<string, string> = {};
     
     if (params) {
@@ -411,187 +500,177 @@ class ApiClient {
     return this.makeRequest<any>(`/api/profiles/profiles/${id}/`);
   }
 
-  
+  /**
+   * Create new profile
+   */
+  async createProfile(profileData: Partial<Profile>): Promise<Profile> {
+    return this.makeRequest<Profile>('/api/profiles/profiles/', {
+      method: 'POST',
+      body: JSON.stringify(profileData),
+    });
+  }
+
+  /**
+   * Update profile
+   */
+  async updateProfile(id: number, profileData: Partial<Profile>): Promise<Profile> {
+    return this.makeRequest<Profile>(`/api/profiles/profiles/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(profileData),
+    });
+  }
+
+  /**
+   * Delete profile
+   */
+  async deleteProfile(id: number): Promise<void> {
+    return this.makeRequest<void>(`/api/profiles/profiles/${id}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ====== USERS MANAGEMENT ======
+
+  /**
+   * Get all users with optional filters
+   */
+  async getUsers(params?: Record<string, string>): Promise<any> {
+    const queryString = params ? `?${new URLSearchParams(params)}` : '';
+    return this.makeRequest<any>(`/api/accounts/users/${queryString}`);
+  }
+
+  /**
+   * Get single user by ID
+   */
+  async getUser(id: number): Promise<User> {
+    return this.makeRequest<User>(`/api/accounts/users/${id}/`);
+  }
+
+  /**
+   * Create new user
+   */
+  async createUser(userData: CreateUserData): Promise<User> {
+    return this.makeRequest<User>('/api/accounts/users/', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  /**
+   * Update user
+   */
+  async updateUser(id: number, userData: UpdateUserData): Promise<User> {
+    return this.makeRequest<User>(`/api/accounts/users/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  /**
+   * Delete user (soft delete - set inactive)
+   */
+  async deleteUser(id: number): Promise<void> {
+    return this.makeRequest<void>(`/api/accounts/users/${id}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Toggle user active status
+   */
+  async toggleUserStatus(id: number, isActive: boolean): Promise<User> {
+    return this.updateUser(id, { is_active: isActive });
+  }
+
+  /**
+   * Get user activities
+   */
+  async getUserActivities(params?: Record<string, any>): Promise<any> {
+    const queryParams = params ? `?${new URLSearchParams(params)}` : '';
+    return this.makeRequest<any>(`/api/accounts/activities/${queryParams}`);
+  }
+
+  /**
+   * Get activities for specific user
+   */
+  async getUserActivityById(userId: number): Promise<UserActivity[]> {
+    return this.makeRequest<UserActivity[]>(`/api/accounts/users/${userId}/activities/`);
+  }
+
+  /**
+   * Get system statistics
+   */
+  async getSystemStats(): Promise<any> {
+    return this.makeRequest<any>('/api/accounts/users/stats/');
+  }
 
   // ====== ADMIN DASHBOARD ======
 
-/**
- * Get admin dashboard statistics
- */
-async getAdminDashboard(): Promise<AdminDashboardStats> {
-  try {
-    // Cargar datos en paralelo
-    const [users, clients, profiles, candidates, activities]: [any, any, any, any, any] = await Promise.all([
-      this.getUsers(),
-      this.getClients(),
-      this.getProfiles(),
-      this.getCandidates(),
-      this.getUserActivities({ limit: 10 })
-    ]);
+  /**
+   * Get admin dashboard statistics
+   */
+  async getAdminDashboard(): Promise<AdminDashboardStats> {
+    try {
+      const [users, clients, profiles, candidates, activities]: [any, any, any, any, any] = await Promise.all([
+        this.getUsers(),
+        this.getClients(),
+        this.getProfiles(),
+        this.getCandidates(),
+        this.getUserActivities({ limit: 10 })
+      ]);
 
-    // Procesar usuarios
-    const usersList = users.results || users;
-    const usersStats = {
-      total: usersList.length,
-      active: usersList.filter((u: User) => u.is_active).length,
-      inactive: usersList.filter((u: User) => !u.is_active).length,
-      by_role: {
-        admin: usersList.filter((u: User) => u.role === 'admin').length,
-        director: usersList.filter((u: User) => u.role === 'director').length,
-        supervisor: usersList.filter((u: User) => u.role === 'supervisor').length,
-      }
-    };
+      const usersList = users.results || users;
+      const usersStats = {
+        total: usersList.length,
+        active: usersList.filter((u: User) => u.is_active).length,
+        inactive: usersList.filter((u: User) => !u.is_active).length,
+        by_role: {
+          admin: usersList.filter((u: User) => u.role === 'admin').length,
+          director: usersList.filter((u: User) => u.role === 'director').length,
+          supervisor: usersList.filter((u: User) => u.role === 'supervisor').length,
+        }
+      };
 
-    // Procesar clientes
-    const clientsList = clients.results || clients;
-    const clientsStats = {
-      total: clientsList.length,
-      active: clientsList.filter((c: Client) => c.is_active).length,
-      inactive: clientsList.filter((c: Client) => !c.is_active).length,
-    };
+      const clientsList = clients.results || clients;
+      const clientsStats = {
+        total: clientsList.length,
+        active: clientsList.filter((c: Client) => c.is_active).length,
+        inactive: clientsList.filter((c: Client) => !c.is_active).length,
+      };
 
-    // Procesar perfiles
-    const profilesList = profiles.results || profiles;
-    const profilesStats = {
-      total: profilesList.length,
-      by_status: profilesList.reduce((acc: Record<string, number>, p: Profile) => {
-        acc[p.status] = (acc[p.status] || 0) + 1;
-        return acc;
-      }, {})
-    };
+      const profilesList = profiles.results || profiles;
+      const profilesStats = {
+        total: profilesList.length,
+        by_status: profilesList.reduce((acc: Record<string, number>, p: Profile) => {
+          acc[p.status] = (acc[p.status] || 0) + 1;
+          return acc;
+        }, {})
+      };
 
-    // Procesar candidatos
-    const candidatesList = candidates.results || candidates;
-    const candidatesStats = {
-      total: candidatesList.length,
-      by_status: candidatesList.reduce((acc: Record<string, number>, c: Candidate) => {
-        acc[c.status] = (acc[c.status] || 0) + 1;
-        return acc;
-      }, {})
-    };
+      const candidatesList = candidates.results || candidates;
+      const candidatesStats = {
+        total: candidatesList.length,
+        by_status: candidatesList.reduce((acc: Record<string, number>, c: Candidate) => {
+          acc[c.status] = (acc[c.status] || 0) + 1;
+          return acc;
+        }, {})
+      };
 
-    return {
-      users: usersStats,
-      clients: clientsStats,
-      profiles: profilesStats,
-      candidates: candidatesStats,
-      recent_activities: activities.results || activities
-    };
-  } catch (error) {
-    console.error('Error loading admin dashboard:', error);
-    throw error;
+      return {
+        users: usersStats,
+        clients: clientsStats,
+        profiles: profilesStats,
+        candidates: candidatesStats,
+        recent_activities: activities.results || activities
+      };
+    } catch (error) {
+      console.error('Error loading admin dashboard:', error);
+      throw error;
+    }
   }
 }
 
-// ====== USERS MANAGEMENT ======
-
-/**
- * Get all users with optional filters
- */
-async getUsers(params?: Record<string, string>): Promise<any> {
-  const queryString = params ? `?${new URLSearchParams(params)}` : '';
-  return this.makeRequest<any>(`/api/accounts/users/${queryString}`);
-}
-
-/**
- * Get single user by ID
- */
-async getUser(id: number): Promise<User> {
-  return this.makeRequest<User>(`/api/accounts/users/${id}/`);
-}
-
-/**
- * Create new user
- */
-async createUser(userData: CreateUserData): Promise<User> {
-  return this.makeRequest<User>('/api/accounts/users/', {
-    method: 'POST',
-    body: JSON.stringify(userData),
-  });
-}
-
-/**
- * Create new profile
- */
-async createProfile(profileData: Partial<Profile>): Promise<Profile> {
-  return this.makeRequest<Profile>('/api/profiles/profiles/', {
-    method: 'POST',
-    body: JSON.stringify(profileData),
-  });
-}
-
-/**
- * Update profile
- */
-async updateProfile(id: number, profileData: Partial<Profile>): Promise<Profile> {
-  return this.makeRequest<Profile>(`/api/profiles/profiles/${id}/`, {
-    method: 'PATCH',
-    body: JSON.stringify(profileData),
-  });
-}
-
-/**
- * Delete profile
- */
-async deleteProfile(id: number): Promise<void> {
-  return this.makeRequest<void>(`/api/profiles/profiles/${id}/`, {
-    method: 'DELETE',
-  });
-}
-
-/**
- * Update user
- */
-async updateUser(id: number, userData: UpdateUserData): Promise<User> {
-  return this.makeRequest<User>(`/api/accounts/users/${id}/`, {
-    method: 'PATCH',
-    body: JSON.stringify(userData),
-  });
-}
-
-/**
- * Delete user (soft delete - set inactive)
- */
-async deleteUser(id: number): Promise<void> {
-  return this.makeRequest<void>(`/api/accounts/users/${id}/`, {
-    method: 'DELETE',
-  });
-}
-
-/**
- * Toggle user active status
- */
-async toggleUserStatus(id: number, isActive: boolean): Promise<User> {
-  return this.updateUser(id, { is_active: isActive });
-}
-
-/**
- * Get user activities
- */
-async getUserActivities(params?: Record<string, any>): Promise<any> {
-  const queryParams = params ? `?${new URLSearchParams(params)}` : '';
-  return this.makeRequest<any>(`/api/accounts/activities/${queryParams}`);
-}
-
-/**
- * Get activities for specific user
- */
-async getUserActivityById(userId: number): Promise<UserActivity[]> {
-  return this.makeRequest<UserActivity[]>(`/api/accounts/users/${userId}/activities/`);
-}
-
-// ====== SYSTEM STATS ======
-
-/**
- * Get system statistics
- */
-async getSystemStats(): Promise<any> {
-  return this.makeRequest<any>('/api/accounts/users/stats/');
-}
-
-}
-
-
+// ====== TYPE DEFINITIONS ======
 
 export interface User {
   id: number;
@@ -607,7 +686,6 @@ export interface User {
   created_at: string;
   updated_at: string;
 }
-
 
 export interface UserActivity {
   id: number;
@@ -708,8 +786,6 @@ export interface CreateUserData {
   phone?: string;
 }
 
-
-
 export interface UpdateUserData {
   email?: string;
   first_name?: string;
@@ -723,9 +799,4 @@ export interface UpdateUserData {
 export const apiClient = new ApiClient();
 
 // Export types for use in components
-export type { LoginCredentials, LoginResponse, ApiError,  };
-
-
-
-
-
+export type { LoginCredentials, LoginResponse, ApiError };

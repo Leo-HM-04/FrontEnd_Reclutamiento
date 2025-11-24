@@ -3,141 +3,228 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faUsers, 
-  faPlus, 
-  faSearch, 
+  faStickyNote,
+  faPlus,
+  faSearch,
   faFilter,
-  faEye,
   faEdit,
   faTrash,
-  faFileAlt,
-  faPhoneAlt,
-  faEnvelope,
-  faMapMarkerAlt,
-  faBriefcase,
-  faGraduationCap,
+  faUser,
   faCalendarAlt,
-  faDollarSign,
-  faLanguage,
-  faCertificate,
+  faTimes,
+  faSave,
   faSort,
   faSortUp,
-  faSortDown
+  faSortDown,
+  faStar as faStarSolid,
+  faExclamationCircle
 } from '@fortawesome/free-solid-svg-icons';
+import { faStar as faStarRegular } from '@fortawesome/free-regular-svg-icons';
 import { apiClient } from '@/lib/api';
-import CandidateFormModal from '@/components/CandidateFormModal';
-import CandidateDetailModal from '@/components/CandidateDetailModal';
+
+interface Note {
+  id: number;
+  candidate: number;
+  note: string;
+  is_important: boolean;
+  created_by: number;
+  created_by_name: string;
+  created_at: string;
+}
 
 interface Candidate {
   id: number;
   first_name: string;
   last_name: string;
   email: string;
-  phone: string;
-  city: string;
-  state: string;
-  current_position: string;
-  current_company: string;
-  years_of_experience: number;
-  education_level: string;
-  status: string;
-  created_at: string;
-  skills: string[];
-  salary_expectation_min?: number;
-  salary_expectation_max?: number;
 }
 
-const STATUS_OPTIONS = [
-  { value: 'new', label: 'Nuevo', color: 'bg-blue-100 text-blue-800' },
-  { value: 'screening', label: 'En Revisión', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'qualified', label: 'Calificado', color: 'bg-green-100 text-green-800' },
-  { value: 'interview', label: 'En Entrevista', color: 'bg-purple-100 text-purple-800' },
-  { value: 'offer', label: 'Oferta Extendida', color: 'bg-orange-100 text-orange-800' },
-  { value: 'hired', label: 'Contratado', color: 'bg-green-100 text-green-800' },
-  { value: 'rejected', label: 'Rechazado', color: 'bg-red-100 text-red-800' },
-  { value: 'withdrawn', label: 'Retirado', color: 'bg-gray-100 text-gray-800' },
-];
-
-export default function CandidatesPage() {
+export default function NotesPage() {
+  const [notes, setNotes] = useState<Note[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+  
+  // Filtros
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [candidateFilter, setCandidateFilter] = useState('');
+  const [importantFilter, setImportantFilter] = useState<'all' | 'important' | 'normal'>('all');
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
+  // Modales
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  
+  // Toast
+  const [toast, setToast] = useState<{show: boolean, message: string, type: 'success' | 'error'}>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
 
   useEffect(() => {
+    fetchNotes();
     fetchCandidates();
   }, []);
 
-  const fetchCandidates = async () => {
+  const fetchNotes = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.getCandidates();
-      console.log('Respuesta de candidatos:', response);
+      console.log('🔵 Cargando notas...');
       
-      // El backend devuelve los datos en diferentes formatos dependiendo de la paginación
-      const candidatesList = (response as any)?.results || (response as any)?.data || [];
-      console.log('Lista de candidatos:', candidatesList);
+      const response = await apiClient.getCandidateNotes();
+      console.log('🟢 Respuesta del servidor:', response);
       
-      setCandidates(candidatesList);
-    } catch (error) {
-      console.error('Error fetching candidates:', error);
-      setCandidates([]);
+      const notesData = (response as any)?.results || (response as any) || [];
+      console.log('✅ Notas procesadas:', notesData);
+      
+      setNotes(notesData);
+    } catch (error: any) {
+      console.error('❌ Error fetching notes:', error);
+      showToast(`Error al cargar notas: ${error.message || 'Error desconocido'}`, 'error');
+      setNotes([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusConfig = (status: string) => {
-    return STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
+  const fetchCandidates = async () => {
+    try {
+      setLoadingCandidates(true);
+      const response = await apiClient.getCandidates();
+      const candidatesData = (response as any)?.results || (response as any) || [];
+      setCandidates(candidatesData);
+    } catch (error) {
+      console.error('❌ Error loading candidates:', error);
+    } finally {
+      setLoadingCandidates(false);
+    }
   };
 
-  const formatSalary = (min?: number, max?: number) => {
-    if (!min && !max) return 'No especificado';
-    if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
-    if (min) return `Desde $${min.toLocaleString()}`;
-    if (max) return `Hasta $${max.toLocaleString()}`;
-    return 'No especificado';
+  const handleToggleImportant = async (note: Note) => {
+    try {
+      console.log('⭐ Cambiando importancia de nota:', note.id);
+      
+      await apiClient.updateCandidateNote(note.id, {
+        candidate: note.candidate,
+        note: note.note,
+        is_important: !note.is_important
+      });
+      
+      // Actualizar localmente
+      setNotes(notes.map(n => 
+        n.id === note.id 
+          ? { ...n, is_important: !n.is_important }
+          : n
+      ));
+      
+      showToast(
+        note.is_important 
+          ? 'Nota marcada como normal' 
+          : 'Nota marcada como importante',
+        'success'
+      );
+    } catch (error: any) {
+      console.error('❌ Error al actualizar:', error);
+      showToast(`Error al actualizar: ${error.message || 'Error desconocido'}`, 'error');
+    }
   };
 
-  const filteredCandidates = candidates.filter(candidate => {
-    const matchesSearch = searchTerm === '' || 
-      `${candidate.first_name} ${candidate.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.current_position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidate.current_company.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === '' || candidate.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta nota?')) {
+      return;
+    }
 
-  const sortedCandidates = [...filteredCandidates].sort((a, b) => {
-    let aValue: any = a[sortField as keyof Candidate];
-    let bValue: any = b[sortField as keyof Candidate];
-    
-    // Handle undefined values
-    if (aValue === undefined) aValue = '';
-    if (bValue === undefined) bValue = '';
-    
-    if (typeof aValue === 'string') aValue = aValue.toLowerCase();
-    if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-    
-    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
+    try {
+      console.log('🗑️ Eliminando nota:', id);
+      await apiClient.deleteCandidateNote(id);
+      
+      setNotes(notes.filter(note => note.id !== id));
+      showToast('Nota eliminada exitosamente', 'success');
+    } catch (error: any) {
+      console.error('❌ Error al eliminar:', error);
+      showToast(`Error al eliminar: ${error.message || 'Error desconocido'}`, 'error');
+    }
+  };
+
+  const handleEdit = (note: Note) => {
+    setEditingNote(note);
+    setShowEditModal(true);
+  };
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3000);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-MX', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getCandidateName = (candidateId: number) => {
+    const candidate = candidates.find(c => c.id === candidateId);
+    return candidate ? `${candidate.first_name} ${candidate.last_name}` : `ID: ${candidateId}`;
+  };
+
+  // Filtrado y ordenamiento
+  const filteredAndSortedNotes = React.useMemo(() => {
+    let filtered = [...notes];
+
+    // Filtrar por búsqueda
+    if (searchTerm) {
+      filtered = filtered.filter(note => 
+        note.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        note.created_by_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filtrar por candidato
+    if (candidateFilter) {
+      filtered = filtered.filter(note => note.candidate === parseInt(candidateFilter));
+    }
+
+    // Filtrar por importancia
+    if (importantFilter === 'important') {
+      filtered = filtered.filter(note => note.is_important);
+    } else if (importantFilter === 'normal') {
+      filtered = filtered.filter(note => !note.is_important);
+    }
+
+    // Ordenar
+    filtered.sort((a, b) => {
+      let aVal: any = a[sortField as keyof Note];
+      let bVal: any = b[sortField as keyof Note];
+
+      if (aVal === null || aVal === undefined) aVal = '';
+      if (bVal === null || bVal === undefined) bVal = '';
+
+      if (sortDirection === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+    return filtered;
+  }, [notes, searchTerm, candidateFilter, importantFilter, sortField, sortDirection]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection('desc');
     }
   };
 
@@ -146,270 +233,479 @@ export default function CandidatesPage() {
     return sortDirection === 'asc' ? faSortUp : faSortDown;
   };
 
-  const handleSuccess = (message: string) => {
-    // Aquí podrías mostrar un toast notification
-    console.log(message);
-    alert(message);
-  };
-
-  const handleDeleteCandidate = async (candidateId: number) => {
-    if (confirm('¿Estás seguro de que deseas eliminar este candidato?')) {
-      try {
-        await apiClient.deleteCandidate(candidateId);
-        await fetchCandidates();
-      } catch (error) {
-        console.error('Error deleting candidate:', error);
-      }
-    }
-  };
-
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Action Bar */}
-      <div className="mb-6">
-        <div className="flex items-center justify-end">
+    <div className="p-6">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg ${
+          toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        } text-white`}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Notas de Candidatos</h1>
+            <p className="text-gray-600 mt-1">Gestiona notas, comentarios y observaciones sobre candidatos</p>
+          </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center transition-colors"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
           >
-            <FontAwesomeIcon icon={faPlus} className="mr-2" />
-            Agregar Candidato
+            <FontAwesomeIcon icon={faPlus} />
+            Nueva Nota
           </button>
         </div>
+      </div>
 
-        {/* Filters and Search */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar candidatos..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <FontAwesomeIcon 
+              icon={faSearch} 
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Buscar en notas..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Candidate Filter */}
+          <select
+            value={candidateFilter}
+            onChange={(e) => setCandidateFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            disabled={loadingCandidates}
+          >
+            <option value="">Todos los candidatos</option>
+            {candidates.map(candidate => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.first_name} {candidate.last_name}
+              </option>
+            ))}
+          </select>
+
+          {/* Important Filter */}
+          <select
+            value={importantFilter}
+            onChange={(e) => setImportantFilter(e.target.value as any)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          >
+            <option value="all">Todas las notas</option>
+            <option value="important">⭐ Solo importantes</option>
+            <option value="normal">📝 Solo normales</option>
+          </select>
+
+          {/* Clear Filters */}
+          {(searchTerm || candidateFilter || importantFilter !== 'all') && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setCandidateFilter('');
+                setImportantFilter('all');
+              }}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Limpiar Filtros
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total</p>
+              <p className="text-2xl font-bold text-gray-900">{notes.length}</p>
             </div>
-
-            {/* Status Filter */}
-            <div className="relative">
-              <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-              >
-                <option value="">Todos los estados</option>
-                {STATUS_OPTIONS.map(status => (
-                  <option key={status.value} value={status.value}>
-                    {status.label}
-                  </option>
-                ))}
-              </select>
+            <div className="p-3 bg-green-100 rounded-lg">
+              <FontAwesomeIcon icon={faStickyNote} className="text-green-600 text-xl" />
             </div>
+          </div>
+        </div>
 
-            {/* Results Count */}
-            <div className="flex items-center justify-end">
-              <span className="text-gray-600">
-                Mostrando {sortedCandidates.length} de {candidates.length} candidatos
-              </span>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Importantes</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {notes.filter(n => n.is_important).length}
+              </p>
+            </div>
+            <div className="p-3 bg-yellow-100 rounded-lg">
+              <FontAwesomeIcon icon={faStarSolid} className="text-yellow-600 text-xl" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Normales</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {notes.filter(n => !n.is_important).length}
+              </p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <FontAwesomeIcon icon={faStickyNote} className="text-blue-600 text-xl" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Hoy</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {notes.filter(n => {
+                  const today = new Date().toDateString();
+                  const noteDate = new Date(n.created_at).toDateString();
+                  return today === noteDate;
+                }).length}
+              </p>
+            </div>
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <FontAwesomeIcon icon={faCalendarAlt} className="text-purple-600 text-xl" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Candidates Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando candidatos...</p>
-          </div>
-        ) : sortedCandidates.length === 0 ? (
-          <div className="p-8 text-center">
-            <FontAwesomeIcon icon={faUsers} className="text-6xl text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron candidatos</h3>
-            <p className="text-gray-600 mb-4">
-              {searchTerm || statusFilter ? 'Intenta ajustar los filtros de búsqueda.' : 'Comienza agregando tu primer candidato.'}
-            </p>
-            {!searchTerm && !statusFilter && (
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
-              >
-                <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                Agregar Primer Candidato
-              </button>
-            )}
-          </div>
-        ) : (
+      {/* Notes List */}
+      {loading ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <p className="mt-4 text-gray-600">Cargando notas...</p>
+        </div>
+      ) : filteredAndSortedNotes.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <FontAwesomeIcon icon={faStickyNote} className="text-gray-300 text-6xl mb-4" />
+          <p className="text-gray-600 text-lg">No se encontraron notas</p>
+          <p className="text-gray-500 mt-2">
+            {searchTerm || candidateFilter || importantFilter !== 'all'
+              ? 'Intenta ajustar los filtros de búsqueda' 
+              : 'Comienza creando una nueva nota'}
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('first_name')}
-                  >
-                    <div className="flex items-center">
-                      Nombre
-                      <FontAwesomeIcon icon={getSortIcon('first_name')} className="ml-1 text-gray-400" />
-                    </div>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-12">
+                    ⭐
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Candidato
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Nota
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Creado por
                   </th>
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('current_position')}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('created_at')}
                   >
-                    <div className="flex items-center">
-                      Posición Actual
-                      <FontAwesomeIcon icon={getSortIcon('current_position')} className="ml-1 text-gray-400" />
+                    <div className="flex items-center gap-2">
+                      Fecha
+                      <FontAwesomeIcon icon={getSortIcon('created_at')} className="text-gray-400" />
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contacto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ubicación
-                  </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('years_of_experience')}
-                  >
-                    <div className="flex items-center">
-                      Experiencia
-                      <FontAwesomeIcon icon={getSortIcon('years_of_experience')} className="ml-1 text-gray-400" />
-                    </div>
-                  </th>
-                  <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('status')}
-                  >
-                    <div className="flex items-center">
-                      Estado
-                      <FontAwesomeIcon icon={getSortIcon('status')} className="ml-1 text-gray-400" />
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedCandidates.map((candidate) => {
-                  const statusConfig = getStatusConfig(candidate.status);
-                  return (
-                    <tr key={candidate.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-linear-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
-                            {candidate.first_name.charAt(0)}{candidate.last_name.charAt(0)}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {candidate.first_name} {candidate.last_name}
-                            </div>
-                            <div className="text-sm text-gray-500">{candidate.education_level}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{candidate.current_position}</div>
-                        <div className="text-sm text-gray-500">{candidate.current_company}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 flex items-center">
-                          <FontAwesomeIcon icon={faEnvelope} className="mr-2 text-gray-400" />
-                          {candidate.email}
-                        </div>
-                        <div className="text-sm text-gray-500 flex items-center mt-1">
-                          <FontAwesomeIcon icon={faPhoneAlt} className="mr-2 text-gray-400" />
-                          {candidate.phone}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 flex items-center">
-                          <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-2 text-gray-400" />
-                          {candidate.city}
-                        </div>
-                        <div className="text-sm text-gray-500">{candidate.state}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{candidate.years_of_experience} años</div>
-                        <div className="text-sm text-gray-500">
-                          {formatSalary(candidate.salary_expectation_min, candidate.salary_expectation_max)}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusConfig.color}`}>
-                          {statusConfig.label}
+                {filteredAndSortedNotes.map((note) => (
+                  <tr key={note.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => handleToggleImportant(note)}
+                        className="text-2xl hover:scale-110 transition-transform"
+                        title={note.is_important ? 'Marcar como normal' : 'Marcar como importante'}
+                      >
+                        <FontAwesomeIcon 
+                          icon={note.is_important ? faStarSolid : faStarRegular} 
+                          className={note.is_important ? 'text-yellow-500' : 'text-gray-300'} 
+                        />
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      #{note.id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <FontAwesomeIcon icon={faUser} className="text-gray-400" />
+                        {getCandidateName(note.candidate)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 max-w-md">
+                      <div className="text-sm text-gray-900">
+                        {note.note.length > 100 
+                          ? note.note.substring(0, 100) + '...' 
+                          : note.note
+                        }
+                      </div>
+                      {note.is_important && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 mt-1">
+                          <FontAwesomeIcon icon={faExclamationCircle} />
+                          Importante
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedCandidate(candidate);
-                              setShowDetailModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded"
-                            title="Ver detalles"
-                          >
-                            <FontAwesomeIcon icon={faEye} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedCandidate(candidate);
-                              setShowAddModal(true);
-                            }}
-                            className="text-green-600 hover:text-green-900 p-1 rounded"
-                            title="Editar"
-                          >
-                            <FontAwesomeIcon icon={faEdit} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCandidate(candidate.id)}
-                            className="text-red-600 hover:text-red-900 p-1 rounded"
-                            title="Eliminar"
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {note.created_by_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <FontAwesomeIcon icon={faCalendarAlt} className="text-gray-400" />
+                        {formatDate(note.created_at)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleEdit(note)}
+                        className="text-green-600 hover:text-green-900 mr-3"
+                        title="Editar"
+                      >
+                        <FontAwesomeIcon icon={faEdit} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(note.id)}
+                        className="text-red-600 hover:text-red-900"
+                        title="Eliminar"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <NoteFormModal
+          candidates={candidates}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={(message: string) => {
+            showToast(message, 'success');
+            fetchNotes();
+          }}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingNote && (
+        <NoteFormModal
+          candidates={candidates}
+          existingNote={editingNote}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingNote(null);
+          }}
+          onSuccess={(message: string) => {
+            showToast(message, 'success');
+            fetchNotes();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ====== NOTE FORM MODAL COMPONENT ======
+
+interface NoteFormModalProps {
+  candidates: Candidate[];
+  existingNote?: Note;
+  onClose: () => void;
+  onSuccess: (message: string) => void;
+}
+
+function NoteFormModal({ candidates, existingNote, onClose, onSuccess }: NoteFormModalProps) {
+  const [formData, setFormData] = useState({
+    candidate: existingNote?.candidate.toString() || '',
+    note: existingNote?.note || '',
+    is_important: existingNote?.is_important || false,
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.candidate || !formData.note.trim()) {
+      alert('Por favor completa todos los campos obligatorios');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      console.log(existingNote ? '💾 Actualizando nota...' : '📝 Creando nota...');
+
+      const noteData = {
+        candidate: parseInt(formData.candidate),
+        note: formData.note.trim(),
+        is_important: formData.is_important
+      };
+
+      if (existingNote) {
+        // Editar nota existente
+        await apiClient.updateCandidateNote(existingNote.id, noteData);
+        console.log('✅ Nota actualizada exitosamente');
+        onSuccess('Nota actualizada exitosamente');
+      } else {
+        // Crear nueva nota
+        await apiClient.createCandidateNote(noteData);
+        console.log('✅ Nota creada exitosamente');
+        onSuccess('Nota creada exitosamente');
+      }
+      
+      onClose();
+    } catch (error: any) {
+      console.error('❌ Error:', error);
+      alert(`Error: ${error.message || 'Error desconocido'}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-white">
+              {existingNote ? 'Editar Nota' : 'Nueva Nota'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
+            >
+              <FontAwesomeIcon icon={faTimes} className="text-xl" />
+            </button>
+          </div>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Candidato */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Candidato <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.candidate}
+              onChange={(e) => setFormData({ ...formData, candidate: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              required
+              disabled={!!existingNote}
+            >
+              <option value="">Seleccionar candidato...</option>
+              {candidates.map(candidate => (
+                <option key={candidate.id} value={candidate.id}>
+                  {candidate.first_name} {candidate.last_name} - {candidate.email}
+                </option>
+              ))}
+            </select>
+            {existingNote && (
+              <p className="text-xs text-gray-500 mt-1">
+                No se puede cambiar el candidato al editar una nota
+              </p>
+            )}
+          </div>
+
+          {/* Nota */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nota <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              rows={6}
+              value={formData.note}
+              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              placeholder="Escribe tus observaciones, comentarios o notas sobre el candidato..."
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.note.length} caracteres
+            </p>
+          </div>
+
+          {/* Marcar como Importante */}
+          <div className="flex items-center gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <input
+              type="checkbox"
+              id="is_important"
+              checked={formData.is_important}
+              onChange={(e) => setFormData({ ...formData, is_important: e.target.checked })}
+              className="w-5 h-5 text-yellow-600 rounded focus:ring-2 focus:ring-yellow-500"
+            />
+            <label htmlFor="is_important" className="flex items-center gap-2 cursor-pointer">
+              <FontAwesomeIcon 
+                icon={formData.is_important ? faStarSolid : faStarRegular} 
+                className={`text-2xl ${formData.is_important ? 'text-yellow-500' : 'text-gray-400'}`}
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Marcar como importante</p>
+                <p className="text-xs text-gray-600">Las notas importantes se destacan en la lista</p>
+              </div>
+            </label>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3 pt-4 border-t">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              disabled={submitting}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+              disabled={submitting}
+            >
+              {submitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faSave} />
+                  {existingNote ? 'Actualizar Nota' : 'Crear Nota'}
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
-
-      {/* Add/Edit Candidate Modal */}
-      <CandidateFormModal
-        isOpen={showAddModal}
-        onClose={() => {
-          setShowAddModal(false);
-          setSelectedCandidate(null);
-        }}
-        candidate={selectedCandidate}
-        onSuccess={handleSuccess}
-        onRefresh={fetchCandidates}
-      />
-
-      {/* Candidate Detail Modal */}
-      <CandidateDetailModal
-        isOpen={showDetailModal}
-        onClose={() => {
-          setShowDetailModal(false);
-          setSelectedCandidate(null);
-        }}
-        candidate={selectedCandidate}
-        onEdit={() => {
-          setShowDetailModal(false);
-          setShowAddModal(true);
-        }}
-      />
     </div>
   );
 }
