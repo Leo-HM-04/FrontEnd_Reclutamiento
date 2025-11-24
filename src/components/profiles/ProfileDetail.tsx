@@ -1,0 +1,539 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { getProfile, approveProfile, changeProfileStatus } from "@/lib/api";
+
+interface ProfileDetailProps {
+  profileId: number;
+  onBack?: () => void;
+}
+
+interface Profile {
+  id: number;
+  position_title: string;
+  client: number;
+  client_name?: string;
+  status: string;
+  priority: string;
+  service_type: string;
+  positions_available: number;
+  responsibilities: string;
+  requirements: string;
+  benefits: string;
+  min_age?: number;
+  max_age?: number;
+  education_level: string;
+  years_experience_required?: number;
+  salary_min?: number;
+  salary_max?: number;
+  salary_currency: string;
+  salary_period: string;
+  location: string;
+  modality: string;
+  work_schedule: string;
+  technical_skills: string[];
+  soft_skills: string[];
+  languages_required: string[];
+  certifications_required: string[];
+  deadline_date?: string;
+  expected_start_date?: string;
+  assigned_to?: number;
+  assigned_to_name?: string;
+  internal_notes: string;
+  ai_profile_text?: string;
+  created_at: string;
+  updated_at: string;
+  created_by_name?: string;
+}
+
+export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps) {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [approvalFeedback, setApprovalFeedback] = useState("");
+  const [newStatus, setNewStatus] = useState("");
+  const [statusNotes, setStatusNotes] = useState("");
+
+  useEffect(() => {
+    loadProfile();
+  }, [profileId]);
+
+  const loadProfile = async () => {
+    setLoading(true);
+    try {
+      const response = await getProfile(profileId);
+      setProfile(response.data);
+    } catch (error) {
+      console.error("Error loading profile:", error);
+      alert("Error al cargar el perfil");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (approved: boolean) => {
+    try {
+      await approveProfile(profileId, {
+        approved,
+        feedback: approvalFeedback
+      });
+      alert(approved ? "Perfil aprobado exitosamente" : "Perfil rechazado");
+      setShowApprovalModal(false);
+      loadProfile();
+    } catch (error) {
+      console.error("Error approving profile:", error);
+      alert("Error al procesar la aprobación");
+    }
+  };
+
+  const handleChangeStatus = async () => {
+    if (!newStatus) {
+      alert("Por favor seleccione un estado");
+      return;
+    }
+
+    try {
+      await changeProfileStatus(profileId, {
+        status: newStatus,
+        notes: statusNotes
+      });
+      alert("Estado actualizado exitosamente");
+      setShowStatusModal(false);
+      setNewStatus("");
+      setStatusNotes("");
+      loadProfile();
+    } catch (error) {
+      console.error("Error changing status:", error);
+      alert("Error al cambiar el estado");
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: { [key: string]: { bg: string; text: string; label: string } } = {
+      draft: { bg: "bg-gray-100", text: "text-gray-700", label: "Borrador" },
+      pending: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Pendiente" },
+      approved: { bg: "bg-green-100", text: "text-green-700", label: "Aprobado" },
+      in_progress: { bg: "bg-blue-100", text: "text-blue-700", label: "En Proceso" },
+      candidates_found: { bg: "bg-indigo-100", text: "text-indigo-700", label: "Candidatos Encontrados" },
+      in_evaluation: { bg: "bg-purple-100", text: "text-purple-700", label: "En Evaluación" },
+      in_interview: { bg: "bg-pink-100", text: "text-pink-700", label: "En Entrevista" },
+      finalists: { bg: "bg-orange-100", text: "text-orange-700", label: "Finalistas" },
+      completed: { bg: "bg-green-100", text: "text-green-700", label: "Completado" },
+      cancelled: { bg: "bg-red-100", text: "text-red-700", label: "Cancelado" },
+    };
+
+    const config = statusConfig[status] || statusConfig.draft;
+    return (
+      <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.bg} ${config.text}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    const priorityConfig: { [key: string]: { bg: string; text: string; label: string } } = {
+      urgent: { bg: "bg-red-100", text: "text-red-700", label: "Urgente" },
+      high: { bg: "bg-orange-100", text: "text-orange-700", label: "Alta" },
+      medium: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Media" },
+      low: { bg: "bg-green-100", text: "text-green-700", label: "Baja" },
+    };
+
+    const config = priorityConfig[priority] || priorityConfig.medium;
+    return (
+      <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.bg} ${config.text}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  if (loading || !profile) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <i className="fas fa-spinner fa-spin text-4xl text-orange-600"></i>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-4">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <i className="fas fa-arrow-left"></i>
+              </button>
+            )}
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">{profile.position_title}</h3>
+              <p className="text-gray-600">ID: #{profile.id}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            {getStatusBadge(profile.status)}
+            {getPriorityBadge(profile.priority)}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setShowStatusModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <i className="fas fa-edit mr-2"></i>
+            Cambiar Estado
+          </button>
+          
+          {profile.status === "pending" && (
+            <button
+              onClick={() => setShowApprovalModal(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <i className="fas fa-check mr-2"></i>
+              Aprobar/Rechazar
+            </button>
+          )}
+          
+          <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+            <i className="fas fa-users mr-2"></i>
+            Ver Candidatos
+          </button>
+          
+          <button className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+            <i className="fas fa-file-alt mr-2"></i>
+            Ver Documentos
+          </button>
+        </div>
+      </div>
+
+      {/* Info Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Info */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Información Básica */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <i className="fas fa-info-circle text-orange-600 mr-2"></i>
+              Información Básica
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Cliente</p>
+                <p className="font-medium">{profile.client_name || `Cliente #${profile.client}`}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Posiciones Disponibles</p>
+                <p className="font-medium">{profile.positions_available}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Tipo de Servicio</p>
+                <p className="font-medium">
+                  {profile.service_type === "normal" ? "Normal" : "Especializado"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Asignado a</p>
+                <p className="font-medium">{profile.assigned_to_name || "Sin asignar"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Descripción */}
+          {profile.responsibilities && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <i className="fas fa-tasks text-orange-600 mr-2"></i>
+                Responsabilidades
+              </h4>
+              <p className="text-gray-700 whitespace-pre-line">{profile.responsibilities}</p>
+            </div>
+          )}
+
+          {profile.requirements && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <i className="fas fa-clipboard-check text-orange-600 mr-2"></i>
+                Requisitos
+              </h4>
+              <p className="text-gray-700 whitespace-pre-line">{profile.requirements}</p>
+            </div>
+          )}
+
+          {profile.benefits && (
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <i className="fas fa-gift text-orange-600 mr-2"></i>
+                Beneficios
+              </h4>
+              <p className="text-gray-700 whitespace-pre-line">{profile.benefits}</p>
+            </div>
+          )}
+
+          {/* Habilidades */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <i className="fas fa-brain text-orange-600 mr-2"></i>
+              Habilidades y Competencias
+            </h4>
+            
+            {profile.technical_skills && profile.technical_skills.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Habilidades Técnicas:</p>
+                <div className="flex flex-wrap gap-2">
+                  {profile.technical_skills.map((skill, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {profile.soft_skills && profile.soft_skills.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Habilidades Blandas:</p>
+                <div className="flex flex-wrap gap-2">
+                  {profile.soft_skills.map((skill, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {profile.languages_required && profile.languages_required.length > 0 && (
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">Idiomas:</p>
+                <div className="flex flex-wrap gap-2">
+                  {profile.languages_required.map((lang, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                      {lang}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {profile.certifications_required && profile.certifications_required.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Certificaciones:</p>
+                <div className="flex flex-wrap gap-2">
+                  {profile.certifications_required.map((cert, idx) => (
+                    <span key={idx} className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
+                      {cert}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div className="lg:col-span-1 space-y-6">
+          {/* Requisitos */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Requisitos</h4>
+            <div className="space-y-3">
+              {(profile.min_age || profile.max_age) && (
+                <div>
+                  <p className="text-sm text-gray-500">Edad</p>
+                  <p className="font-medium">
+                    {profile.min_age && profile.max_age
+                      ? `${profile.min_age} - ${profile.max_age} años`
+                      : profile.min_age
+                      ? `${profile.min_age}+ años`
+                      : `Hasta ${profile.max_age} años`}
+                  </p>
+                </div>
+              )}
+              {profile.education_level && (
+                <div>
+                  <p className="text-sm text-gray-500">Educación</p>
+                  <p className="font-medium capitalize">{profile.education_level}</p>
+                </div>
+              )}
+              {profile.years_experience_required !== null && (
+                <div>
+                  <p className="text-sm text-gray-500">Experiencia</p>
+                  <p className="font-medium">{profile.years_experience_required} años</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Salario */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Salario</h4>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold text-gray-900">
+                ${profile.salary_min?.toLocaleString()} - ${profile.salary_max?.toLocaleString()}
+              </p>
+              <p className="text-sm text-gray-500">
+                {profile.salary_currency} / {profile.salary_period}
+              </p>
+            </div>
+          </div>
+
+          {/* Ubicación */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Ubicación</h4>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm text-gray-500">Lugar</p>
+                <p className="font-medium">{profile.location}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Modalidad</p>
+                <p className="font-medium capitalize">{profile.modality}</p>
+              </div>
+              {profile.work_schedule && (
+                <div>
+                  <p className="text-sm text-gray-500">Horario</p>
+                  <p className="font-medium">{profile.work_schedule}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Fechas */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4">Fechas</h4>
+            <div className="space-y-3">
+              {profile.deadline_date && (
+                <div>
+                  <p className="text-sm text-gray-500">Fecha Límite</p>
+                  <p className="font-medium">
+                    {new Date(profile.deadline_date).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+              {profile.expected_start_date && (
+                <div>
+                  <p className="text-sm text-gray-500">Inicio Esperado</p>
+                  <p className="font-medium">
+                    {new Date(profile.expected_start_date).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-gray-500">Creado</p>
+                <p className="font-medium">
+                  {new Date(profile.created_at).toLocaleDateString()}
+                </p>
+                {profile.created_by_name && (
+                  <p className="text-xs text-gray-500">por {profile.created_by_name}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Approval Modal */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-semibold mb-4">Aprobar/Rechazar Perfil</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Retroalimentación
+              </label>
+              <textarea
+                value={approvalFeedback}
+                onChange={(e) => setApprovalFeedback(e.target.value)}
+                rows={4}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                placeholder="Comentarios sobre la decisión..."
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowApprovalModal(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleApprove(false)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Rechazar
+              </button>
+              <button
+                onClick={() => handleApprove(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Aprobar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Change Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-semibold mb-4">Cambiar Estado</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nuevo Estado
+              </label>
+              <select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="draft">Borrador</option>
+                <option value="pending">Pendiente</option>
+                <option value="approved">Aprobado</option>
+                <option value="in_progress">En Proceso</option>
+                <option value="candidates_found">Candidatos Encontrados</option>
+                <option value="in_evaluation">En Evaluación</option>
+                <option value="in_interview">En Entrevista</option>
+                <option value="finalists">Finalistas</option>
+                <option value="completed">Completado</option>
+                <option value="cancelled">Cancelado</option>
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Notas
+              </label>
+              <textarea
+                value={statusNotes}
+                onChange={(e) => setStatusNotes(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                placeholder="Notas sobre el cambio de estado..."
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleChangeStatus}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+              >
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

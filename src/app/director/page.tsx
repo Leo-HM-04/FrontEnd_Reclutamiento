@@ -10,12 +10,14 @@ import CandidateDocumentFormModal from "@/components/CandidateDocumentFormModal"
 import CandidateNoteFormModal from "@/components/CandidateNoteFormModal";
 import ClientFormModal from "@/components/ClientFormModal";
 import EvaluationsMain from "@/components/evaluations/EvaluationsMain";
+import ProfilesMain from "@/components/profiles/ProfilesMain";
 
 type Stats = {
   activeProcesses: number;
   completedCandidates: number;
   successRate: number;
   clientSatisfaction: number;
+  activeProfiles: number;
 };
 
 type NotificationItem = {
@@ -176,7 +178,7 @@ export default function Page() {
 
   // ====== State principal (equivalente a directorApp) ======
   const [currentView, setCurrentView] = useState<
-    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations"
+    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles"
   >("dashboard");
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -188,6 +190,7 @@ export default function Page() {
     completedCandidates: 0,
     successRate: 0,
     clientSatisfaction: 0,
+    activeProfiles: 0,
   });
 
   const [notifications, setNotifications] = useState<{ unread: number; items: NotificationItem[] }>({
@@ -364,7 +367,7 @@ useEffect(() => {
 
   async function loadDashboardData() {
     // Mock data (igual que tu HTML)
-    setStats({ activeProcesses: 12, completedCandidates: 25, successRate: 85, clientSatisfaction: 4.7 });
+    setStats({ activeProcesses: 12, completedCandidates: 25, successRate: 85, clientSatisfaction: 4.7, activeProfiles: 8 });
 
     setNotifications({
       unread: 3,
@@ -997,6 +1000,23 @@ useEffect(() => {
                 </button>
               </li>
               <li>
+
+               <li>
+              <button 
+                onClick={() => setCurrentView("profiles")} 
+                className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles")}`}
+              >
+                <i className="fas fa-briefcase mr-3 w-5" />
+                Perfiles de Reclutamiento
+                {stats.activeProfiles > 0 && (
+                  <span className="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                    {stats.activeProfiles}
+                  </span>
+                )}
+              </button>
+            </li>
+
+             
                 <div>
                   <button onClick={() => setCandidatesMenuOpen(!candidatesMenuOpen)} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}>
                     <i className="fas fa-user-tie mr-3 w-5" />
@@ -1128,6 +1148,8 @@ useEffect(() => {
                   Sistema de Evaluaciones
                 </button>
               </li>
+
+              
 
               
 
@@ -3459,6 +3481,8 @@ useEffect(() => {
 
         {/* SISTEMA DE EVALUACIONES */}
         {currentView === "evaluations" && <EvaluationsMain />}
+
+        {currentView === "profiles" && <ProfilesMain />}  
 
           {/* LISTA DE CLIENTES */}
           {currentView === "client-list" && (

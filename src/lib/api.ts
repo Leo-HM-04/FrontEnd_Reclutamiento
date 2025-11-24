@@ -96,6 +96,8 @@ class ApiClient {
     }
   }
 
+  
+
   // ====== AUTHENTICATION ======
 
   /**
@@ -193,6 +195,7 @@ class ApiClient {
     return this.makeRequest(`/api/candidates/candidates/${id}/`, {
       method: 'DELETE',
     });
+
   }
 
   // ====== APPLICATIONS (CANDIDATEPROFILE) ENDPOINTS ======
@@ -529,6 +532,102 @@ class ApiClient {
     });
   }
 
+    /**
+   * Approve or reject profile
+   */
+  async approveProfile(
+    id: number,
+    data: { approved: boolean; feedback?: string }
+  ): Promise<any> {
+    return this.makeRequest<any>(`/api/profiles/profiles/${id}/approve/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Change profile status
+   */
+  async changeProfileStatus(
+    id: number,
+    data: { status: string; notes?: string }
+  ): Promise<any> {
+    return this.makeRequest<any>(`/api/profiles/profiles/${id}/change_status/`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+    /**
+   * Get profile statistics
+   */
+  async getProfileStats(): Promise<any> {
+    // Ajusta la URL si tu endpoint es distinto
+    return this.makeRequest<any>('/api/profiles/stats/');
+  }
+
+  /**
+   * Get profile status history for a given profile
+   */
+  async getProfileHistory(profileId: number): Promise<any> {
+    // Si tu endpoint usa otro path (por ejemplo detail + /history/), cambia la URL
+    return this.makeRequest<any>(`/api/profiles/history/?profile=${profileId}`);
+  }
+
+  /**
+   * Get documents associated to profiles
+   */
+  async getProfileDocuments(profileId?: number): Promise<any> {
+    const endpoint = profileId
+      ? `/api/profiles/documents/?profile=${profileId}`
+      : '/api/profiles/documents/';
+
+    return this.makeRequest<any>(endpoint);
+  }
+
+  /**
+   * Upload document for a profile
+   */
+  async uploadProfileDocument(profileId: number, formData: FormData): Promise<any> {
+    // Aseguramos que el ID de perfil va en el formData, por si el backend lo espera así
+    if (!formData.has('profile')) {
+      formData.append('profile', String(profileId));
+    }
+
+    const token = localStorage.getItem('authToken');
+
+    const headers: HeadersInit = token
+      ? { Authorization: `Bearer ${token}` }
+      : {};
+
+    const response = await fetch(`${this.baseURL}/api/profiles/documents/`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorData: any = null;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        // ignoramos errores de parseo
+      }
+
+      throw {
+        message: errorData?.detail || 'Error uploading profile document',
+        status: response.status,
+        details: errorData,
+      } as ApiError;
+    }
+
+    return await response.json();
+  }
+
+
+
+
+
   // ====== USERS MANAGEMENT ======
 
   /**
@@ -668,6 +767,11 @@ class ApiClient {
       throw error;
     }
   }
+
+  
+
+  
+
 }
 
 // ====== TYPE DEFINITIONS ======
@@ -795,8 +899,49 @@ export interface UpdateUserData {
   is_active?: boolean;
 }
 
+
+
+
 // Create and export a default instance
 export const apiClient = new ApiClient();
 
+// Convenience function exports for components (profiles)
+export const getProfiles = (params?: Record<string, string>) =>
+  apiClient.getProfiles(params);
+
+export const getProfile = (id: number) =>
+  apiClient.getProfile(id);
+
+export const approveProfile = (
+  id: number,
+  data: { approved: boolean; feedback?: string }
+) => apiClient.approveProfile(id, data);
+
+export const changeProfileStatus = (
+  id: number,
+  data: { status: string; notes?: string }
+) => apiClient.changeProfileStatus(id, data);
+
+export const createProfile = (profileData: Partial<Profile>) =>
+  apiClient.createProfile(profileData);
+
+export const updateProfile = (id: number, profileData: Partial<Profile>) =>
+  apiClient.updateProfile(id, profileData);
+
+export const getProfileStats = () =>
+  apiClient.getProfileStats();
+
+export const getProfileDocuments = (profileId?: number) =>
+  apiClient.getProfileDocuments(profileId);
+
+export const uploadProfileDocument = (profileId: number, formData: FormData) =>
+  apiClient.uploadProfileDocument(profileId, formData);
+
+export const getProfileHistory = (profileId: number) =>
+  apiClient.getProfileHistory(profileId);
+
 // Export types for use in components
 export type { LoginCredentials, LoginResponse, ApiError };
+
+
+
