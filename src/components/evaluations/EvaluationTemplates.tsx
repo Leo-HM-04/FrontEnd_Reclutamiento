@@ -48,7 +48,8 @@ export default function EvaluationTemplates() {
 
       if (response.ok) {
         const data = await response.json();
-        setTemplates(data);
+        console.log("Templates data:", data);
+        setTemplates(Array.isArray(data) ? data : data.results || []);
       }
     } catch (error) {
       console.error("Error fetching templates:", error);
@@ -170,15 +171,25 @@ export default function EvaluationTemplates() {
       {/* Templates Grid */}
       {filteredTemplates.length === 0 ? (
         <div className="text-center py-12">
-          <i className="fas fa-inbox text-5xl text-gray-300 mb-4"></i>
-          <p className="text-gray-600">No se encontraron plantillas</p>
+          <i className="fas fa-file-alt text-6xl text-gray-300 mb-4"></i>
+          <p className="text-gray-500 text-lg">No se encontraron plantillas</p>
+          <button
+            onClick={() => {
+              setSelectedTemplate(null);
+              setShowModal(true);
+            }}
+            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <i className="fas fa-plus mr-2"></i>
+            Crear primera plantilla
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredTemplates.map((template) => (
             <div
               key={template.id}
-              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
@@ -245,6 +256,192 @@ export default function EvaluationTemplates() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal para Crear/Editar Plantilla */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedTemplate ? "Editar Plantilla" : "Nueva Plantilla"}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    setSelectedTemplate(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                
+                const data = {
+                  title: formData.get("title"),
+                  description: formData.get("description"),
+                  category: formData.get("category"),
+                  duration_minutes: parseInt(formData.get("duration_minutes") as string),
+                  passing_score: parseFloat(formData.get("passing_score") as string),
+                  is_active: formData.get("is_active") === "on",
+                  is_template: true
+                };
+
+                try {
+                  const token = localStorage.getItem("token");
+                  const url = selectedTemplate
+                    ? `http://localhost:8000/api/evaluations/templates/${selectedTemplate.id}/`
+                    : "http://localhost:8000/api/evaluations/templates/";
+                  
+                  const method = selectedTemplate ? "PUT" : "POST";
+
+                  const response = await fetch(url, {
+                    method,
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify(data),
+                  });
+
+                  if (response.ok) {
+                    await fetchTemplates();
+                    setShowModal(false);
+                    setSelectedTemplate(null);
+                    alert(selectedTemplate ? "Plantilla actualizada exitosamente" : "Plantilla creada exitosamente");
+                  } else {
+                    const error = await response.json();
+                    alert("Error: " + JSON.stringify(error));
+                  }
+                } catch (error) {
+                  console.error("Error:", error);
+                  alert("Error al guardar la plantilla");
+                }
+              }}>
+                <div className="space-y-4">
+                  {/* Título */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Título *
+                    </label>
+                    <input
+                      type="text"
+                      name="title"
+                      defaultValue={selectedTemplate?.title || ""}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ej: Evaluación Python Senior"
+                    />
+                  </div>
+
+                  {/* Descripción */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Descripción
+                    </label>
+                    <textarea
+                      name="description"
+                      defaultValue={selectedTemplate?.description || ""}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Descripción de la evaluación"
+                    />
+                  </div>
+
+                  {/* Categoría */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Categoría *
+                    </label>
+                    <select
+                      name="category"
+                      defaultValue={selectedTemplate?.category || "technical"}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Duración */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Duración (minutos) *
+                    </label>
+                    <input
+                      type="number"
+                      name="duration_minutes"
+                      defaultValue={selectedTemplate?.duration_minutes || 60}
+                      required
+                      min="1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Puntaje mínimo */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Puntaje Mínimo Aprobatorio (%) *
+                    </label>
+                    <input
+                      type="number"
+                      name="passing_score"
+                      defaultValue={selectedTemplate?.passing_score || 70}
+                      required
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Activa */}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="is_active"
+                      id="is_active"
+                      defaultChecked={selectedTemplate?.is_active !== false}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="is_active" className="ml-2 block text-sm text-gray-700">
+                      Plantilla activa
+                    </label>
+                  </div>
+                </div>
+
+                {/* Botones */}
+                <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      setSelectedTemplate(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    {selectedTemplate ? "Actualizar" : "Crear"} Plantilla
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -6,38 +6,57 @@ interface EvaluationComment {
   id: number;
   evaluation: number;
   evaluation_info?: string;
-  user: number;
   user_name?: string;
   comment: string;
   is_internal: boolean;
   created_at: string;
-  updated_at?: string;
+}
+
+interface CandidateEvaluation {
+  id: number;
+  candidate_name?: string;
+  template_name?: string;
 }
 
 export default function EvaluationComments() {
   const [comments, setComments] = useState<EvaluationComment[]>([]);
+  const [evaluations, setEvaluations] = useState<CandidateEvaluation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState<"all" | "internal" | "public">("all");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedComment, setSelectedComment] = useState<EvaluationComment | null>(null);
+  const [filterEvaluation, setFilterEvaluation] = useState("all");
+  const [filterType, setFilterType] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    fetchComments();
+    fetchData();
   }, []);
 
-  const fetchComments = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:8000/api/evaluations/comments/", {
+
+      // Fetch comments
+      const commentsRes = await fetch("http://localhost:8000/api/evaluations/comments/", {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (commentsRes.ok) {
+        const commentsData = await commentsRes.json();
+        setComments(Array.isArray(commentsData) ? commentsData : commentsData.results || []);
+      }
 
-      if (response.ok) {
-        const data = await response.json();
-        setComments(data);
+      // Fetch evaluations
+      const evalRes = await fetch(
+        "http://localhost:8000/api/evaluations/candidate-evaluations/",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (evalRes.ok) {
+        const evalData = await evalRes.json();
+        setEvaluations(Array.isArray(evalData) ? evalData : evalData.results || []);
       }
     } catch (error) {
-      console.error("Error fetching comments:", error);
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
@@ -65,15 +84,15 @@ export default function EvaluationComments() {
   };
 
   const filteredComments = comments.filter((comment) => {
-    const matchesSearch =
-      comment.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = comment.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
       comment.user_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    let matchesType = true;
-    if (filterType === "internal") matchesType = comment.is_internal;
-    if (filterType === "public") matchesType = !comment.is_internal;
-
-    return matchesSearch && matchesType;
+    const matchesEvaluation =
+      filterEvaluation === "all" || comment.evaluation === parseInt(filterEvaluation);
+    const matchesType =
+      filterType === "all" ||
+      (filterType === "internal" && comment.is_internal) ||
+      (filterType === "public" && !comment.is_internal);
+    return matchesSearch && matchesEvaluation && matchesType;
   });
 
   const formatDate = (dateString: string) => {
@@ -84,16 +103,6 @@ export default function EvaluationComments() {
       hour: "2-digit",
       minute: "2-digit"
     });
-  };
-
-  const getInitials = (name?: string) => {
-    if (!name) return "??";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
   };
 
   if (loading) {
@@ -118,47 +127,16 @@ export default function EvaluationComments() {
               {comments.length} comentarios registrados
             </p>
           </div>
-          <button className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={() => {
+              setSelectedComment(null);
+              setShowModal(true);
+            }}
+            className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <i className="fas fa-plus mr-2"></i>
             Nuevo Comentario
           </button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Total Comentarios</p>
-                <p className="text-2xl font-bold text-gray-900">{comments.length}</p>
-              </div>
-              <i className="fas fa-comments text-3xl text-gray-400"></i>
-            </div>
-          </div>
-
-          <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-purple-700 font-medium">Comentarios Internos</p>
-                <p className="text-2xl font-bold text-purple-900">
-                  {comments.filter((c) => c.is_internal).length}
-                </p>
-              </div>
-              <i className="fas fa-lock text-3xl text-purple-400"></i>
-            </div>
-          </div>
-
-          <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-700 font-medium">Comentarios Públicos</p>
-                <p className="text-2xl font-bold text-green-900">
-                  {comments.filter((c) => !c.is_internal).length}
-                </p>
-              </div>
-              <i className="fas fa-globe text-3xl text-green-400"></i>
-            </div>
-          </div>
         </div>
 
         {/* Filters */}
@@ -172,107 +150,73 @@ export default function EvaluationComments() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilterType("all")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === "all"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => setFilterType("internal")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === "internal"
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Internos
-            </button>
-            <button
-              onClick={() => setFilterType("public")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filterType === "public"
-                  ? "bg-green-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Públicos
-            </button>
-          </div>
+          <select
+            value={filterEvaluation}
+            onChange={(e) => setFilterEvaluation(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Todas las evaluaciones</option>
+            {evaluations.map((evaluation) => (
+              <option key={evaluation.id} value={evaluation.id}>
+                {evaluation.candidate_name} - {evaluation.template_name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Todos los tipos</option>
+            <option value="public">Públicos</option>
+            <option value="internal">Internos</option>
+          </select>
         </div>
       </div>
 
       {/* Comments List */}
       {filteredComments.length === 0 ? (
         <div className="text-center py-12">
-          <i className="fas fa-comment-slash text-5xl text-gray-300 mb-4"></i>
-          <p className="text-gray-600">No se encontraron comentarios</p>
+          <i className="fas fa-comments text-6xl text-gray-300 mb-4"></i>
+          <p className="text-gray-500 text-lg">No se encontraron comentarios</p>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredComments.map((comment) => (
             <div
               key={comment.id}
-              className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                comment.is_internal
-                  ? "border-purple-200 bg-purple-50"
-                  : "border-gray-200 bg-white"
-              }`}
+              className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start gap-3">
-                {/* Avatar */}
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    comment.is_internal
-                      ? "bg-purple-600 text-white"
-                      : "bg-blue-600 text-white"
-                  }`}
-                >
-                  <span className="text-sm font-semibold">
-                    {getInitials(comment.user_name)}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-gray-900">
-                      {comment.user_name || `Usuario #${comment.user}`}
-                    </span>
-                    <span className="text-xs text-gray-500">•</span>
-                    <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
-                    {comment.is_internal && (
-                      <>
-                        <span className="text-xs text-gray-500">•</span>
-                        <span className="px-2 py-0.5 text-xs bg-purple-200 text-purple-800 rounded">
-                          <i className="fas fa-lock mr-1"></i>
-                          Interno
-                        </span>
-                      </>
-                    )}
-                  </div>
-
-                  <p className="text-sm text-gray-700 mb-2">{comment.comment}</p>
-
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>Evaluación #{comment.evaluation}</span>
-                    {comment.updated_at && comment.updated_at !== comment.created_at && (
-                      <>
-                        <span>•</span>
-                        <span>Editado: {formatDate(comment.updated_at)}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Actions */}
+              <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <button className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="Editar">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <i className="fas fa-user text-blue-600"></i>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{comment.user_name || "Usuario"}</p>
+                    <p className="text-xs text-gray-500">{formatDate(comment.created_at)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {comment.is_internal ? (
+                    <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded">
+                      <i className="fas fa-lock mr-1"></i>
+                      Interno
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+                      <i className="fas fa-eye mr-1"></i>
+                      Público
+                    </span>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSelectedComment(comment);
+                      setShowModal(true);
+                    }}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                    title="Editar"
+                  >
                     <i className="fas fa-edit"></i>
                   </button>
                   <button
@@ -284,8 +228,160 @@ export default function EvaluationComments() {
                   </button>
                 </div>
               </div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.comment}</p>
+              {comment.evaluation_info && (
+                <p className="text-xs text-gray-500 mt-2">
+                  <i className="fas fa-clipboard-list mr-1"></i>
+                  {comment.evaluation_info}
+                </p>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal para Crear/Editar Comentario */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedComment ? "Editar Comentario" : "Nuevo Comentario"}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    setSelectedComment(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+
+                  const data = {
+                    evaluation: parseInt(formData.get("evaluation") as string),
+                    comment: formData.get("comment"),
+                    is_internal: formData.get("is_internal") === "on",
+                  };
+
+                  try {
+                    const token = localStorage.getItem("token");
+                    const url = selectedComment
+                      ? `http://localhost:8000/api/evaluations/comments/${selectedComment.id}/`
+                      : "http://localhost:8000/api/evaluations/comments/";
+
+                    const method = selectedComment ? "PUT" : "POST";
+
+                    const response = await fetch(url, {
+                      method,
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify(data),
+                    });
+
+                    if (response.ok) {
+                      await fetchData();
+                      setShowModal(false);
+                      setSelectedComment(null);
+                    } else {
+                      const error = await response.json();
+                      alert("Error: " + JSON.stringify(error));
+                    }
+                  } catch (error) {
+                    console.error("Error:", error);
+                    alert("Error al guardar el comentario");
+                  }
+                }}
+              >
+                <div className="space-y-4">
+                  {/* Seleccionar Evaluación */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Evaluación *
+                    </label>
+                    <select
+                      name="evaluation"
+                      defaultValue={selectedComment?.evaluation || ""}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Seleccionar evaluación...</option>
+                      {evaluations.map((evaluation) => (
+                        <option key={evaluation.id} value={evaluation.id}>
+                          {evaluation.candidate_name} - {evaluation.template_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Comentario */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Comentario *
+                    </label>
+                    <textarea
+                      name="comment"
+                      defaultValue={selectedComment?.comment || ""}
+                      required
+                      rows={5}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Escribe tu comentario aquí..."
+                    />
+                  </div>
+
+                  {/* Es interno */}
+                  <div className="flex items-start">
+                    <div className="flex items-center h-5">
+                      <input
+                        type="checkbox"
+                        name="is_internal"
+                        id="is_internal"
+                        defaultChecked={selectedComment?.is_internal || false}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </div>
+                    <div className="ml-3">
+                      <label htmlFor="is_internal" className="text-sm font-medium text-gray-700">
+                        Comentario interno
+                      </label>
+                      <p className="text-xs text-gray-500">
+                        Los comentarios internos solo son visibles para el equipo de reclutamiento
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botones */}
+                <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      setSelectedComment(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    {selectedComment ? "Actualizar" : "Crear"} Comentario
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
     </div>

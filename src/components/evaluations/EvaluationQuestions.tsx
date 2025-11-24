@@ -21,6 +21,8 @@ export default function EvaluationQuestions() {
   const [loading, setLoading] = useState(true);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<EvaluationQuestion | null>(null);
 
   const questionTypes = [
     { value: "multiple_choice", label: "Opción Múltiple" },
@@ -138,6 +140,10 @@ export default function EvaluationQuestions() {
             </p>
           </div>
           <button
+            onClick={() => {
+              setSelectedQuestion(null);
+              setShowModal(true);
+            }}
             className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <i className="fas fa-plus mr-2"></i>
@@ -245,7 +251,288 @@ export default function EvaluationQuestions() {
                 </div>
               </div>
             </div>
+
+            
           ))}
+        </div>
+
+        
+      )}
+
+      {/* Modal para Crear/Editar Pregunta */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {selectedQuestion ? "Editar Pregunta" : "Nueva Pregunta"}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    setSelectedQuestion(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                
+                const questionType = formData.get("question_type") as string;
+                let options: string[] = [];
+                let correctAnswer = "";
+
+                // Si es opción múltiple, obtener las opciones
+                if (questionType === "multiple_choice") {
+                  const optionsInput = formData.get("options") as string;
+                  options = optionsInput.split("\n").filter(opt => opt.trim());
+                  correctAnswer = formData.get("correct_answer") as string;
+                } else if (questionType === "true_false") {
+                  options = ["Verdadero", "Falso"];
+                  correctAnswer = formData.get("correct_answer") as string;
+                }
+
+                const data = {
+                  template: parseInt(formData.get("template") as string),
+                  question_text: formData.get("question_text"),
+                  question_type: questionType,
+                  options: options,
+                  correct_answer: correctAnswer || null,
+                  points: parseFloat(formData.get("points") as string),
+                  order: parseInt(formData.get("order") as string) || 0,
+                  is_required: formData.get("is_required") === "on",
+                  help_text: formData.get("help_text") || ""
+                };
+
+                try {
+                  const token = localStorage.getItem("token");
+                  const url = selectedQuestion
+                    ? `http://localhost:8000/api/evaluations/questions/${selectedQuestion.id}/`
+                    : "http://localhost:8000/api/evaluations/questions/";
+                  
+                  const method = selectedQuestion ? "PUT" : "POST";
+
+                  const response = await fetch(url, {
+                    method,
+                    headers: {
+                      "Content-Type": "application/json",
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify(data),
+                  });
+
+                  if (response.ok) {
+                    await fetchData();
+                    setShowModal(false);
+                    setSelectedQuestion(null);
+                  } else {
+                    const error = await response.json();
+                    alert("Error: " + JSON.stringify(error));
+                  }
+                } catch (error) {
+                  console.error("Error:", error);
+                  alert("Error al guardar la pregunta");
+                }
+              }}>
+                <div className="space-y-4">
+                  {/* Plantilla */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Plantilla *
+                    </label>
+                    <select
+                      name="template"
+                      defaultValue={selectedQuestion?.template || ""}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Seleccionar plantilla...</option>
+                      {templates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {template.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Texto de la pregunta */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Pregunta *
+                    </label>
+                    <textarea
+                      name="question_text"
+                      defaultValue={selectedQuestion?.question_text || ""}
+                      required
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Escribe la pregunta aquí"
+                    />
+                  </div>
+
+                  {/* Tipo de pregunta */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo de Pregunta *
+                    </label>
+                    <select
+                      name="question_type"
+                      defaultValue={selectedQuestion?.question_type || "multiple_choice"}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        // Mostrar/ocultar campos según el tipo
+                        const optionsDiv = document.getElementById("options-section");
+                        const answerDiv = document.getElementById("answer-section");
+                        
+                        if (e.target.value === "multiple_choice") {
+                          optionsDiv?.classList.remove("hidden");
+                          answerDiv?.classList.remove("hidden");
+                        } else if (e.target.value === "true_false") {
+                          optionsDiv?.classList.add("hidden");
+                          answerDiv?.classList.remove("hidden");
+                        } else {
+                          optionsDiv?.classList.add("hidden");
+                          answerDiv?.classList.add("hidden");
+                        }
+                      }}
+                    >
+                      {questionTypes.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Opciones (solo para opción múltiple) */}
+                  <div id="options-section" className={selectedQuestion?.question_type === "multiple_choice" ? "" : "hidden"}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Opciones (una por línea)
+                    </label>
+                    <textarea
+                      name="options"
+                      defaultValue={selectedQuestion?.options?.join("\n") || ""}
+                      rows={5}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="A) Opción 1&#10;B) Opción 2&#10;C) Opción 3&#10;D) Opción 4"
+                    />
+                  </div>
+
+                  {/* Respuesta correcta */}
+                  <div id="answer-section" className={
+                    selectedQuestion?.question_type === "multiple_choice" || selectedQuestion?.question_type === "true_false" ? "" : "hidden"
+                  }>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Respuesta Correcta
+                    </label>
+                    {(!selectedQuestion || selectedQuestion.question_type === "true_false") && (
+                      <select
+                        name="correct_answer"
+                        defaultValue={selectedQuestion?.correct_answer || ""}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="Verdadero">Verdadero</option>
+                        <option value="Falso">Falso</option>
+                      </select>
+                    )}
+                    {selectedQuestion?.question_type === "multiple_choice" && (
+                      <input
+                        type="text"
+                        name="correct_answer"
+                        defaultValue={selectedQuestion?.correct_answer || ""}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Ej: A) Opción 1"
+                      />
+                    )}
+                  </div>
+
+                  {/* Puntos */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Puntos *
+                    </label>
+                    <input
+                      type="number"
+                      name="points"
+                      defaultValue={selectedQuestion?.points || 10}
+                      required
+                      min="0"
+                      step="0.5"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Orden */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Orden
+                    </label>
+                    <input
+                      type="number"
+                      name="order"
+                      defaultValue={selectedQuestion?.order || 0}
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Texto de ayuda */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Texto de Ayuda (opcional)
+                    </label>
+                    <textarea
+                      name="help_text"
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Instrucciones o pistas para el candidato"
+                    />
+                  </div>
+
+                  {/* Es requerida */}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="is_required"
+                      id="is_required"
+                      defaultChecked={selectedQuestion?.is_required !== false}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="is_required" className="ml-2 block text-sm text-gray-700">
+                      Pregunta obligatoria
+                    </label>
+                  </div>
+                </div>
+
+                {/* Botones */}
+                <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      setSelectedQuestion(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    {selectedQuestion ? "Actualizar" : "Crear"} Pregunta
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
     </div>
