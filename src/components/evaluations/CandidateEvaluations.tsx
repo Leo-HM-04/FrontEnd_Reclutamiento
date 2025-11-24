@@ -57,7 +57,7 @@ export default function CandidateEvaluations() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
 
       // Fetch evaluations
       const evalRes = await fetch(
@@ -99,7 +99,7 @@ export default function CandidateEvaluations() {
     if (!confirm("¿Estás seguro de eliminar esta evaluación?")) return;
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
       const response = await fetch(
         `http://localhost:8000/api/evaluations/candidate-evaluations/${id}/`,
         {
@@ -338,7 +338,7 @@ export default function CandidateEvaluations() {
                   };
 
                   try {
-                    const token = localStorage.getItem("token");
+                    const token = localStorage.getItem("authToken");
                     const response = await fetch(
                       "http://localhost:8000/api/evaluations/candidate-evaluations/",
                       {

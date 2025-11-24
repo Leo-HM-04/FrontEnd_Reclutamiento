@@ -35,7 +35,7 @@ export default function EvaluationComments() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
 
       // Fetch comments
       const commentsRes = await fetch("http://localhost:8000/api/evaluations/comments/", {
@@ -66,7 +66,7 @@ export default function EvaluationComments() {
     if (!confirm("¿Estás seguro de eliminar este comentario?")) return;
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
       const response = await fetch(
         `http://localhost:8000/api/evaluations/comments/${id}/`,
         {
@@ -272,7 +272,7 @@ export default function EvaluationComments() {
                   };
 
                   try {
-                    const token = localStorage.getItem("token");
+                    const token = localStorage.getItem("authToken");
                     const url = selectedComment
                       ? `http://localhost:8000/api/evaluations/comments/${selectedComment.id}/`
                       : "http://localhost:8000/api/evaluations/comments/";

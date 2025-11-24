@@ -52,11 +52,10 @@ export default function EvaluationQuestions() {
       ? templatesData
       : Array.isArray(templatesData.results)
       ? templatesData.results
-      : Array.isArray(templatesData.templates)
-      ? templatesData.templates
       : [];
 
     setTemplates(normalizedTemplates);
+    console.log("Templates cargados:", normalizedTemplates); // Para debug
 
     // Fetch questions
     const questionsRes = await fetch("http://localhost:8000/api/evaluations/questions/", {
@@ -162,12 +161,13 @@ export default function EvaluationQuestions() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <select
-            value={selectedTemplate}
-            onChange={(e) => setSelectedTemplate(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+         <select
+            name="template"
+            defaultValue={selectedQuestion?.template || ""}
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">Todas las plantillas</option>
+            <option value="">Seleccionar plantilla...</option>
             {templates.map((template) => (
               <option key={template.id} value={template.id}>
                 {template.title}
