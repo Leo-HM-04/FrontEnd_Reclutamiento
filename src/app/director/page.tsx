@@ -9,6 +9,7 @@ import DirectorCandidateFormModal from "@/components/DirectorCandidateFormModal"
 import CandidateDocumentFormModal from "@/components/CandidateDocumentFormModal";
 import CandidateNoteFormModal from "@/components/CandidateNoteFormModal";
 import ClientFormModal from "@/components/ClientFormModal";
+import EvaluationsMain from "@/components/evaluations/EvaluationsMain";
 
 type Stats = {
   activeProcesses: number;
@@ -175,7 +176,7 @@ export default function Page() {
 
   // ====== State principal (equivalente a directorApp) ======
   const [currentView, setCurrentView] = useState<
-    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress"
+    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations"
   >("dashboard");
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -1118,7 +1119,21 @@ useEffect(() => {
                 </button>
               </li>
 
+               <li>
+                <button 
+                  onClick={() => setCurrentView("evaluations")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("evaluations")}`}
+                >
+                  <i className="fas fa-clipboard-check mr-3 w-5" />
+                  Sistema de Evaluaciones
+                </button>
+              </li>
+
+              
+
             </ul>
+
+            
 
             {/* Quick Actions */}
             <div className="mt-8 pt-6 border-t border-gray-100">
@@ -3178,6 +3193,7 @@ useEffect(() => {
                 </div>
               </div>
 
+
               {/* Estadísticas generales */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -3440,6 +3456,9 @@ useEffect(() => {
               </div>
             </div>
           )}
+
+        {/* SISTEMA DE EVALUACIONES */}
+        {currentView === "evaluations" && <EvaluationsMain />}
 
           {/* LISTA DE CLIENTES */}
           {currentView === "client-list" && (
