@@ -7,6 +7,8 @@ import ProfileDetail from "./ProfileDetail";
 import ProfileStatusHistory from "./ProfileStatusHistory";
 import ProfileDocuments from "./ProfileDocuments";
 import ProfileStats from "./ProfileStats";
+import CVAnalysisModal from "./CVAnalysisModal";
+import ProfileGenerationModal from "./ProfileGenerationModal";
 
 type ProfileView = 
   | "profiles-list" 
@@ -15,7 +17,18 @@ type ProfileView =
   | "profiles-pending" 
   | "profile-history" 
   | "profile-documents"
-  | "profile-stats";
+  | "profile-stats"
+  | "ai-cv-analysis"
+  | "ai-profile-generation";
+
+  interface MenuItem {
+  id: ProfileView;
+  label: string;
+  icon: string;
+  description: string;
+  isAction?: boolean;
+  action?: () => void;
+}
 
 interface ProfilesMainProps {
   onClose?: () => void;
@@ -24,43 +37,62 @@ interface ProfilesMainProps {
 export default function ProfilesMain({ onClose }: ProfilesMainProps) {
   const [currentView, setCurrentView] = useState<ProfileView>("profiles-list");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [showCVAnalysis, setShowCVAnalysis] = useState(false); // NUEVO
+  const [showProfileGeneration, setShowProfileGeneration] = useState(false); // NUEVO
+  const [successMessage, setSuccessMessage] = useState<string>(""); // NUEVO
 
-  const menuItems = [
+ const menuItems: MenuItem[] = [
     {
-      id: "profiles-list" as ProfileView,
+      id: "profiles-list",
       label: "Perfiles de Reclutamiento",
       icon: "fa-briefcase",
       description: "Ver y gestionar todos los perfiles"
     },
     {
-      id: "profile-create" as ProfileView,
+      id: "profile-create",
       label: "Crear Nuevo Perfil",
       icon: "fa-plus-circle",
       description: "Crear un nuevo perfil de reclutamiento"
     },
     {
-      id: "profiles-pending" as ProfileView,
+      id: "profiles-pending",
       label: "Perfiles Pendientes",
       icon: "fa-clock",
       description: "Perfiles pendientes de aprobación"
     },
     {
-      id: "profile-history" as ProfileView,
+      id: "profile-history",
       label: "Historial de Estados",
       icon: "fa-history",
       description: "Ver cambios de estado de perfiles"
     },
     {
-      id: "profile-documents" as ProfileView,
+      id: "profile-documents",
       label: "Documentos de Perfiles",
       icon: "fa-folder-open",
       description: "Gestionar documentos asociados"
     },
     {
-      id: "profile-stats" as ProfileView,
+      id: "profile-stats",
       label: "Estadísticas",
       icon: "fa-chart-bar",
       description: "Métricas y estadísticas de perfiles"
+    },
+    {
+      id: "ai-cv-analysis",
+      label: "🤖 Analizar CVs con IA",
+      icon: "fa-robot",
+      description: "Extraer información de CVs automáticamente",
+      isAction: true,
+      action: () => setShowCVAnalysis(true)
+    },
+    {
+      id: "ai-profile-generation",
+      label: "✨ Generar Perfil con IA",
+      icon: "fa-magic",
+      description: "Crear perfiles desde transcripciones",
+      isAction: true,
+      action: () => setShowProfileGeneration(true)
     }
   ];
 
@@ -114,7 +146,14 @@ export default function ProfilesMain({ onClose }: ProfilesMainProps) {
               {menuItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setCurrentView(item.id)}
+                  onClick={() => {
+                    if (item.isAction && item.action) {
+                      item.action();
+                    } else {
+                      setCurrentView(item.id);
+                      setSelectedProfileId(null);
+                    }
+                  }}
                   className={`w-full flex items-start px-3 py-3 text-sm font-medium rounded-lg transition-all ${getNavClass(
                     item.id
                   )}`}
@@ -165,6 +204,41 @@ export default function ProfilesMain({ onClose }: ProfilesMainProps) {
           </div>
         </div>
       </div>
+      {/* Success Message */}
+      {successMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-fade-in">
+          <div className="bg-white rounded-lg shadow-xl border-l-4 border-green-500 p-4 max-w-md">
+            <div className="flex items-center">
+              <i className="fas fa-check-circle text-green-500 text-xl mr-3"></i>
+              <p className="text-gray-800">{successMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CV Analysis Modal */}
+      <CVAnalysisModal
+        isOpen={showCVAnalysis}
+        onClose={() => setShowCVAnalysis(false)}
+        onSuccess={(message) => {
+          setSuccessMessage(message);
+          setTimeout(() => setSuccessMessage(""), 5000);
+          // Reload data if needed
+          setCurrentView("profiles-list");
+        }}
+      />
+
+      {/* Profile Generation Modal */}
+      <ProfileGenerationModal
+        isOpen={showProfileGeneration}
+        onClose={() => setShowProfileGeneration(false)}
+        onSuccess={(message) => {
+          setSuccessMessage(message);
+          setTimeout(() => setSuccessMessage(""), 5000);
+          // Reload data if needed
+          setCurrentView("profiles-list");
+        }}
+      />
     </div>
   );
 }

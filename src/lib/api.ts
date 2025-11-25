@@ -768,13 +768,100 @@ class ApiClient {
     }
   }
 
+  // ====== AI SERVICES ENDPOINTS ======
+
+  /**
+   * Analyze CV with AI
+   * @param formData FormData with candidate_id and document_file
+   */
+  async analyzeCVWithAI(formData: FormData): Promise<any> {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${this.baseURL}/api/ai-services/cv-analysis/analyze/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw {
+        message: errorData.message || 'Error analyzing CV',
+        status: response.status,
+        details: errorData,
+      } as ApiError;
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Get CV analysis results
+   */
+  async getCVAnalyses(params?: Record<string, string>): Promise<any> {
+    const queryString = params ? `?${new URLSearchParams(params)}` : '';
+    return this.makeRequest<any>(`/api/ai-services/cv-analysis/${queryString}`);
+  }
+
+  /**
+   * Get single CV analysis by ID
+   */
+  async getCVAnalysis(id: number): Promise<any> {
+    return this.makeRequest<any>(`/api/ai-services/cv-analysis/${id}/`);
+  }
+
+  /**
+   * Generate profile from meeting transcription
+   */
+  async generateProfileFromTranscription(data: {
+    meeting_transcription: string;
+    client_id?: number;
+    additional_notes?: string;
+  }): Promise<any> {
+    return this.makeRequest<any>('/api/ai-services/profile-generation/generate/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Get profile generations
+   */
+  async getProfileGenerations(params?: Record<string, string>): Promise<any> {
+    const queryString = params ? `?${new URLSearchParams(params)}` : '';
+    return this.makeRequest<any>(`/api/ai-services/profile-generation/${queryString}`);
+  }
+
+  /**
+   * Get single profile generation by ID
+   */
+  async getProfileGeneration(id: number): Promise<any> {
+    return this.makeRequest<any>(`/api/ai-services/profile-generation/${id}/`);
+  }
+
+  /**
+   * Calculate candidate-profile matching with AI
+   */
+  async calculateMatching(data: {
+    candidate_id: number;
+    profile_id: number;
+  }): Promise<any> {
+    return this.makeRequest<any>('/api/ai-services/matching/calculate/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Get matching results
+   */
+  async getMatchings(params?: Record<string, string>): Promise<any> {
+    const queryString = params ? `?${new URLSearchParams(params)}` : '';
+    return this.makeRequest<any>(`/api/ai-services/matching/${queryString}`);
+  }
 
   
-
-  
-
-  
-
 }
 
 // ====== TYPE DEFINITIONS ======
@@ -944,6 +1031,67 @@ export const uploadProfileDocument = (profileId: number, formData: FormData) =>
 
 export const getProfileHistory = (profileId: number) =>
   apiClient.getProfileHistory(profileId);
+
+// Candidates exports  <--- AGREGAR DESDE AQUÍ
+export const getCandidates = (params?: any) =>
+  apiClient.getCandidates(params);
+
+export const getCandidate = (id: number) =>
+  apiClient.getCandidate(id);
+
+export const createCandidate = (candidateData: any) =>
+  apiClient.createCandidate(candidateData);
+
+export const updateCandidate = (id: number, candidateData: any) =>
+  apiClient.updateCandidate(id, candidateData);
+
+export const deleteCandidate = (id: number) =>
+  apiClient.deleteCandidate(id);
+
+// Clients exports
+export const getClients = (params?: Record<string, string>) =>
+  apiClient.getClients(params);
+
+export const getClient = (id: number) =>
+  apiClient.getClient(id);
+
+export const createClient = (clientData: any) =>
+  apiClient.createClient(clientData);
+
+export const updateClient = (id: number, clientData: any) =>
+  apiClient.updateClient(id, clientData);
+
+export const deleteClient = (id: number) =>
+  apiClient.deleteClient(id);
+
+
+// AI Services exports
+export const analyzeCVWithAI = (formData: FormData) =>
+  apiClient.analyzeCVWithAI(formData);
+
+export const getCVAnalyses = (params?: Record<string, string>) =>
+  apiClient.getCVAnalyses(params);
+
+export const getCVAnalysis = (id: number) =>
+  apiClient.getCVAnalysis(id);
+
+export const generateProfileFromTranscription = (data: {
+  meeting_transcription: string;
+  client_id?: number;
+  additional_notes?: string;
+}) => apiClient.generateProfileFromTranscription(data);
+
+export const getProfileGenerations = (params?: Record<string, string>) =>
+  apiClient.getProfileGenerations(params);
+
+export const getProfileGeneration = (id: number) =>
+  apiClient.getProfileGeneration(id);
+
+export const calculateMatching = (data: { candidate_id: number; profile_id: number }) =>
+  apiClient.calculateMatching(data);
+
+export const getMatchings = (params?: Record<string, string>) =>
+  apiClient.getMatchings(params);
 
 // Export types for use in components
 export type { LoginCredentials, LoginResponse, ApiError };
