@@ -34,7 +34,8 @@ export default function ProfileStatusHistory() {
   const loadProfiles = async () => {
     try {
       const response = await getProfiles();
-      setProfiles(response.data.results || response.data);
+      const profilesList = response.results || (Array.isArray(response) ? response : []);
+      setProfiles(profilesList);
     } catch (error) {
       console.error("Error loading profiles:", error);
     }

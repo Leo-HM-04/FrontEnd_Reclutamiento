@@ -768,6 +768,9 @@ class ApiClient {
     }
   }
 
+
+  
+
   
 
   
@@ -904,6 +907,8 @@ export interface UpdateUserData {
 
 // Create and export a default instance
 export const apiClient = new ApiClient();
+
+
 
 // Convenience function exports for components (profiles)
 export const getProfiles = (params?: Record<string, string>) =>

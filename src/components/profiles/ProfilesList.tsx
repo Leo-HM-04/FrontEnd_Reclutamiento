@@ -47,7 +47,8 @@ export default function ProfilesList({ filterStatus, onViewProfile }: ProfilesLi
       if (priorityFilter) params.priority = priorityFilter;
       
       const response = await getProfiles(params);
-      setProfiles(response.data.results || response.data);
+      const profilesList = response.results || (Array.isArray(response) ? response : []);
+      setProfiles(profilesList);
     } catch (error) {
       console.error("Error loading profiles:", error);
     } finally {

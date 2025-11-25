@@ -38,7 +38,7 @@ export default function ProfileStats() {
     setLoading(true);
     try {
       const response = await getProfileStats();
-      setStats(response.data);
+      setStats(response);
     } catch (error) {
       console.error("Error loading stats:", error);
     } finally {
