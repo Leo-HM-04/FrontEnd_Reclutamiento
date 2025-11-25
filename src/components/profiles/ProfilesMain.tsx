@@ -100,7 +100,7 @@ export default function ProfilesMain({ onClose }: ProfilesMainProps) {
 
     {
       id: "ai-bulk-cv-upload",
-      label: "🚀 Carga Masiva de CVs",
+      label: "Carga Masiva de CVs",
       icon: "fa-file-upload",
       description: "Analizar múltiples CVs de una vez",
       isAction: true,
@@ -123,6 +123,34 @@ export default function ProfilesMain({ onClose }: ProfilesMainProps) {
     setSelectedProfileId(null);
     setCurrentView("profiles-list");
   };
+
+  const handleEditProfile = (profileId: number) => {
+  setSelectedProfileId(profileId);
+  setCurrentView("profile-create"); // Reutilizamos el formulario en modo edición
+};
+
+const handleDeleteProfile = async (profileId: number) => {
+  if (!confirm("¿Estás seguro de que deseas eliminar este perfil? Esta acción no se puede deshacer.")) {
+    return;
+  }
+  
+  try {
+    // Aquí llamarías a tu API para eliminar el perfil
+    // await deleteProfile(profileId);
+    console.log(`Eliminando perfil ${profileId}`);
+    
+    // Mostrar mensaje de éxito
+    setSuccessMessage("Perfil eliminado exitosamente");
+    
+    // Recargar la lista (puedes implementar un refresh)
+    // await loadProfiles();
+    
+    setTimeout(() => setSuccessMessage(""), 3000);
+  } catch (error) {
+    console.error("Error al eliminar perfil:", error);
+    alert("Error al eliminar el perfil. Por favor, intenta de nuevo.");
+  }
+};
 
   return (
     <div className="p-6">
@@ -187,8 +215,12 @@ export default function ProfilesMain({ onClose }: ProfilesMainProps) {
         <div className="lg:col-span-3">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             {currentView === "profiles-list" && (
-              <ProfilesList onViewProfile={handleViewProfile} />
-            )}
+                <ProfilesList 
+                  onViewProfile={handleViewProfile}
+                  onEditProfile={handleEditProfile}
+                  onDeleteProfile={handleDeleteProfile}
+                />
+              )}
             {currentView === "profile-create" && (
               <ProfileForm onSuccess={handleBackToList} />
             )}

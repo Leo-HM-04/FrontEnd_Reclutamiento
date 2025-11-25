@@ -26,9 +26,11 @@ interface Profile {
 interface ProfilesListProps {
   filterStatus?: string;
   onViewProfile?: (profileId: number) => void;
+  onEditProfile?: (profileId: number) => void;
+  onDeleteProfile?: (profileId: number) => void;
 }
 
-export default function ProfilesList({ filterStatus, onViewProfile }: ProfilesListProps) {
+export default function ProfilesList({ filterStatus, onViewProfile, onEditProfile, onDeleteProfile }: ProfilesListProps) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -273,12 +275,14 @@ export default function ProfilesList({ filterStatus, onViewProfile }: ProfilesLi
                       <i className="fas fa-eye"></i>
                     </button>
                     <button
+                      onClick={() => onEditProfile && onEditProfile(profile.id)}
                       className="text-blue-600 hover:text-blue-900 mr-3"
                       title="Editar"
                     >
                       <i className="fas fa-edit"></i>
                     </button>
                     <button
+                      onClick={() => onDeleteProfile && onDeleteProfile(profile.id)}
                       className="text-red-600 hover:text-red-900"
                       title="Eliminar"
                     >

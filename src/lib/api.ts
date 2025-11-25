@@ -1052,6 +1052,9 @@ export const createProfile = (profileData: Partial<Profile>) =>
 export const updateProfile = (id: number, profileData: Partial<Profile>) =>
   apiClient.updateProfile(id, profileData);
 
+export const deleteProfile = (id: number) =>
+  apiClient.deleteProfile(id);
+
 export const getProfileStats = () =>
   apiClient.getProfileStats();
 
