@@ -861,6 +861,38 @@ class ApiClient {
     return this.makeRequest<any>(`/api/ai-services/matching/${queryString}`);
   }
 
+  /**
+   * Bulk upload CVs with AI analysis
+   */
+  async bulkUploadCVs(formData: FormData): Promise<any> {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${this.baseURL}/api/candidates/candidates/bulk_upload_cvs/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw {
+        message: errorData.message || 'Error uploading CVs',
+        status: response.status,
+        details: errorData,
+      } as ApiError;
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Check bulk upload status
+   */
+  async getBulkUploadStatus(taskId: string): Promise<any> {
+    return this.makeRequest<any>(`/api/candidates/candidates/bulk_upload_status/?task_id=${taskId}`);
+  }
+
   
 }
 
@@ -1092,6 +1124,12 @@ export const calculateMatching = (data: { candidate_id: number; profile_id: numb
 
 export const getMatchings = (params?: Record<string, string>) =>
   apiClient.getMatchings(params);
+
+export const bulkUploadCVs = (formData: FormData) =>
+  apiClient.bulkUploadCVs(formData);
+
+export const getBulkUploadStatus = (taskId: string) =>
+  apiClient.getBulkUploadStatus(taskId);
 
 // Export types for use in components
 export type { LoginCredentials, LoginResponse, ApiError };

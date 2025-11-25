@@ -9,6 +9,7 @@ import ProfileDocuments from "./ProfileDocuments";
 import ProfileStats from "./ProfileStats";
 import CVAnalysisModal from "./CVAnalysisModal";
 import ProfileGenerationModal from "./ProfileGenerationModal";
+import BulkCVUploadModal from "./BulkCVUploadModal";
 
 type ProfileView = 
   | "profiles-list" 
@@ -19,7 +20,8 @@ type ProfileView =
   | "profile-documents"
   | "profile-stats"
   | "ai-cv-analysis"
-  | "ai-profile-generation";
+  | "ai-profile-generation"
+  | "ai-bulk-cv-upload";
 
   interface MenuItem {
   id: ProfileView;
@@ -40,6 +42,7 @@ export default function ProfilesMain({ onClose }: ProfilesMainProps) {
   const [showCVAnalysis, setShowCVAnalysis] = useState(false); // NUEVO
   const [showProfileGeneration, setShowProfileGeneration] = useState(false); // NUEVO
   const [successMessage, setSuccessMessage] = useState<string>(""); // NUEVO
+  const [showBulkCVUpload, setShowBulkCVUpload] = useState(false);
 
  const menuItems: MenuItem[] = [
     {
@@ -80,7 +83,7 @@ export default function ProfilesMain({ onClose }: ProfilesMainProps) {
     },
     {
       id: "ai-cv-analysis",
-      label: "🤖 Analizar CVs con IA",
+      label: " Analizar CVs con IA",
       icon: "fa-robot",
       description: "Extraer información de CVs automáticamente",
       isAction: true,
@@ -88,11 +91,20 @@ export default function ProfilesMain({ onClose }: ProfilesMainProps) {
     },
     {
       id: "ai-profile-generation",
-      label: "✨ Generar Perfil con IA",
+      label: " Generar Perfil con IA",
       icon: "fa-magic",
       description: "Crear perfiles desde transcripciones",
       isAction: true,
       action: () => setShowProfileGeneration(true)
+    },
+
+    {
+      id: "ai-bulk-cv-upload",
+      label: "🚀 Carga Masiva de CVs",
+      icon: "fa-file-upload",
+      description: "Analizar múltiples CVs de una vez",
+      isAction: true,
+      action: () => setShowBulkCVUpload(true)
     }
   ];
 
@@ -239,6 +251,18 @@ export default function ProfilesMain({ onClose }: ProfilesMainProps) {
           setCurrentView("profiles-list");
         }}
       />
+
+      {/* Bulk CV Upload Modal */}
+      <BulkCVUploadModal
+        isOpen={showBulkCVUpload}
+        onClose={() => setShowBulkCVUpload(false)}
+        onSuccess={(message: string) => {
+          setSuccessMessage(message);
+          setTimeout(() => setSuccessMessage(""), 5000);
+          setCurrentView("profiles-list");
+        }}
+      />
     </div>
+  
   );
 }
