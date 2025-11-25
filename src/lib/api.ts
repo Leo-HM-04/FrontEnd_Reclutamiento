@@ -84,15 +84,14 @@ class ApiClient {
 
       return await response.json();
     } catch (error) {
-      if (error && typeof error === 'object' && 'status' in error) {
-        throw error;
-      }
+      console.error('❌ API Request failed:', error);
       
+      // ✅ Asegurar que siempre devolvemos un objeto de error con estructura
       throw {
-        message: 'Error de conexión con el servidor',
+        message: 'Error en la petición',
         status: 0,
-        details: error,
-      } as ApiError;
+        details: error
+      };
     }
   }
 
@@ -561,28 +560,27 @@ class ApiClient {
     /**
    * Get profile statistics
    */
-  async getProfileStats(): Promise<any> {
-    // Ajusta la URL si tu endpoint es distinto
-    return this.makeRequest<any>('/api/profiles/stats/');
+ async getProfileStats(): Promise<any> {
+    return this.makeRequest<any>('/api/profiles/profiles/stats/');
   }
 
   /**
    * Get profile status history for a given profile
    */
   async getProfileHistory(profileId: number): Promise<any> {
-    // Si tu endpoint usa otro path (por ejemplo detail + /history/), cambia la URL
-    return this.makeRequest<any>(`/api/profiles/history/?profile=${profileId}`);
+    return this.makeRequest<any>(`/api/profiles/profiles/${profileId}/history/`);
   }
 
   /**
    * Get documents associated to profiles
    */
   async getProfileDocuments(profileId?: number): Promise<any> {
-    const endpoint = profileId
-      ? `/api/profiles/documents/?profile=${profileId}`
-      : '/api/profiles/documents/';
-
-    return this.makeRequest<any>(endpoint);
+    if (profileId) {
+      // Si hay un profileId específico, usar la acción del perfil
+      return this.makeRequest<any>(`/api/profiles/profiles/${profileId}/documents/`);
+    }
+    // Si no hay profileId, usar el endpoint general
+    return this.makeRequest<any>('/api/profiles/documents/');
   }
 
   /**

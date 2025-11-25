@@ -47,7 +47,9 @@ export default function ProfileStatusHistory() {
     setLoading(true);
     try {
       const response = await getProfileHistory(selectedProfile);
-      setHistories(response.data);
+      // ✅ El API devuelve directamente el array o un objeto con results
+      const historyList = response.results || (Array.isArray(response) ? response : []);
+      setHistories(historyList);
     } catch (error) {
       console.error("Error loading history:", error);
     } finally {

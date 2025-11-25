@@ -59,12 +59,12 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
     loadProfile();
   }, [profileId]);
 
-  const loadProfile = async () => {
-    setLoading(true);
-    try {
-      const response = await getProfile(profileId);
-      setProfile(response.data);
-    } catch (error) {
+ const loadProfile = async () => {
+  setLoading(true);
+  try {
+    const profile = await getProfile(profileId);
+    setProfile(profile);
+  } catch (error) {
       console.error("Error loading profile:", error);
       alert("Error al cargar el perfil");
     } finally {

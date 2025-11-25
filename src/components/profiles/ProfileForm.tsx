@@ -1,15 +1,32 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createProfile, updateProfile, getProfile } from "@/lib/api";
-
+import { createProfile, updateProfile, getProfile, getClients, apiClient } from "@/lib/api";
 interface ProfileFormProps {
   profileId?: number;
   onSuccess?: () => void;
 }
 
+interface Client {
+  id: number;
+  company_name: string;
+  name?: string;
+}
+
+interface User {
+  id: number;
+  full_name: string;
+  email: string;
+  role: string;
+}
+
 export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) {
   const [loading, setLoading] = useState(false);
+  const [clients, setClients] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
+  
+  
   const [formData, setFormData] = useState({
     // Información básica
     position_title: "",
@@ -59,18 +76,70 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
   });
 
   useEffect(() => {
-    if (profileId) {
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (profileId && clients.length > 0) {
       loadProfile();
     }
-  }, [profileId]);
+  }, [profileId, clients]);
+
+  useEffect(() => {
+    loadClientsAndUsers();
+  }, []);
+
+  const loadClientsAndUsers = async () => {
+    setLoadingData(true);
+    try {
+      const [clientsRes, usersRes] = await Promise.all([
+        getClients(),
+        apiClient.getUsers()
+      ]);
+      
+      const clientsList = (clientsRes as any).results || (Array.isArray(clientsRes) ? clientsRes : []);
+      const usersList = (usersRes as any).results || (Array.isArray(usersRes) ? usersRes : []);
+      
+      setClients(clientsList);
+      setUsers(usersList);
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+
+
+  const loadInitialData = async () => {
+    setLoadingData(true);
+    try {
+      // Cargar clientes
+      const clientsResponse = await getClients();
+      const clientsList = (clientsResponse as any).results || (Array.isArray(clientsResponse) ? clientsResponse : []);
+      setClients(clientsList);
+
+      // Cargar usuarios (supervisores y directores)
+      const usersResponse = await apiClient.getUsers();
+      const usersList = (usersResponse as any).results || (Array.isArray(usersResponse) ? usersResponse : []);
+      setUsers(usersList);
+
+      console.log('✅ Clientes cargados:', clientsList.length);
+      console.log('✅ Usuarios cargados:', usersList.length);
+    } catch (error) {
+      console.error("Error loading initial data:", error);
+      alert("Error al cargar datos iniciales");
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   const loadProfile = async () => {
-    if (!profileId) return;
-    
-    setLoading(true);
-    try {
-      const response = await getProfile(profileId);
-      const profile = response.data;
+  if (!profileId) return;
+  
+  setLoading(true);
+  try {
+    const profile = await getProfile(profileId);
       
       // Parsear JSON fields
       const technicalSkills = Array.isArray(profile.technical_skills) 
@@ -89,6 +158,8 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
       setFormData({
         ...formData,
         ...profile,
+        client: profile.client?.toString() || "",
+        assigned_to: profile.assigned_to?.toString() || "",
         technical_skills: technicalSkills,
         soft_skills: softSkills,
         languages_required: languages,
@@ -157,6 +228,15 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
     }
   };
 
+  if (loadingData) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <i className="fas fa-spinner fa-spin text-4xl text-orange-600 mr-4"></i>
+        <span className="text-gray-600">Cargando datos...</span>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -193,18 +273,25 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cliente * (ID)
-              </label>
-              <input
-                type="number"
-                name="client"
-                value={formData.client}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              />
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cliente *
+            </label>
+            <select
+              name="client"
+              value={formData.client}
+              onChange={handleChange}
+              required
+              disabled={loadingData}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="">Seleccionar cliente...</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.company_name || client.name || `Cliente #${client.id}`}
+                </option>
+              ))}
+            </select>
+          </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -281,15 +368,24 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Asignado a (ID Usuario)
+                Asignado a
               </label>
-              <input
-                type="number"
+              <select
                 name="assigned_to"
                 value={formData.assigned_to}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              />
+              >
+                <option value="">Sin asignar</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.full_name} ({user.role}) - {user.email}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Selecciona el supervisor o director responsable
+              </p>
             </div>
           </div>
         </div>
@@ -304,12 +400,13 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Responsabilidades
+                Responsabilidades *
               </label>
               <textarea
                 name="responsibilities"
                 value={formData.responsibilities}
                 onChange={handleChange}
+                required
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 placeholder="Describa las responsabilidades principales del puesto..."
@@ -318,15 +415,16 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Requisitos
+                Requisitos *
               </label>
               <textarea
                 name="requirements"
                 value={formData.requirements}
                 onChange={handleChange}
+                required
                 rows={4}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                placeholder="Describa los requisitos del puesto..."
+                placeholder="Especifique los requisitos y calificaciones necesarias..."
               />
             </div>
 
@@ -340,17 +438,17 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
                 onChange={handleChange}
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                placeholder="Describa los beneficios ofrecidos..."
+                placeholder="Prestaciones, beneficios, bonos, etc..."
               />
             </div>
           </div>
         </div>
 
-        {/* Requisitos Específicos */}
+        {/* Requisitos del Candidato */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-clipboard-check text-orange-600 mr-2"></i>
-            Requisitos Específicos
+            <i className="fas fa-user-check text-orange-600 mr-2"></i>
+            Requisitos del Candidato
           </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -388,25 +486,19 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nivel Educativo
               </label>
-              <select
+              <input
+                type="text"
                 name="education_level"
                 value={formData.education_level}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="">Seleccionar...</option>
-                <option value="secundaria">Secundaria</option>
-                <option value="preparatoria">Preparatoria</option>
-                <option value="tecnico">Técnico</option>
-                <option value="licenciatura">Licenciatura</option>
-                <option value="maestria">Maestría</option>
-                <option value="doctorado">Doctorado</option>
-              </select>
+                placeholder="Ej: Licenciatura en Ingeniería"
+              />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Años de Experiencia Requeridos
+                Años de Experiencia
               </label>
               <input
                 type="number"
@@ -414,18 +506,17 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
                 value={formData.years_experience_required}
                 onChange={handleChange}
                 min="0"
-                max="50"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               />
             </div>
           </div>
         </div>
 
-        {/* Salario */}
+        {/* Salario y Compensación */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <i className="fas fa-dollar-sign text-orange-600 mr-2"></i>
-            Información Salarial
+            Salario y Compensación
           </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -438,6 +529,7 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
                 name="salary_min"
                 value={formData.salary_min}
                 onChange={handleChange}
+                min="0"
                 step="0.01"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               />
@@ -452,6 +544,7 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
                 name="salary_max"
                 value={formData.salary_max}
                 onChange={handleChange}
+                min="0"
                 step="0.01"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               />
@@ -484,9 +577,8 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               >
                 <option value="mensual">Mensual</option>
-                <option value="quincenal">Quincenal</option>
-                <option value="semanal">Semanal</option>
                 <option value="anual">Anual</option>
+                <option value="por_hora">Por Hora</option>
               </select>
             </div>
           </div>
@@ -502,26 +594,28 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ubicación
+                Ubicación *
               </label>
               <input
                 type="text"
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
+                required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                placeholder="Ciudad, Estado"
+                placeholder="Ej: Ciudad de México, CDMX"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Modalidad
+                Modalidad *
               </label>
               <select
                 name="modality"
                 value={formData.modality}
                 onChange={handleChange}
+                required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
               >
                 <option value="presencial">Presencial</option>
@@ -546,45 +640,47 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
           </div>
         </div>
 
-        {/* Habilidades */}
+        {/* Habilidades y Competencias */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-brain text-orange-600 mr-2"></i>
+            <i className="fas fa-cogs text-orange-600 mr-2"></i>
             Habilidades y Competencias
           </h4>
           
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Habilidades Técnicas (separadas por comas)
+                Habilidades Técnicas
               </label>
-              <textarea
+              <input
+                type="text"
                 name="technical_skills"
                 value={formData.technical_skills}
                 onChange={handleChange}
-                rows={2}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                placeholder="Python, Django, PostgreSQL, Docker, AWS"
+                placeholder="Separadas por comas: Python, Django, React, PostgreSQL"
               />
+              <p className="text-xs text-gray-500 mt-1">Separe cada habilidad con una coma</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Habilidades Blandas (separadas por comas)
+                Habilidades Blandas
               </label>
-              <textarea
+              <input
+                type="text"
                 name="soft_skills"
                 value={formData.soft_skills}
                 onChange={handleChange}
-                rows={2}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                placeholder="Liderazgo, Trabajo en equipo, Comunicación efectiva"
+                placeholder="Separadas por comas: Trabajo en equipo, Liderazgo, Comunicación"
               />
+              <p className="text-xs text-gray-500 mt-1">Separe cada habilidad con una coma</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Idiomas Requeridos (separados por comas)
+                Idiomas Requeridos
               </label>
               <input
                 type="text"
@@ -592,13 +688,14 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
                 value={formData.languages_required}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                placeholder="Español, Inglés avanzado"
+                placeholder="Separados por comas: Español, Inglés avanzado"
               />
+              <p className="text-xs text-gray-500 mt-1">Separe cada idioma con una coma</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Certificaciones Requeridas (separadas por comas)
+                Certificaciones Requeridas
               </label>
               <input
                 type="text"
@@ -606,23 +703,24 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
                 value={formData.certifications_required}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                placeholder="PMP, Scrum Master, AWS Certified"
+                placeholder="Separadas por comas: PMP, SCRUM Master, AWS"
               />
+              <p className="text-xs text-gray-500 mt-1">Separe cada certificación con una coma</p>
             </div>
           </div>
         </div>
 
-        {/* Fechas */}
+        {/* Fechas Importantes */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-calendar-alt text-orange-600 mr-2"></i>
+            <i className="fas fa-calendar text-orange-600 mr-2"></i>
             Fechas Importantes
           </h4>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha Límite de Búsqueda
+                Fecha Límite
               </label>
               <input
                 type="date"
@@ -635,7 +733,7 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Fecha Esperada de Inicio
+                Fecha de Inicio Esperada
               </label>
               <input
                 type="date"
@@ -655,29 +753,36 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
             Notas Internas
           </h4>
           
-          <textarea
-            name="internal_notes"
-            value={formData.internal_notes}
-            onChange={handleChange}
-            rows={4}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-            placeholder="Notas internas sobre el perfil, no visibles para el cliente..."
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Notas
+            </label>
+            <textarea
+              name="internal_notes"
+              value={formData.internal_notes}
+              onChange={handleChange}
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              placeholder="Notas privadas para uso interno del equipo..."
+            />
+          </div>
         </div>
 
-        {/* Botones */}
-        <div className="flex justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => onSuccess && onSuccess()}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-          >
-            Cancelar
-          </button>
+        {/* Botones de Acción */}
+        <div className="flex justify-end space-x-4 pt-4 border-t">
+          {onSuccess && (
+            <button
+              type="button"
+              onClick={onSuccess}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+          )}
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400"
+            className="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           >
             {loading ? (
               <>

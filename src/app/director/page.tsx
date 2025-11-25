@@ -1000,64 +1000,60 @@ useEffect(() => {
                 </button>
               </li>
               <li>
-
-               <li>
-              <button 
-                onClick={() => setCurrentView("profiles")} 
-                className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles")}`}
-              >
-                <i className="fas fa-briefcase mr-3 w-5" />
-                Perfiles de Reclutamiento
-                {stats.activeProfiles > 0 && (
-                  <span className="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
-                    {stats.activeProfiles}
-                  </span>
-                )}
-              </button>
-            </li>
-
-             
-                <div>
-                  <button onClick={() => setCandidatesMenuOpen(!candidatesMenuOpen)} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}>
-                    <i className="fas fa-user-tie mr-3 w-5" />
-                    Candidatos
-                    <i className={`fas fa-chevron-${candidatesMenuOpen ? 'down' : 'right'} ml-auto text-xs transition-transform`} />
-                  </button>
-                  {candidatesMenuOpen && (
-                    <ul className="ml-8 mt-1 space-y-1">
-                      <li>
-                        <button onClick={() => setCurrentView("candidates")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}>
-                          <i className="fas fa-users mr-3 w-4" />
-                          Ver Candidatos
-                        </button>
-                      </li>
-                      <li>
-                        <button onClick={() => setCurrentView("applications")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("applications")}`}>
-                          <i className="fas fa-briefcase mr-3 w-4" />
-                          Aplicaciones
-                        </button>
-                      </li>
-                      <li>
-                        <button onClick={() => setCurrentView("documents")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("documents")}`}>
-                          <i className="fas fa-folder-open mr-3 w-4" />
-                          Documentos
-                        </button>
-                      </li>
-                      <li>
-                        <button onClick={() => setCurrentView("notes")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("notes")}`}>
-                          <i className="fas fa-sticky-note mr-3 w-4" />
-                          Notas
-                        </button>
-                      </li>
-                      <li>
-                        <button onClick={() => setCurrentView("history")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("history")}`}>
-                          <i className="fas fa-history mr-3 w-4" />
-                          Historial
-                        </button>
-                      </li>
-                    </ul>
+                <button 
+                  onClick={() => setCurrentView("profiles")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles")}`}
+                >
+                  <i className="fas fa-briefcase mr-3 w-5" />
+                  Perfiles de Reclutamiento
+                  {stats.activeProfiles > 0 && (
+                    <span className="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                      {stats.activeProfiles}
+                    </span>
                   )}
-                </div>
+                </button>
+              </li>
+
+              <li>
+                <button onClick={() => setCandidatesMenuOpen(!candidatesMenuOpen)} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}>
+                  <i className="fas fa-user-tie mr-3 w-5" />
+                  Candidatos
+                  <i className={`fas fa-chevron-${candidatesMenuOpen ? 'down' : 'right'} ml-auto text-xs transition-transform`} />
+                </button>
+                {candidatesMenuOpen && (
+                  <ul className="ml-8 mt-1 space-y-1">
+                    <li>
+                      <button onClick={() => setCurrentView("candidates")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}>
+                        <i className="fas fa-users mr-3 w-4" />
+                        Ver Candidatos
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => setCurrentView("applications")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("applications")}`}>
+                        <i className="fas fa-briefcase mr-3 w-4" />
+                        Aplicaciones
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => setCurrentView("documents")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("documents")}`}>
+                        <i className="fas fa-folder-open mr-3 w-4" />
+                        Documentos
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => setCurrentView("notes")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("notes")}`}>
+                        <i className="fas fa-sticky-note mr-3 w-4" />
+                        Notas
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => setCurrentView("history")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("history")}`}>
+                        <i className="fas fa-history mr-3 w-4" />
+                        Historial
+                      </button>
+                    </li>
+                  </ul>
+                )}
               </li>
               <li>
                 <button 

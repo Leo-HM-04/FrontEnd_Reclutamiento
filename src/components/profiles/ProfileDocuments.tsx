@@ -49,15 +49,18 @@ export default function ProfileDocuments() {
     }
   };
 
-  const loadDocuments = async () => {
+ const loadDocuments = async () => {
     if (!selectedProfile) return;
     
     setLoading(true);
     try {
       const response = await getProfileDocuments(selectedProfile);
-      setDocuments(response.data);
+      // ✅ El API puede devolver un array directo o un objeto con results
+      const documentsList = response.results || (Array.isArray(response) ? response : []);
+      setDocuments(documentsList);
     } catch (error) {
       console.error("Error loading documents:", error);
+      setDocuments([]); // ✅ Asegurar que siempre sea un array
     } finally {
       setLoading(false);
     }

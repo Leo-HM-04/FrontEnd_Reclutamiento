@@ -221,8 +221,11 @@ const handleDeleteProfile = async (profileId: number) => {
                   onDeleteProfile={handleDeleteProfile}
                 />
               )}
-            {currentView === "profile-create" && (
-              <ProfileForm onSuccess={handleBackToList} />
+           {currentView === "profile-create" && (
+              <ProfileForm 
+                profileId={selectedProfileId || undefined}
+                onSuccess={handleBackToList} 
+              />
             )}
             {currentView === "profile-detail" && selectedProfileId && (
               <ProfileDetail 
