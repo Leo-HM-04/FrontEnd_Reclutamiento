@@ -214,6 +214,28 @@ export default function Page() {
   // Estado para clientes
   const [clientsData, setClientsData] = useState<Client[]>([]);
   const [contactsData, setContactsData] = useState<ContactPerson[]>([]);
+  // Estado para aplicaciones
+  const [applicationsData, setApplicationsData] = useState({
+    total: 0,
+    active: 0,
+    shortlisted: 0,
+    rejected: 0,
+    loading: true
+  });
+
+  // Estado para documentos
+  const [documentsData, setDocumentsData] = useState({
+    total: 0,
+    by_type: {
+      cv: 0,
+      contract: 0,  // Contratos
+      report: 0,    // Reportes
+      other: 0
+    },
+    recent: [] as any[],
+    loading: true
+  });
+
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   // Dropdowns
@@ -290,6 +312,8 @@ useEffect(() => {
       setLoading(true);
       try {
         await loadDashboardData();
+        await loadApplicationsData();
+        await loadDocumentsData();
         setupCharts();
         // Actualizaciones cada 30s
         const id = setInterval(() => loadDashboardData(), 30000);
@@ -454,10 +478,6 @@ useEffect(() => {
       { id: 2, name: "Carlos Ruiz", role: "Talent Acquisition", email: "carlos.ruiz@company.com", status: "active", assignedProcesses: 6, managedCandidates: 32, successRate: 88, avatar: "Carlos+Ruiz" },
     ]);
 
-    setDocuments([
-      { id: 1, name: "CV_Juan_Perez_2024.pdf", type: "pdf", size: "2.5 MB", uploadedBy: "Ana García", uploadedAt: "Hace 2 horas", category: "CV" },
-      { id: 2, name: "Contrato_Maria_Gonzalez.docx", type: "docx", size: "1.2 MB", uploadedBy: "Carlos Ruiz", uploadedAt: "Hace 1 día", category: "Contrato" },
-    ]);
   }
 
   // ====== Acciones (toasts) ======
@@ -675,6 +695,97 @@ useEffect(() => {
         response: err.response
       });
       error(`Error al cargar contactos: ${err.message || 'Error desconocido'}`);
+    }
+  };
+
+  /**
+ * Cargar datos de aplicaciones desde el backend
+ */
+const loadApplicationsData = async () => {
+  try {
+    setApplicationsData(prev => ({ ...prev, loading: true }));
+    
+    console.log('🔵 Cargando aplicaciones desde el backend...');
+    const response = await apiClient.getCandidateApplications();
+    
+    // El backend puede devolver datos en .results (paginado) o directamente
+    const applications = (response as any)?.results || (response as any) || [];
+    
+    console.log('✅ Aplicaciones cargadas:', applications.length);
+    
+    // Calcular estadísticas
+    const stats = {
+      total: applications.length,
+      active: applications.filter((app: any) => 
+        !['rejected', 'withdrawn', 'accepted'].includes(app.status)
+      ).length,
+      shortlisted: applications.filter((app: any) => 
+        app.status === 'shortlisted'
+      ).length,
+      rejected: applications.filter((app: any) => 
+        ['rejected', 'withdrawn'].includes(app.status)
+      ).length,
+      loading: false
+    };
+    
+    setApplicationsData(stats);
+    console.log('📊 Estadísticas de aplicaciones:', stats);
+    
+  } catch (error: any) {
+    console.error('❌ Error al cargar aplicaciones:', error);
+    setApplicationsData({
+      total: 0,
+      active: 0,
+      shortlisted: 0,
+      rejected: 0,
+      loading: false
+    });
+  }
+
+};
+
+
+  /**
+   * Cargar datos de documentos desde el backend
+   */
+  const loadDocumentsData = async () => {
+    try {
+      setDocumentsData(prev => ({ ...prev, loading: true }));
+      
+      console.log('🔵 Cargando documentos desde el backend...');
+      const response = await apiClient.getCandidateDocuments();
+      
+      const documents = (response as any)?.results || (response as any) || [];
+      
+      console.log('✅ Documentos cargados:', documents.length);
+      
+      const stats = {
+        total: documents.length,
+        by_type: {
+          cv: documents.filter((d: any) => d.document_type === 'cv').length,
+          contract: documents.filter((d: any) => 
+            d.document_type === 'contract' || d.document_type === 'cover_letter'
+          ).length,
+          report: documents.filter((d: any) => d.document_type === 'certificate').length,
+          other: documents.filter((d: any) => 
+            !['cv', 'contract', 'cover_letter', 'certificate'].includes(d.document_type)
+          ).length,
+        },
+        recent: documents.slice(0, 5),  // ← AGREGAR ESTA LÍNEA: Tomar los 5 más recientes
+        loading: false
+      };
+      
+      setDocumentsData(stats);
+      console.log('📊 Estadísticas de documentos:', stats);
+      
+    } catch (error: any) {
+      console.error('❌ Error al cargar documentos:', error);
+      setDocumentsData({
+        total: 0,
+        by_type: { cv: 0, contract: 0, report: 0, other: 0 },
+        recent: [],  // ← AGREGAR ESTA LÍNEA
+        loading: false
+      });
     }
   };
 
@@ -1749,7 +1860,13 @@ useEffect(() => {
                     </div>
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">Total Aplicaciones</p>
-                      <p className="text-2xl font-bold text-gray-900">324</p>
+                      {applicationsData.loading ? (
+                        <div className="animate-pulse">
+                          <div className="h-8 bg-gray-200 rounded w-16 mt-2"></div>
+                        </div>
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-900">{applicationsData.total}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1760,7 +1877,13 @@ useEffect(() => {
                     </div>
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">Preseleccionados</p>
-                      <p className="text-2xl font-bold text-gray-900">89</p>
+                      {applicationsData.loading ? (
+                        <div className="animate-pulse">
+                          <div className="h-8 bg-gray-200 rounded w-12 mt-2"></div>
+                        </div>
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-900">{applicationsData.shortlisted}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1771,7 +1894,13 @@ useEffect(() => {
                     </div>
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">En Revisión</p>
-                      <p className="text-2xl font-bold text-gray-900">156</p>
+                      {applicationsData.loading ? (
+                        <div className="animate-pulse">
+                          <div className="h-8 bg-gray-200 rounded w-12 mt-2"></div>
+                        </div>
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-900">{applicationsData.active}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1782,7 +1911,15 @@ useEffect(() => {
                     </div>
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">Tasa Conversión</p>
-                      <p className="text-2xl font-bold text-gray-900">27%</p>
+                      {applicationsData.loading ? (
+                        <div className="animate-pulse">...</div>
+                      ) : (
+                        <p className="text-2xl font-bold text-gray-900">
+                          {applicationsData.total > 0 
+                            ? Math.round((applicationsData.shortlisted / applicationsData.total) * 100) 
+                            : 0}%
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1813,37 +1950,35 @@ useEffect(() => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      <tr className="table-row">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium">JP</div>
-                            <div className="ml-4">
-                              <p className="font-medium text-gray-900">Juan Pérez García</p>
-                              <p className="text-gray-500">juan.perez@email.com</p>
+                      {applicationsData.loading ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-12 text-center">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <p className="mt-2 text-gray-500">Cargando aplicaciones...</p>
+                          </td>
+                        </tr>
+                      ) : applicationsData.total === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-12 text-center">
+                            <div className="text-gray-400">
+                              <i className="fas fa-inbox text-5xl mb-4"></i>
+                              <p className="text-lg font-medium text-gray-900">No hay aplicaciones registradas</p>
+                              <p className="text-gray-500 mt-1">Las aplicaciones aparecerán aquí cuando se agreguen</p>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="text-gray-900">Desarrollador Full Stack Senior</p>
-                          <p className="text-gray-500">Tecnología</p>
-                        </td>
-                        <td className="px-6 py-4 text-gray-900">01 Nov 2024</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <div className="flex-1 bg-gray-200 rounded-full h-2 mr-3">
-                              <div className="bg-green-600 h-2 rounded-full" style={{ width: '85%' }}></div>
-                            </div>
-                            <span className="text-sm font-medium text-green-600">85%</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Preseleccionado</span>
-                        </td>
-                        <td className="px-6 py-4 text-right space-x-2">
-                          <button className="text-blue-600 hover:text-blue-900"><i className="fas fa-eye" /></button>
-                          <button className="text-green-600 hover:text-green-900"><i className="fas fa-edit" /></button>
-                        </td>
-                      </tr>
+                          </td>
+                        </tr>
+                      ) : (
+                        <>
+                          <tr className="table-row">
+                            <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                              <p>Aplicaciones cargadas: {applicationsData.total}</p>
+                              <p className="text-sm mt-1">
+                                Haz clic en <strong>"Aplicaciones"</strong> en el menú lateral para ver la lista completa
+                              </p>
+                            </td>
+                          </tr>
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1851,133 +1986,7 @@ useEffect(() => {
             </div>
           )}
 
-          {/* DOCUMENTS */}
-          {currentView === "documents" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Documentos de Candidatos</h2>
-                  <p className="text-gray-600 mt-1">Gestiona todos los documentos y archivos de candidatos</p>
-                </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={() => info("Buscando documentos...")} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-search mr-2" />
-                    Buscar
-                  </button>
-                  <button onClick={() => info("Subiendo documento...")} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-upload mr-2" />
-                    Subir Documento
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-red-100">
-                      <i className="fas fa-file-pdf text-red-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">CVs</p>
-                      <p className="text-2xl font-bold text-gray-900">1,247</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-100">
-                      <i className="fas fa-certificate text-green-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Certificados</p>
-                      <p className="text-2xl font-bold text-gray-900">89</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-purple-100">
-                      <i className="fas fa-folder text-purple-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Portafolios</p>
-                      <p className="text-2xl font-bold text-gray-900">156</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-blue-100">
-                      <i className="fas fa-file-alt text-blue-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Referencias</p>
-                      <p className="text-2xl font-bold text-gray-900">67</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Documentos Recientes</h3>
-                  <div className="flex space-x-3">
-                    <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                      <option>Todos los tipos</option>
-                      <option>CVs</option>
-                      <option>Certificados</option>
-                      <option>Portafolios</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidato</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tamaño</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      <tr className="table-row">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <i className="fas fa-file-pdf text-red-500 text-xl mr-3" />
-                            <div>
-                              <p className="font-medium text-gray-900">CV_Juan_Perez_2024.pdf</p>
-                              <p className="text-gray-500">Currículum actualizado</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">JP</div>
-                            <div className="ml-3">
-                              <p className="text-gray-900">Juan Pérez García</p>
-                              <p className="text-gray-500">juan.perez@email.com</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">CV</span>
-                        </td>
-                        <td className="px-6 py-4 text-gray-900">2.3 MB</td>
-                        <td className="px-6 py-4 text-gray-900">01 Nov 2024</td>
-                        <td className="px-6 py-4 text-right space-x-2">
-                          <button className="text-blue-600 hover:text-blue-900"><i className="fas fa-eye" /></button>
-                          <button className="text-green-600 hover:text-green-900"><i className="fas fa-download" /></button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+          
 
           {/* Modal Formulario Nueva Aplicación */}
           <ApplicationFormModal
@@ -3135,59 +3144,204 @@ useEffect(() => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                {[
-                  { icon: "fas fa-file-pdf", title: "CVs", count: "1,247 documentos", wrap: "bg-blue-100 text-blue-600", btn: "bg-blue-50 text-blue-600 hover:bg-blue-100" },
-                  { icon: "fas fa-file-contract", title: "Contratos", count: "89 documentos", wrap: "bg-green-100 text-green-600", btn: "bg-green-50 text-green-600 hover:bg-green-100" },
-                  { icon: "fas fa-file-alt", title: "Reportes", count: "156 documentos", wrap: "bg-purple-100 text-purple-600", btn: "bg-purple-50 text-purple-600 hover:bg-purple-100" },
-                  { icon: "fas fa-folder", title: "Otros", count: "67 documentos", wrap: "bg-yellow-100 text-yellow-600", btn: "bg-yellow-50 text-yellow-600 hover:bg-yellow-100" },
-                ].map((c) => (
-                  <div key={c.title} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200 text-center">
-                    <div className={`w-12 h-12 ${c.wrap.split(" ").slice(0,1).join(" ")} rounded-xl flex items-center justify-center mx-auto mb-4`}>
-                      <i className={`${c.icon} ${c.wrap.split(" ").slice(1).join(" ")} text-xl`} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{c.title}</h3>
-                    <p className="text-sm text-gray-500 mb-4">{c.count}</p>
-                    <button className={`w-full px-4 py-2 rounded-lg ${c.btn}`}>Ver Todos</button>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-semibold text-gray-900">Documentos Recientes</h3>
-                </div>
-                <div className="divide-y divide-gray-200">
-                  {documents.map((d) => (
-                    <div key={d.id} className="p-6 hover:bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                            <i className="fas fa-file-pdf text-red-600" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-semibold text-gray-900">{d.name}</h4>
-                            <p className="text-xs text-gray-500">
-                              Subido por {d.uploadedBy} • {d.uploadedAt} • {d.size}
-                            </p>
-                          </div>
+                {documentsData.loading ? (
+                  // Loading skeleton para 4 tarjetas
+                  [1, 2, 3, 4].map((i) => (
+                    <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                      <div className="animate-pulse">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
                         </div>
-                        <div className="flex space-x-2">
-                          <button onClick={() => viewDocument(d.id)} className="text-blue-600 hover:text-blue-700 p-2 rounded" title="Ver">
-                            <i className="fas fa-eye" />
-                          </button>
-                          <button onClick={() => downloadDocument(d.id)} className="text-green-600 hover:text-green-700 p-2 rounded" title="Descargar">
-                            <i className="fas fa-download" />
-                          </button>
-                          <button onClick={() => deleteDocument(d.id)} className="text-red-600 hover:text-red-700 p-2 rounded" title="Eliminar">
-                            <i className="fas fa-trash" />
-                          </button>
-                        </div>
+                        <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
+                        <div className="h-6 bg-gray-200 rounded w-32"></div>
                       </div>
                     </div>
-                  ))}
-                  {/* ...otros items si deseas... */}
-                </div>
+                  ))
+                ) : (
+                  [
+                    { 
+                      icon: "fas fa-file-pdf", 
+                      title: "CVs", 
+                      count: documentsData.by_type.cv, 
+                      wrap: "bg-blue-100 text-blue-600", 
+                      btn: "bg-blue-50 text-blue-600 hover:bg-blue-100" 
+                    },
+                    { 
+                      icon: "fas fa-file-contract", 
+                      title: "Contratos", 
+                      count: documentsData.by_type.contract, 
+                      wrap: "bg-green-100 text-green-600", 
+                      btn: "bg-green-50 text-green-600 hover:bg-green-100" 
+                    },
+                    { 
+                      icon: "fas fa-file-alt", 
+                      title: "Reportes", 
+                      count: documentsData.by_type.report, 
+                      wrap: "bg-purple-100 text-purple-600", 
+                      btn: "bg-purple-50 text-purple-600 hover:bg-purple-100" 
+                    },
+                    { 
+                      icon: "fas fa-folder", 
+                      title: "Otros", 
+                      count: documentsData.by_type.other, 
+                      wrap: "bg-yellow-100 text-yellow-600", 
+                      btn: "bg-yellow-50 text-yellow-600 hover:bg-yellow-100" 
+                    },
+                  ].map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className={`w-12 h-12 ${item.wrap} rounded-lg flex items-center justify-center`}>
+                          <i className={`${item.icon} text-xl`} />
+                        </div>
+                      </div>
+                      <h3 className="text-gray-600 text-sm font-medium mb-1">{item.title}</h3>
+                      <p className="text-2xl font-bold text-gray-900">{item.count}</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {item.count === 1 ? 'documento' : 'documentos'}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900">Documentos Recientes</h2>
+                </div>
+                
+                <div className="divide-y divide-gray-200">
+                  {documentsData.loading ? (
+                    // Loading skeleton
+                    [1, 2].map((i) => (
+                      <div key={i} className="px-6 py-4 animate-pulse">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : documentsData.recent.length === 0 ? (
+                    // No hay documentos
+                    <div className="px-6 py-12 text-center">
+                      <div className="text-gray-400">
+                        <i className="fas fa-inbox text-5xl mb-4"></i>
+                        <p className="text-lg font-medium text-gray-900">No hay documentos recientes</p>
+                        <p className="text-gray-500 mt-1">Los documentos aparecerán aquí cuando se suban</p>
+                      </div>
+                    </div>
+                  ) : (
+                    // Lista de documentos reales
+                    documentsData.recent.map((doc: any) => {
+                      // Calcular hace cuánto tiempo
+                      const uploadedDate = new Date(doc.uploaded_at);
+                      const now = new Date();
+                      const diffMs = now.getTime() - uploadedDate.getTime();
+                      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                      const diffDays = Math.floor(diffHours / 24);
+                      
+                      let timeAgo = '';
+                      if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
+                      else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+                      else if (diffDays === 1) timeAgo = 'Hace 1 día';
+                      else timeAgo = `Hace ${diffDays} días`;
+                      
+                      // Determinar icono según tipo
+                      const getIcon = (type: string) => {
+                        switch(type) {
+                          case 'cv': return { icon: 'fa-file-pdf', color: 'text-red-500' };
+                          case 'certificate': return { icon: 'fa-certificate', color: 'text-green-500' };
+                          case 'portfolio': return { icon: 'fa-folder', color: 'text-purple-500' };
+                          case 'cover_letter': return { icon: 'fa-file-alt', color: 'text-blue-500' };
+                          default: return { icon: 'fa-file', color: 'text-gray-500' };
+                        }
+                      };
+                      
+                      const iconConfig = getIcon(doc.document_type);
+                      
+                      // Calcular tamaño del archivo
+                      const fileSize = doc.file_size 
+                        ? `${(doc.file_size / (1024 * 1024)).toFixed(1)} MB`
+                        : 'Tamaño desconocido';
+                      
+                      return (
+                        <div key={doc.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center justify-between">
+                            {/* Icono y nombre */}
+                            <div className="flex items-center space-x-4 flex-1 min-w-0">
+                              <div className="flex-shrink-0">
+                                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                  <i className={`fas ${iconConfig.icon} ${iconConfig.color} text-lg`}></i>
+                                </div>
+                              </div>
+                              
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {doc.original_filename || 'Documento sin nombre'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  Subido por {doc.uploaded_by_name || 'Usuario'} • {timeAgo} • {fileSize}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Acciones */}
+                            <div className="flex items-center space-x-2 ml-4">
+                              <button
+                                onClick={() => window.open(doc.file_url, '_blank')}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Ver documento"
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = doc.file_url;
+                                  link.download = doc.original_filename;
+                                  link.click();
+                                }}
+                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Descargar"
+                              >
+                                <i className="fas fa-download"></i>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (confirm('¿Estás seguro de que deseas eliminar este documento?')) {
+                                    console.log('Eliminar documento:', doc.id);
+                                    // Aquí puedes agregar la lógica de eliminación
+                                  }
+                                }}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Eliminar"
+                              >
+                                <i className="fas fa-trash"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+                
+                {/* Footer con link a ver todos */}
+                {documentsData.recent.length > 0 && (
+                  <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                    <button 
+                      onClick={() => router.push('/director/candidates/documents')}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Ver todos los documentos ({documentsData.total}) →
+                    </button>
+                  </div>
+                )}
+              </div>           
             </div>
           )}
 
