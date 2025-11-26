@@ -220,8 +220,10 @@ export default function Page() {
     active: 0,
     shortlisted: 0,
     rejected: 0,
+    recent: [] as any[],
     loading: true
   });
+  
 
   // Estado para documentos
   const [documentsData, setDocumentsData] = useState({
@@ -236,6 +238,29 @@ export default function Page() {
     loading: true
   });
 
+  // Estado para notas
+  const [notesData, setNotesData] = useState({
+    total: 0,
+    by_type: {
+      interview: 0,
+      evaluation: 0,
+      concern: 0,
+      general: 0,
+      reference: 0
+    },
+    recent: [] as any[],
+    loading: true
+  });
+
+  // Estado para historial
+  const [historyData, setHistoryData] = useState({
+    total_candidates: 0,
+    hired: 0,
+    in_process: 0,
+    rejected: 0,
+    success_rate: 0,
+    loading: true
+  });
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   // Dropdowns
@@ -314,6 +339,7 @@ useEffect(() => {
         await loadDashboardData();
         await loadApplicationsData();
         await loadDocumentsData();
+        await loadNotesData();
         setupCharts();
         // Actualizaciones cada 30s
         const id = setInterval(() => loadDashboardData(), 30000);
@@ -327,6 +353,8 @@ useEffect(() => {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  
 
  
 
@@ -621,44 +649,94 @@ useEffect(() => {
   };
 
   const loadCandidatesData = async () => {
-    try {
-      console.log('🔵 Cargando candidatos y estadísticas del director...');
-      
-      // Cargar candidatos y overview en paralelo
-      const [candidatesResponse, overviewResponse] = await Promise.all([
-        apiClient.getCandidates({ search: searchQuery }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/director/candidates/overview/`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            'Content-Type': 'application/json',
-          },
-        }).then(res => res.json())
-      ]);
-      
-      console.log('🟢 Candidatos recibidos:', candidatesResponse);
-      console.log('🟢 Overview recibido:', overviewResponse);
-      
-      const typedCandidatesResponse = candidatesResponse as { results?: Candidate[] } | Candidate[];
-      setCandidates(
-        Array.isArray(typedCandidatesResponse)
-          ? typedCandidatesResponse
-          : typedCandidatesResponse.results || []
-      );
-      setCandidatesOverview(overviewResponse);
-    } catch (error: any) {
-      console.error('❌ Error loading candidates:', error);
-      if (error?.status === 401) {
-        warning('Sesión expirada. Redirigiendo al login...');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        router.push('/auth');
-      } else {
-        error('Error al cargar candidatos');
-      }
-    }
-  };
+  try {
+    console.log('🔵 Cargando candidatos y estadísticas del director...');
+    
+    // Cargar candidatos y overview en paralelo
+    const [candidatesResponse, overviewResponse] = await Promise.all([
+      apiClient.getCandidates({ search: searchQuery }),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/director/candidates/overview/`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+      }).then(res => res.json())
+    ]);
+    
+    console.log('🟢 Candidatos recibidos:', candidatesResponse);
+    console.log('🟢 Overview recibido:', overviewResponse);
+    
+    // Procesar candidatos
+    const typedCandidatesResponse = candidatesResponse as { results?: Candidate[] } | Candidate[];
+    const candidatesList = Array.isArray(typedCandidatesResponse)
+      ? typedCandidatesResponse
+      : typedCandidatesResponse.results || [];
+    
+    setCandidates(candidatesList);
+    setCandidatesOverview(overviewResponse);
 
+    // ✅ VALIDAR overviewResponse
+    if (!overviewResponse || typeof overviewResponse !== 'object') {
+      console.warn('⚠️ overviewResponse es null, usando valores por defecto');
+      setHistoryData({
+        total_candidates: candidatesList.length,
+        hired: 0,
+        in_process: candidatesList.length,
+        rejected: 0,
+        success_rate: 0,
+        loading: false
+      });
+      return;
+    }
+
+    // ✅ Calcular estadísticas (DENTRO del try, usando overviewResponse)
+    const totalCandidates = overviewResponse.total || 0;
+    const hired = overviewResponse.by_status?.hired || 0;
+    const rejected = overviewResponse.by_status?.rejected || 0;
+    const inProcess = 
+      (overviewResponse.by_status?.screening || 0) +
+      (overviewResponse.by_status?.qualified || 0) +
+      (overviewResponse.by_status?.interview || 0) +
+      (overviewResponse.by_status?.offer || 0);
+
+    const successRate = totalCandidates > 0 
+      ? Math.round((hired / totalCandidates) * 100)
+      : 0;
+
+    setHistoryData({
+      total_candidates: totalCandidates,
+      hired,
+      in_process: inProcess,
+      rejected,
+      success_rate: successRate,
+      loading: false
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error loading candidates:', error);
+    
+    setCandidates([]);
+    setCandidatesOverview(null);
+    setHistoryData({
+      total_candidates: 0,
+      hired: 0,
+      in_process: 0,
+      rejected: 0,
+      success_rate: 0,
+      loading: false
+    });
+    
+    if (error?.status === 401) {
+      warning('Sesión expirada. Redirigiendo al login...');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      router.push('/auth');
+    } else {
+      error('Error al cargar candidatos');
+    }
+  }
+};
   // ====== Funciones para datos de Clientes ======
   const loadClientsData = async () => {
     try {
@@ -712,6 +790,11 @@ const loadApplicationsData = async () => {
     const applications = (response as any)?.results || (response as any) || [];
     
     console.log('✅ Aplicaciones cargadas:', applications.length);
+
+     // ← AGREGAR ESTE LOG PARA VER LOS DATOS
+    console.log('📊 Primera aplicación completa:', applications[0]);
+    console.log('📊 ¿Tiene candidate_name?', applications[0]?.candidate_name);
+    console.log('📊 ¿Tiene candidate_email?', applications[0]?.candidate_email);
     
     // Calcular estadísticas
     const stats = {
@@ -725,6 +808,7 @@ const loadApplicationsData = async () => {
       rejected: applications.filter((app: any) => 
         ['rejected', 'withdrawn'].includes(app.status)
       ).length,
+      recent: applications.slice(0, 5),
       loading: false
     };
     
@@ -738,6 +822,7 @@ const loadApplicationsData = async () => {
       active: 0,
       shortlisted: 0,
       rejected: 0,
+      recent: [],
       loading: false
     });
   }
@@ -784,6 +869,48 @@ const loadApplicationsData = async () => {
         total: 0,
         by_type: { cv: 0, contract: 0, report: 0, other: 0 },
         recent: [],  // ← AGREGAR ESTA LÍNEA
+        loading: false
+      });
+    }
+  };
+
+  /**
+   * Cargar datos de notas desde el backend
+   */
+  const loadNotesData = async () => {
+    try {
+      setNotesData(prev => ({ ...prev, loading: true }));
+      
+      console.log('🔵 Cargando notas desde el backend...');
+      const response = await apiClient.getCandidateNotes();
+      
+      const notes = (response as any)?.results || (response as any) || [];
+      
+      console.log('✅ Notas cargadas:', notes.length);
+      
+      // Contar por tipo de nota
+      const stats = {
+        total: notes.length,
+        by_type: {
+          interview: notes.filter((n: any) => n.note_type === 'interview').length,
+          evaluation: notes.filter((n: any) => n.note_type === 'evaluation').length,
+          concern: notes.filter((n: any) => n.note_type === 'concern').length,
+          general: notes.filter((n: any) => n.note_type === 'general').length,
+          reference: notes.filter((n: any) => n.note_type === 'reference').length,
+        },
+        recent: notes.slice(0, 2), // 2 más recientes para mostrar en dashboard
+        loading: false
+      };
+      
+      setNotesData(stats);
+      console.log('📊 Estadísticas de notas:', stats);
+      
+    } catch (error: any) {
+      console.error('❌ Error al cargar notas:', error);
+      setNotesData({
+        total: 0,
+        by_type: { interview: 0, evaluation: 0, concern: 0, general: 0, reference: 0 },
+        recent: [],
         loading: false
       });
     }
@@ -1952,14 +2079,14 @@ const loadApplicationsData = async () => {
                     <tbody className="divide-y divide-gray-200">
                       {applicationsData.loading ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-12 text-center">
+                          <td colSpan={6} className="px-6 py-12 text-center">
                             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                             <p className="mt-2 text-gray-500">Cargando aplicaciones...</p>
                           </td>
                         </tr>
                       ) : applicationsData.total === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-12 text-center">
+                          <td colSpan={6} className="px-6 py-12 text-center">
                             <div className="text-gray-400">
                               <i className="fas fa-inbox text-5xl mb-4"></i>
                               <p className="text-lg font-medium text-gray-900">No hay aplicaciones registradas</p>
@@ -1968,16 +2095,141 @@ const loadApplicationsData = async () => {
                           </td>
                         </tr>
                       ) : (
-                        <>
-                          <tr className="table-row">
-                            <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                              <p>Aplicaciones cargadas: {applicationsData.total}</p>
-                              <p className="text-sm mt-1">
-                                Haz clic en <strong>"Aplicaciones"</strong> en el menú lateral para ver la lista completa
-                              </p>
-                            </td>
-                          </tr>
-                        </>
+                        // Mostrar aplicaciones reales
+                        applicationsData.recent.map((app: any) => {
+                          // Calcular tiempo transcurrido
+                          const appliedDate = new Date(app.applied_at);
+                          const now = new Date();
+                          const diffMs = now.getTime() - appliedDate.getTime();
+                          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                          const diffDays = Math.floor(diffHours / 24);
+                          
+                          let timeAgo = '';
+                          if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
+                          else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+                          else if (diffDays === 1) timeAgo = 'Hace 1 día';
+                          else timeAgo = `Hace ${diffDays} días`;
+
+                          // Configuración de badge según estado
+                          const getStatusBadge = (status: string) => {
+                            const configs: Record<string, { color: string; label: string; icon: string }> = {
+                              applied: { color: 'bg-blue-100 text-blue-800', label: 'Aplicó', icon: 'fa-clock' },
+                              screening: { color: 'bg-yellow-100 text-yellow-800', label: 'En Revisión', icon: 'fa-eye' },
+                              shortlisted: { color: 'bg-green-100 text-green-800', label: 'Preseleccionado', icon: 'fa-check-circle' },
+                              interview_scheduled: { color: 'bg-purple-100 text-purple-800', label: 'Entrevista Programada', icon: 'fa-calendar-alt' },
+                              interviewed: { color: 'bg-indigo-100 text-indigo-800', label: 'Entrevistado', icon: 'fa-user' },
+                              offered: { color: 'bg-orange-100 text-orange-800', label: 'Oferta Extendida', icon: 'fa-briefcase' },
+                              accepted: { color: 'bg-green-100 text-green-800', label: 'Aceptado', icon: 'fa-check-circle' },
+                              rejected: { color: 'bg-red-100 text-red-800', label: 'Rechazado', icon: 'fa-times-circle' },
+                              withdrawn: { color: 'bg-gray-100 text-gray-800', label: 'Retirado', icon: 'fa-times' },
+                            };
+                            return configs[status] || configs.applied;
+                          };
+
+                          const statusConfig = getStatusBadge(app.status);
+
+                          // Obtener nombre del candidato
+                          const candidateName = app.candidate_name || 'Candidato sin nombre';
+                          const candidateEmail = app.candidate_email || 'Sin email';
+
+                          // Iniciales para avatar
+                          const initials = candidateName.split(' ')
+                            .map((n: string) => n[0])
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase();
+
+                          return (
+                            <tr key={app.id} className="table-row hover:bg-gray-50">
+                              {/* Candidato */}
+                              <td className="px-6 py-4">
+                                <div className="flex items-center">
+                                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                                    {initials}
+                                  </div>
+                                  <div className="ml-3">
+                                    <p className="text-sm font-medium text-gray-900">{candidateName}</p>
+                                    <p className="text-sm text-gray-500">{candidateEmail}</p>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Posición */}
+                              <td className="px-6 py-4">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {app.profile_title || app.profile?.position_title || 'Posición no especificada'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {app.profile_client || app.profile?.client_name || 'Cliente no especificado'}
+                                </p>
+                              </td>
+
+                              {/* Fecha */}
+                              <td className="px-6 py-4">
+                                <p className="text-sm text-gray-900">{timeAgo}</p>
+                                <p className="text-xs text-gray-500">
+                                  {appliedDate.toLocaleDateString('es-MX', { 
+                                    day: '2-digit', 
+                                    month: 'short', 
+                                    year: 'numeric' 
+                                  })}
+                                </p>
+                              </td>
+
+                              {/* Compatibilidad */}
+                              <td className="px-6 py-4">
+                                {app.match_percentage !== null && app.match_percentage !== undefined ? (
+                                  <div className="flex items-center">
+                                    <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                      <div 
+                                        className={`h-2 rounded-full ${
+                                          app.match_percentage >= 80 ? 'bg-green-500' :
+                                          app.match_percentage >= 60 ? 'bg-yellow-500' :
+                                          'bg-red-500'
+                                        }`}
+                                        style={{ width: `${app.match_percentage}%` }}
+                                      ></div>
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {Math.round(app.match_percentage)}%
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-gray-400">No calculado</span>
+                                )}
+                              </td>
+
+                              {/* Estado */}
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
+                                  <i className={`fas ${statusConfig.icon} mr-1.5`}></i>
+                                  {statusConfig.label}
+                                </span>
+                              </td>
+
+                              {/* Acciones */}
+                              <td className="px-6 py-4 text-right space-x-2">
+                                <button 
+                                  onClick={() => router.push(`/director/candidates/applications`)}
+                                  className="text-blue-600 hover:text-blue-900"
+                                  title="Ver detalles"
+                                >
+                                  <i className="fas fa-eye"></i>
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    console.log('Editar aplicación:', app.id);
+                                    info('Funcionalidad de edición en construcción');
+                                  }}
+                                  className="text-green-600 hover:text-green-900"
+                                  title="Editar"
+                                >
+                                  <i className="fas fa-edit"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -2020,91 +2272,178 @@ const loadApplicationsData = async () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-blue-100">
-                      <i className="fas fa-sticky-note text-blue-600 text-xl" />
+                {notesData.loading ? (
+                  // Loading skeleton
+                  [1, 2, 3, 4].map((i) => (
+                    <div key={i} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="animate-pulse">
+                        <div className="flex items-center">
+                          <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                          <div className="ml-4 flex-1">
+                            <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
+                            <div className="h-6 bg-gray-200 rounded w-16"></div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Notas</p>
-                      <p className="text-2xl font-bold text-gray-900">456</p>
+                  ))
+                ) : (
+                  <>
+                    {/* Total Notas */}
+                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-full bg-blue-100">
+                          <i className="fas fa-sticky-note text-blue-600 text-xl" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Total Notas</p>
+                          <p className="text-2xl font-bold text-gray-900">{notesData.total}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-100">
-                      <i className="fas fa-comment text-green-600 text-xl" />
+
+                    {/* Entrevistas */}
+                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-full bg-green-100">
+                          <i className="fas fa-comments text-green-600 text-xl" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Entrevistas</p>
+                          <p className="text-2xl font-bold text-gray-900">{notesData.by_type.interview}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Entrevistas</p>
-                      <p className="text-2xl font-bold text-gray-900">123</p>
+
+                    {/* Preocupaciones */}
+                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-full bg-yellow-100">
+                          <i className="fas fa-exclamation-triangle text-yellow-600 text-xl" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Preocupaciones</p>
+                          <p className="text-2xl font-bold text-gray-900">{notesData.by_type.concern}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-yellow-100">
-                      <i className="fas fa-exclamation-triangle text-yellow-600 text-xl" />
+
+                    {/* Referencias */}
+                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-full bg-purple-100">
+                          <i className="fas fa-flag text-purple-600 text-xl" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Referencias</p>
+                          <p className="text-2xl font-bold text-gray-900">{notesData.by_type.reference}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Preocupaciones</p>
-                      <p className="text-2xl font-bold text-gray-900">23</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-purple-100">
-                      <i className="fas fa-flag text-purple-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Referencias</p>
-                      <p className="text-2xl font-bold text-gray-900">89</p>
-                    </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Entrevista técnica completada</h3>
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Entrevista</span>
-                  </div>
-                  <div className="flex items-center mb-3">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">JP</div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">Juan Pérez García</p>
-                      <p className="text-xs text-gray-500">Hace 2 horas</p>
+                {notesData.loading ? (
+                  // Loading skeleton
+                  [1, 2].map((i) => (
+                    <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                      <div className="animate-pulse space-y-3">
+                        <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                            <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                          </div>
+                        </div>
+                        <div className="h-16 bg-gray-200 rounded"></div>
+                      </div>
                     </div>
+                  ))
+                ) : notesData.recent.length === 0 ? (
+                  // No hay notas
+                  <div className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                    <i className="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
+                    <p className="text-lg font-medium text-gray-900">No hay notas recientes</p>
+                    <p className="text-gray-500 mt-1">Las notas aparecerán aquí cuando se creen</p>
                   </div>
-                  <p className="text-gray-700 text-sm mb-4">El candidato demostró excelentes conocimientos en React y Node.js. Resolvió los problemas de algoritmos correctamente y mostró buena comunicación.</p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">#entrevista</span>
-                    <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">#técnica</span>
-                    <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">#react</span>
-                  </div>
-                </div>
+                ) : (
+                  // Mostrar notas reales
+                  notesData.recent.map((note: any) => {
+                    // Calcular tiempo transcurrido
+                    const createdDate = new Date(note.created_date);
+                    const now = new Date();
+                    const diffMs = now.getTime() - createdDate.getTime();
+                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                    const diffDays = Math.floor(diffHours / 24);
+                    
+                    let timeAgo = '';
+                    if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
+                    else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+                    else if (diffDays === 1) timeAgo = 'Hace 1 día';
+                    else timeAgo = `Hace ${diffDays} días`;
 
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Referencias verificadas</h3>
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Referencia</span>
-                  </div>
-                  <div className="flex items-center mb-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-medium">MG</div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">María González López</p>
-                      <p className="text-xs text-gray-500">Hace 1 día</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-700 text-sm mb-4">Se contactó con dos referencias previas. Ambas confirmaron el excelente desempeño de la candidata en gestión de productos y liderazgo de equipos.</p>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">#referencias</span>
-                    <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">#liderazgo</span>
-                  </div>
-                </div>
+                    // Configuración de badge según tipo
+                    const getBadgeConfig = (type: string) => {
+                      const configs: Record<string, { color: string; label: string }> = {
+                        interview: { color: 'bg-blue-100 text-blue-800', label: 'Entrevista' },
+                        evaluation: { color: 'bg-green-100 text-green-800', label: 'Evaluación' },
+                        concern: { color: 'bg-yellow-100 text-yellow-800', label: 'Preocupación' },
+                        reference: { color: 'bg-purple-100 text-purple-800', label: 'Referencia' },
+                        general: { color: 'bg-gray-100 text-gray-800', label: 'General' },
+                      };
+                      return configs[type] || configs.general;
+                    };
+
+                    const badgeConfig = getBadgeConfig(note.note_type);
+
+                    // Iniciales del candidato
+                    const candidateInitials = note.candidate?.first_name && note.candidate?.last_name
+                      ? `${note.candidate.first_name[0]}${note.candidate.last_name[0]}`.toUpperCase()
+                      : 'CD';
+
+                    return (
+                      <div key={note.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900 flex-1">
+                            {note.title || 'Nota sin título'}
+                          </h3>
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${badgeConfig.color}`}>
+                            {badgeConfig.label}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center mb-3">
+                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                            {candidateInitials}
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-900">
+                              {note.candidate?.first_name} {note.candidate?.last_name}
+                            </p>
+                            <p className="text-xs text-gray-500">{timeAgo}</p>
+                          </div>
+                        </div>
+
+                        <p className="text-gray-700 text-sm mb-4 line-clamp-3">
+                          {note.content || 'Sin contenido'}
+                        </p>
+
+                        {note.tags && note.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {note.tags.slice(0, 3).map((tag: string, idx: number) => (
+                              <span key={idx} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
@@ -2130,50 +2469,78 @@ const loadApplicationsData = async () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-blue-100">
-                      <i className="fas fa-users text-blue-600 text-xl" />
+                {historyData.loading ? (
+                  // Loading skeleton
+                  [1, 2, 3, 4].map((i) => (
+                    <div key={i} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="animate-pulse">
+                        <div className="flex items-center">
+                          <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                          <div className="ml-4 flex-1">
+                            <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                            <div className="h-6 bg-gray-200 rounded w-16"></div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Candidatos</p>
-                      <p className="text-2xl font-bold text-gray-900">1,247</p>
+                  ))
+                ) : (
+                  <>
+                    {/* Total Candidatos */}
+                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-full bg-blue-100">
+                          <i className="fas fa-users text-blue-600 text-xl" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Total Candidatos</p>
+                          <p className="text-2xl font-bold text-gray-900">
+                            {historyData.total_candidates.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-100">
-                      <i className="fas fa-check-circle text-green-600 text-xl" />
+
+                    {/* Contratados */}
+                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-full bg-green-100">
+                          <i className="fas fa-check-circle text-green-600 text-xl" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Contratados</p>
+                          <p className="text-2xl font-bold text-gray-900">{historyData.hired}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Contratados</p>
-                      <p className="text-2xl font-bold text-gray-900">289</p>
+
+                    {/* En Proceso */}
+                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-full bg-yellow-100">
+                          <i className="fas fa-clock text-yellow-600 text-xl" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">En Proceso</p>
+                          <p className="text-2xl font-bold text-gray-900">{historyData.in_process}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-yellow-100">
-                      <i className="fas fa-clock text-yellow-600 text-xl" />
+
+                    {/* Tasa de Éxito */}
+                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center">
+                        <div className="p-3 rounded-full bg-purple-100">
+                          <i className="fas fa-chart-line text-purple-600 text-xl" />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">Tasa Éxito</p>
+                          <p className="text-2xl font-bold text-gray-900">{historyData.success_rate}%</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">En Proceso</p>
-                      <p className="text-2xl font-bold text-gray-900">156</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-purple-100">
-                      <i className="fas fa-chart-line text-purple-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Tasa Éxito</p>
-                      <p className="text-2xl font-bold text-gray-900">23%</p>
-                    </div>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
 
               {/* Timeline de candidatos */}
@@ -2191,138 +2558,92 @@ const loadApplicationsData = async () => {
                 <div className="p-6">
                   <div className="flow-root">
                     <ul className="-mb-8">
-                      <li>
-                        <div className="relative pb-8">
-                          <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>
-                          <div className="relative flex space-x-3">
-                            <div>
-                              <span className="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center ring-8 ring-white">
-                                <i className="fas fa-user-check text-white text-sm" />
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                              <div>
-                                <p className="text-sm text-gray-900">
-                                  <strong>Juan Pérez García</strong> fue contratado para 
-                                  <span className="font-medium text-gray-900"> Desarrollador Full Stack Senior</span>
-                                </p>
-                                <p className="mt-0.5 text-sm text-gray-500">
-                                  Proceso completado en 21 días • Cliente: TechCorp
-                                </p>
-                              </div>
-                              <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                <time>Hace 2 horas</time>
+                      {historyData.loading ? (
+                        // Loading skeleton
+                        [1, 2, 3].map((i) => (
+                          <li key={i}>
+                            <div className="relative pb-8">
+                              {i < 3 && <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>}
+                              <div className="relative flex space-x-3">
+                                <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                                <div className="flex-1 space-y-2">
+                                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                                  <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      </li>
+                          </li>
+                        ))
+                      ) : candidates.length === 0 ? (
+                        <li className="text-center py-12">
+                          <i className="fas fa-inbox text-gray-300 text-5xl mb-4"></i>
+                          <p className="text-gray-500">No hay actividad reciente</p>
+                        </li>
+                      ) : (
+                        candidates.slice(0, 5).map((candidate: any, index: number) => {
+                          // Determinar icono y color según estado
+                          const getStatusConfig = (status: string) => {
+                            const configs: Record<string, { icon: string; color: string; bgColor: string; label: string }> = {
+                              hired: { icon: 'fa-user-check', color: 'text-white', bgColor: 'bg-green-500', label: 'fue contratado' },
+                              interview: { icon: 'fa-comments', color: 'text-white', bgColor: 'bg-blue-500', label: 'está en entrevista' },
+                              qualified: { icon: 'fa-check-circle', color: 'text-white', bgColor: 'bg-purple-500', label: 'fue calificado' },
+                              new: { icon: 'fa-user-plus', color: 'text-white', bgColor: 'bg-indigo-500', label: 'se registró' },
+                              screening: { icon: 'fa-search', color: 'text-white', bgColor: 'bg-yellow-500', label: 'está en revisión' },
+                              rejected: { icon: 'fa-times-circle', color: 'text-white', bgColor: 'bg-red-500', label: 'fue rechazado' },
+                            };
+                            return configs[status] || configs.new;
+                          };
 
-                      <li>
-                        <div className="relative pb-8">
-                          <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>
-                          <div className="relative flex space-x-3">
-                            <div>
-                              <span className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white">
-                                <i className="fas fa-comments text-white text-sm" />
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                              <div>
-                                <p className="text-sm text-gray-900">
-                                  <strong>María González López</strong> completó entrevista técnica para 
-                                  <span className="font-medium text-gray-900"> Product Manager Senior</span>
-                                </p>
-                                <p className="mt-0.5 text-sm text-gray-500">
-                                  Puntuación: 4.2/5 • Supervisor: Ana Rodríguez
-                                </p>
-                              </div>
-                              <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                <time>Hace 4 horas</time>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
+                          const config = getStatusConfig(candidate.status);
 
-                      <li>
-                        <div className="relative pb-8">
-                          <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>
-                          <div className="relative flex space-x-3">
-                            <div>
-                              <span className="h-8 w-8 rounded-full bg-yellow-500 flex items-center justify-center ring-8 ring-white">
-                                <i className="fas fa-file-alt text-white text-sm" />
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                              <div>
-                                <p className="text-sm text-gray-900">
-                                  <strong>Carlos Mendoza</strong> subió documentos adicionales para 
-                                  <span className="font-medium text-gray-900"> Diseñador UX/UI</span>
-                                </p>
-                                <p className="mt-0.5 text-sm text-gray-500">
-                                  3 archivos: Portfolio, certificados, referencias
-                                </p>
-                              </div>
-                              <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                <time>Hace 1 día</time>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
+                          // Calcular tiempo transcurrido
+                          const updatedDate = new Date(candidate.updated_at || candidate.created_at);
+                          const now = new Date();
+                          const diffMs = now.getTime() - updatedDate.getTime();
+                          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                          const diffDays = Math.floor(diffHours / 24);
+                          
+                          let timeAgo = '';
+                          if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
+                          else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+                          else if (diffDays === 1) timeAgo = 'Hace 1 día';
+                          else timeAgo = `Hace ${diffDays} días`;
 
-                      <li>
-                        <div className="relative pb-8">
-                          <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>
-                          <div className="relative flex space-x-3">
-                            <div>
-                              <span className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center ring-8 ring-white">
-                                <i className="fas fa-times-circle text-white text-sm" />
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                              <div>
-                                <p className="text-sm text-gray-900">
-                                  <strong>Ana Martínez</strong> fue rechazada para 
-                                  <span className="font-medium text-gray-900"> Data Analyst</span>
-                                </p>
-                                <p className="mt-0.5 text-sm text-gray-500">
-                                  Motivo: No cumple con experiencia mínima en SQL
-                                </p>
+                          return (
+                            <li key={candidate.id}>
+                              <div className="relative pb-8">
+                                {index < candidates.length - 1 && (
+                                  <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>
+                                )}
+                                <div className="relative flex space-x-3">
+                                  <div>
+                                    <span className={`h-8 w-8 rounded-full ${config.bgColor} flex items-center justify-center ring-8 ring-white`}>
+                                      <i className={`fas ${config.icon} ${config.color} text-sm`} />
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                    <div>
+                                      <p className="text-sm text-gray-900">
+                                        <strong>{candidate.full_name || `${candidate.first_name} ${candidate.last_name}`}</strong> {config.label}
+                                        {candidate.current_position && (
+                                          <span className="font-medium text-gray-900"> para {candidate.current_position}</span>
+                                        )}
+                                      </p>
+                                      <p className="mt-0.5 text-sm text-gray-500">
+                                        {candidate.email}
+                                        {candidate.years_experience && ` • ${candidate.years_experience} años de experiencia`}
+                                      </p>
+                                    </div>
+                                    <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                                      <time>{timeAgo}</time>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                <time>Hace 2 días</time>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-
-                      <li>
-                        <div className="relative">
-                          <div className="relative flex space-x-3">
-                            <div>
-                              <span className="h-8 w-8 rounded-full bg-purple-500 flex items-center justify-center ring-8 ring-white">
-                                <i className="fas fa-user-plus text-white text-sm" />
-                              </span>
-                            </div>
-                            <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                              <div>
-                                <p className="text-sm text-gray-900">
-                                  <strong>Roberto Silva</strong> se registró como nuevo candidato
-                                </p>
-                                <p className="mt-0.5 text-sm text-gray-500">
-                                  Aplicó para: Desarrollador Backend • Fuente: LinkedIn
-                                </p>
-                              </div>
-                              <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                <time>Hace 3 días</time>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
+                            </li>
+                          );
+                        })
+                      )}
                     </ul>
                   </div>
                 </div>

@@ -32,8 +32,16 @@ interface Application {
   id: number;
   candidate: number;
   profile: number;
+  
+  // ========== DATOS DEL CANDIDATO ========== ← AGREGAR
+  candidate_name?: string;
+  candidate_email?: string;
+  
+  // ========== DATOS DEL PERFIL ==========
   profile_title?: string;
   profile_client?: string;
+  
+  // ========== DATOS DE LA APLICACIÓN ==========
   status: string;
   status_display?: string;
   match_percentage: number | null;
@@ -44,6 +52,8 @@ interface Application {
   interview_date: string | null;
   offer_date: string | null;
 }
+
+
 
 // Interfaz para candidato expandido (cuando se hace join)
 interface CandidateInfo {
