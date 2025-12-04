@@ -11,6 +11,11 @@ import CandidateNoteFormModal from "@/components/CandidateNoteFormModal";
 import ClientFormModal from "@/components/ClientFormModal";
 import EvaluationsMain from "@/components/evaluations/EvaluationsMain";
 import ProfilesMain from "@/components/profiles/ProfilesMain";
+import ProfilesStatusDashboard from '@/components/ProfilesStatusDashboard';
+import CandidatesStatusDashboard from '@/components/CandidatesStatusDashboard';
+import ShortlistedCandidatesDashboard from '@/components/ShortlistedCandidatesDashboard';
+import SelectedCandidatesDashboard from '@/components/SelectedCandidatesDashboard';
+import ReportsDashboard from '@/components/ReportsDashboard';
 
 type Stats = {
   activeProcesses: number;
@@ -178,7 +183,7 @@ export default function Page() {
 
   // ====== State principal (equivalente a directorApp) ======
   const [currentView, setCurrentView] = useState<
-    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles"
+    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates"
   >("dashboard");
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -1380,6 +1385,45 @@ const loadApplicationsData = async () => {
                 >
                   <i className="fas fa-clipboard-check mr-3 w-5" />
                   Sistema de Evaluaciones
+                </button>
+              </li>
+
+              <li>
+                <button 
+                  onClick={() => setCurrentView("profiles-status")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles-status")}`}
+                >
+                  <i className="fas fa-tasks mr-3 w-5" />
+                  Estado de Perfiles
+                </button>
+              </li>
+
+              <li>
+                <button 
+                  onClick={() => setCurrentView("candidates-status")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates-status")}`}
+                >
+                  <i className="fas fa-user-check mr-3 w-5" />
+                  Estado de Candidatos
+                </button>
+              </li>
+
+              <li>
+                <button 
+                  onClick={() => setCurrentView("shortlisted-candidates")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("shortlisted-candidates")}`}
+                >
+                  <i className="fas fa-star mr-3 w-5" />
+                  Preseleccionados
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => setCurrentView("selected-candidates")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("selected-candidates")}`}
+                >
+                  <i className="fas fa-user-check mr-3 w-5" />
+                  Candidatos Seleccionados
                 </button>
               </li>
 
@@ -2997,69 +3041,7 @@ const loadApplicationsData = async () => {
           )}
 
           {/* REPORTS */}
-          {currentView === "reports" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Centro de Reportes</h2>
-                  <p className="text-gray-600 mt-1">Analiza métricas y genera reportes detallados del sistema</p>
-                </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-calendar mr-2" />
-                    Período
-                  </button>
-                  <button onClick={exportAllReports} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-download mr-2" />
-                    Exportar Todo
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Reporte Mensual</h3>
-                      <p className="text-sm text-gray-500">Actividad del mes actual</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                      <i className="fas fa-chart-line text-blue-600 text-lg" />
-                    </div>
-                  </div>
-                  <div className="space-y-2 mb-4 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Procesos Completados</span>
-                      <span className="font-semibold text-gray-900">25</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Candidatos Procesados</span>
-                      <span className="font-semibold text-gray-900">156</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tasa de Éxito</span>
-                      <span className="font-semibold text-green-600">85%</span>
-                    </div>
-                  </div>
-                  <button onClick={generateMonthlyReport} className="w-full px-4 py-2 bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100">
-                    <i className="fas fa-download mr-2" />
-                    Generar Reporte
-                  </button>
-                </div>
-                {/* ...otros cards si deseas... */}
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Tendencias de Reclutamiento</h3>
-                <div style={{ height: 300 }} className="flex items-center justify-center bg-gray-50 rounded-lg">
-                  <div className="text-center">
-                    <i className="fas fa-chart-area text-4xl text-gray-400 mb-4" />
-                    <p className="text-gray-500">Gráfico de tendencias se cargará aquí</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {currentView === "reports" && <ReportsDashboard />}
 
           {/* AVANCE DE CLIENTE */}
           {currentView === "client-progress" && (
@@ -3954,6 +3936,11 @@ const loadApplicationsData = async () => {
         {currentView === "evaluations" && <EvaluationsMain />}
 
         {currentView === "profiles" && <ProfilesMain />}  
+        {currentView === "candidates-status" && <CandidatesStatusDashboard />}
+
+        {currentView === "shortlisted-candidates" && <ShortlistedCandidatesDashboard />}
+
+        {currentView === "selected-candidates" && <SelectedCandidatesDashboard />}
 
           {/* LISTA DE CLIENTES */}
           {currentView === "client-list" && (
@@ -4106,6 +4093,8 @@ const loadApplicationsData = async () => {
               </div>
             </div>
           )}
+
+          {currentView === "profiles-status" && <ProfilesStatusDashboard />}
 
           {/* LISTA DE CONTACTOS */}
           {currentView === "client-contacts" && (
