@@ -16,6 +16,7 @@ import CandidatesStatusDashboard from '@/components/CandidatesStatusDashboard';
 import ShortlistedCandidatesDashboard from '@/components/ShortlistedCandidatesDashboard';
 import SelectedCandidatesDashboard from '@/components/SelectedCandidatesDashboard';
 import ReportsDashboard from '@/components/ReportsDashboard';
+import IndividualReportsHub from '@/components/reports/IndividualReportsHub';
 
 type Stats = {
   activeProcesses: number;
@@ -183,7 +184,7 @@ export default function Page() {
 
   // ====== State principal (equivalente a directorApp) ======
   const [currentView, setCurrentView] = useState<
-    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates"
+    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates" | "individual-reports"
   >("dashboard");
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -1424,6 +1425,15 @@ const loadApplicationsData = async () => {
                 >
                   <i className="fas fa-user-check mr-3 w-5" />
                   Candidatos Seleccionados
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => setCurrentView("individual-reports")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("individual-reports")}`}
+                >
+                  <i className="fas fa-file-alt mr-3 w-5" />
+                  Reportes Individuales
                 </button>
               </li>
 
@@ -3941,6 +3951,8 @@ const loadApplicationsData = async () => {
         {currentView === "shortlisted-candidates" && <ShortlistedCandidatesDashboard />}
 
         {currentView === "selected-candidates" && <SelectedCandidatesDashboard />}
+        
+        {currentView === "individual-reports" && <IndividualReportsHub />}
 
           {/* LISTA DE CLIENTES */}
           {currentView === "client-list" && (

@@ -23,43 +23,27 @@ interface MonthlyReport {
     month: number;
     year: number;
     month_name: string;
-    start_date: string;
-    end_date: string;
   };
-  profiles: {
-    created: number;
-    completed: number;
-    completion_rate: number;
-  };
-  candidates: {
-    added: number;
-    hired: number;
-    hire_rate: number;
-  };
-  evaluations: {
-    completed: number;
-    avg_score: number;
-  };
-  ai_metrics: {
-    cvs_analyzed: number;
+  summary: {
+    profiles_created: number;
+    profiles_completed: number;
+    candidates_added: number;
+    candidates_hired: number;
+    evaluations_completed: number;
+    cv_analyses: number;
     documents_generated: number;
-    ai_cost: number;
-  };
-  clients: {
     new_clients: number;
-    active_clients: number;
-    top_clients: Array<{
-      client_name: string;
-      profiles_count: number;
-    }>;
   };
-  team: {
-    top_supervisors: Array<{
-      supervisor_name: string;
-      profiles_completed: number;
-      success_rate: number;
-    }>;
-  };
+  top_clients: Array<{
+    client__company_name: string;
+    count: number;
+  }>;
+  top_supervisors: Array<{
+    assigned_to__first_name: string;
+    assigned_to__last_name: string;
+    count: number;
+  }>;
+  generated_at: string;
 }
 
 // ============================================================
@@ -91,27 +75,44 @@ export default function ReportsDashboard() {
     setLoading(true);
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/director/reports/monthly/?month=${selectedMonth}&year=${selectedYear}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/director/reports/monthly/?month=${selectedMonth}&year=${selectedYear}`;
+      
+      console.log('🔵 Cargando reporte...');
+      console.log('🔑 Token presente:', !!token);
+      console.log('📡 URL:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('📊 Response status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
         setReport(data);
         console.log('✅ Reporte cargado:', data);
       } else {
-        console.error('❌ Error loading report:', response.status);
-        showNotification('Error al cargar el reporte', 'error');
+        // Intentar leer el error del backend
+        let errorMessage = 'Error al cargar el reporte';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.error || JSON.stringify(errorData);
+          console.error('❌ Error del backend:', errorData);
+        } catch {
+          const errorText = await response.text();
+          console.error('❌ Error (texto):', errorText);
+          errorMessage = errorText || `Error ${response.status}`;
+        }
+        
+        console.error('❌ Status:', response.status);
+        showNotification(`Error: ${errorMessage}`, 'error');
       }
     } catch (error) {
-      console.error('💥 Error loading report:', error);
-      showNotification('Error al cargar el reporte', 'error');
+      console.error('💥 Error de red:', error);
+      showNotification('Error de conexión con el servidor', 'error');
     } finally {
       setLoading(false);
     }
@@ -317,13 +318,9 @@ export default function ReportsDashboard() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-600">Desde</p>
+                <p className="text-sm text-gray-600">Generado el</p>
                 <p className="font-semibold text-gray-900">
-                  {new Date(report.period.start_date).toLocaleDateString('es-MX')}
-                </p>
-                <p className="text-sm text-gray-600 mt-2">Hasta</p>
-                <p className="font-semibold text-gray-900">
-                  {new Date(report.period.end_date).toLocaleDateString('es-MX')}
+                  {new Date(report.generated_at).toLocaleDateString('es-MX')}
                 </p>
               </div>
             </div>
@@ -337,7 +334,7 @@ export default function ReportsDashboard() {
                 <div>
                   <h3 className="text-sm font-medium text-gray-600">Perfiles Creados</h3>
                   <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {report.profiles.created}
+                    {report.summary.profiles_created}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -347,23 +344,25 @@ export default function ReportsDashboard() {
               <div className="flex items-center text-sm">
                 <span className="text-gray-600">Completados: </span>
                 <span className="font-semibold text-gray-900 ml-2">
-                  {report.profiles.completed}
+                  {report.summary.profiles_completed}
                 </span>
               </div>
-              <div className="mt-2">
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-600">Tasa de Completación</span>
-                  <span className="font-semibold text-green-600">
-                    {report.profiles.completion_rate.toFixed(1)}%
-                  </span>
+              {report.summary.profiles_created > 0 && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-gray-600">Tasa de Completación</span>
+                    <span className="font-semibold text-green-600">
+                      {((report.summary.profiles_completed / report.summary.profiles_created) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full transition-all"
+                      style={{ width: `${(report.summary.profiles_completed / report.summary.profiles_created) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-500 h-2 rounded-full transition-all"
-                    style={{ width: `${report.profiles.completion_rate}%` }}
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Candidatos */}
@@ -372,7 +371,7 @@ export default function ReportsDashboard() {
                 <div>
                   <h3 className="text-sm font-medium text-gray-600">Candidatos Agregados</h3>
                   <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {report.candidates.added}
+                    {report.summary.candidates_added}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -382,23 +381,25 @@ export default function ReportsDashboard() {
               <div className="flex items-center text-sm">
                 <span className="text-gray-600">Contratados: </span>
                 <span className="font-semibold text-gray-900 ml-2">
-                  {report.candidates.hired}
+                  {report.summary.candidates_hired}
                 </span>
               </div>
-              <div className="mt-2">
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-600">Tasa de Contratación</span>
-                  <span className="font-semibold text-purple-600">
-                    {report.candidates.hire_rate.toFixed(1)}%
-                  </span>
+              {report.summary.candidates_added > 0 && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-gray-600">Tasa de Contratación</span>
+                    <span className="font-semibold text-purple-600">
+                      {((report.summary.candidates_hired / report.summary.candidates_added) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-purple-500 h-2 rounded-full transition-all"
+                      style={{ width: `${(report.summary.candidates_hired / report.summary.candidates_added) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-purple-500 h-2 rounded-full transition-all"
-                    style={{ width: `${report.candidates.hire_rate}%` }}
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Evaluaciones */}
@@ -407,32 +408,15 @@ export default function ReportsDashboard() {
                 <div>
                   <h3 className="text-sm font-medium text-gray-600">Evaluaciones</h3>
                   <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {report.evaluations.completed}
+                    {report.summary.evaluations_completed}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                   <i className="fas fa-clipboard-check text-green-600 text-lg" />
                 </div>
               </div>
-              <div className="flex items-center text-sm">
-                <span className="text-gray-600">Promedio: </span>
-                <span className="font-semibold text-gray-900 ml-2">
-                  {report.evaluations.avg_score.toFixed(1)}/10
-                </span>
-              </div>
-              <div className="mt-2">
-                <div className="flex space-x-1">
-                  {[...Array(5)].map((_, i) => (
-                    <i
-                      key={i}
-                      className={`fas fa-star ${
-                        i < Math.round(report.evaluations.avg_score / 2)
-                          ? 'text-yellow-400'
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  ))}
-                </div>
+              <div className="text-sm text-gray-600">
+                Evaluaciones completadas en el período
               </div>
             </div>
 
@@ -442,7 +426,7 @@ export default function ReportsDashboard() {
                 <div>
                   <h3 className="text-sm font-medium text-gray-600">CVs Analizados</h3>
                   <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {report.ai_metrics.cvs_analyzed}
+                    {report.summary.cv_analyses}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
@@ -452,13 +436,7 @@ export default function ReportsDashboard() {
               <div className="flex items-center text-sm">
                 <span className="text-gray-600">Docs generados: </span>
                 <span className="font-semibold text-gray-900 ml-2">
-                  {report.ai_metrics.documents_generated}
-                </span>
-              </div>
-              <div className="mt-2 text-sm">
-                <span className="text-gray-600">Costo IA: </span>
-                <span className="font-semibold text-indigo-600">
-                  {formatCurrency(report.ai_metrics.ai_cost)}
+                  {report.summary.documents_generated}
                 </span>
               </div>
             </div>
@@ -473,15 +451,15 @@ export default function ReportsDashboard() {
                   Top 5 Clientes Más Activos
                 </h3>
                 <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-                  {report.clients.new_clients} Nuevos
+                  {report.summary.new_clients} Nuevos
                 </span>
               </div>
 
-              {report.clients.top_clients.length === 0 ? (
+              {report.top_clients.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">No hay datos de clientes</p>
               ) : (
                 <div className="space-y-3">
-                  {report.clients.top_clients.map((client, index) => (
+                  {report.top_clients.map((client, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
@@ -491,9 +469,9 @@ export default function ReportsDashboard() {
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{client.client_name}</p>
+                          <p className="font-medium text-gray-900">{client.client__company_name}</p>
                           <p className="text-sm text-gray-500">
-                            {client.profiles_count} perfil{client.profiles_count !== 1 ? 'es' : ''}
+                            {client.count} perfil{client.count !== 1 ? 'es' : ''}
                           </p>
                         </div>
                       </div>
@@ -514,7 +492,7 @@ export default function ReportsDashboard() {
                             stroke="#3b82f6"
                             strokeWidth="8"
                             fill="none"
-                            strokeDasharray={`${(client.profiles_count / 10) * 175.93} 175.93`}
+                            strokeDasharray={`${(client.count / 10) * 175.93} 175.93`}
                           />
                         </svg>
                       </div>
@@ -533,11 +511,11 @@ export default function ReportsDashboard() {
                 </h3>
               </div>
 
-              {report.team.top_supervisors.length === 0 ? (
+              {report.top_supervisors.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">No hay datos de supervisores</p>
               ) : (
                 <div className="space-y-3">
-                  {report.team.top_supervisors.map((supervisor, index) => (
+                  {report.top_supervisors.map((supervisor, index) => (
                     <div
                       key={index}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
@@ -552,17 +530,19 @@ export default function ReportsDashboard() {
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{supervisor.supervisor_name}</p>
+                          <p className="font-medium text-gray-900">
+                            {supervisor.assigned_to__first_name} {supervisor.assigned_to__last_name}
+                          </p>
                           <p className="text-sm text-gray-500">
-                            {supervisor.profiles_completed} completados
+                            {supervisor.count} perfil{supervisor.count !== 1 ? 'es' : ''}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-green-600">
-                          {supervisor.success_rate.toFixed(1)}%
+                          {supervisor.count}
                         </p>
-                        <p className="text-xs text-gray-500">éxito</p>
+                        <p className="text-xs text-gray-500">perfiles</p>
                       </div>
                     </div>
                   ))}
@@ -575,12 +555,12 @@ export default function ReportsDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm p-6 text-white">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Clientes Activos</h3>
+                <h3 className="text-lg font-semibold">Clientes Nuevos</h3>
                 <i className="fas fa-building text-2xl opacity-50" />
               </div>
-              <p className="text-4xl font-bold">{report.clients.active_clients}</p>
+              <p className="text-4xl font-bold">{report.summary.new_clients}</p>
               <p className="text-blue-100 text-sm mt-2">
-                +{report.clients.new_clients} nuevos este mes
+                en el período
               </p>
             </div>
 
@@ -590,7 +570,10 @@ export default function ReportsDashboard() {
                 <i className="fas fa-chart-line text-2xl opacity-50" />
               </div>
               <p className="text-4xl font-bold">
-                {((report.profiles.completion_rate + report.candidates.hire_rate) / 2).toFixed(1)}%
+                {report.summary.profiles_created > 0 && report.summary.candidates_added > 0
+                  ? (((report.summary.profiles_completed / report.summary.profiles_created) + 
+                     (report.summary.candidates_hired / report.summary.candidates_added)) / 2 * 100).toFixed(1)
+                  : '0'}%
               </p>
               <p className="text-purple-100 text-sm mt-2">
                 Promedio general
@@ -603,7 +586,7 @@ export default function ReportsDashboard() {
                 <i className="fas fa-robot text-2xl opacity-50" />
               </div>
               <p className="text-4xl font-bold">
-                {report.ai_metrics.cvs_analyzed + report.ai_metrics.documents_generated}
+                {report.summary.cv_analyses + report.summary.documents_generated}
               </p>
               <p className="text-green-100 text-sm mt-2">
                 Procesos automatizados
