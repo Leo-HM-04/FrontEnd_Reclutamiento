@@ -49,34 +49,44 @@ export default function BulkCVUploadModal({
   }, [isOpen]);
 
   // Poll para procesamiento asíncrono
+  // Poll para procesamiento asíncrono
   useEffect(() => {
     if (isAsyncProcessing && taskId) {
       const interval = setInterval(async () => {
         try {
-          const status = await getBulkUploadStatus(taskId);
+          const response = await getBulkUploadStatus(taskId);
+          console.log('📊 Bulk upload status:', response);
           
-          if (status.state === 'SUCCESS') {
-            setResults(status.result?.successful_details || []);
-            setUploadProgress(`✅ Procesamiento completado: ${status.result?.successful || 0} exitosos, ${status.result?.failed || 0} fallidos`);
+          // El backend devuelve 'status' no 'state' cuando la tarea termina
+          if (response.status === 'completed') {
+            setResults(response.result?.successful_details || []);
+            setUploadProgress(`✅ Procesamiento completado: ${response.result?.successful || 0} exitosos, ${response.result?.failed || 0} fallidos`);
             setIsAsyncProcessing(false);
             setLoading(false);
             clearInterval(interval);
-          } else if (status.state === 'FAILURE') {
-            setUploadProgress(`❌ Error en el procesamiento`);
+            
+            if (onSuccess) {
+              onSuccess(`✅ ${response.result?.successful || 0} candidatos procesados exitosamente`);
+            }
+          } else if (response.status === 'failed') {
+            setUploadProgress(`❌ Error en el procesamiento: ${response.error || 'Error desconocido'}`);
             setIsAsyncProcessing(false);
             setLoading(false);
             clearInterval(interval);
-          } else {
-            setUploadProgress(`⏳ Procesando CVs... Estado: ${status.state}`);
+          } else if (response.status === 'processing') {
+            // Mientras está en proceso, mostrar el estado de Celery
+            const celeryState = response.state || 'PENDING';
+            setUploadProgress(`⏳ Procesando CVs... Estado: ${celeryState}`);
           }
         } catch (error) {
           console.error('Error checking status:', error);
+          // No detener el polling por un error de red temporal
         }
-      }, 3000); // Check cada 3 segundos
+      }, 3000);
 
       return () => clearInterval(interval);
     }
-  }, [isAsyncProcessing, taskId]);
+  }, [isAsyncProcessing, taskId, onSuccess]);
 
   const loadProfiles = async () => {
     setLoadingProfiles(true);

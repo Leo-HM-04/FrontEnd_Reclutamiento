@@ -1018,7 +1018,7 @@ const loadApplicationsData = async () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
-    setTimeout(() => router.push("/login"), 300);
+    setTimeout(() => router.push("/auth"), 300);
   };
 
   const debouncedSearch = useDebounce((q: string) => {
