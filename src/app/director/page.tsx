@@ -11,6 +11,8 @@ import CandidateNoteFormModal from "@/components/CandidateNoteFormModal";
 import ClientFormModal from "@/components/ClientFormModal";
 import EvaluationsMain from "@/components/evaluations/EvaluationsMain";
 import ProfilesMain from "@/components/profiles/ProfilesMain";
+import CandidatesMain from "@/components/candidates/CandidatesMain";
+import ClientsMain from "@/components/clients/ClientsMain";
 import ProfilesStatusDashboard from '@/components/ProfilesStatusDashboard';
 import CandidatesStatusDashboard from '@/components/CandidatesStatusDashboard';
 import ShortlistedCandidatesDashboard from '@/components/ShortlistedCandidatesDashboard';
@@ -1259,89 +1261,22 @@ const loadApplicationsData = async () => {
               </li>
 
               <li>
-                <button onClick={() => setCandidatesMenuOpen(!candidatesMenuOpen)} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}>
+                <button 
+                  onClick={() => setCurrentView("candidates")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}
+                >
                   <i className="fas fa-user-tie mr-3 w-5" />
                   Candidatos
-                  <i className={`fas fa-chevron-${candidatesMenuOpen ? 'down' : 'right'} ml-auto text-xs transition-transform`} />
                 </button>
-                {candidatesMenuOpen && (
-                  <ul className="ml-8 mt-1 space-y-1">
-                    <li>
-                      <button onClick={() => setCurrentView("candidates")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}>
-                        <i className="fas fa-users mr-3 w-4" />
-                        Ver Candidatos
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setCurrentView("applications")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("applications")}`}>
-                        <i className="fas fa-briefcase mr-3 w-4" />
-                        Aplicaciones
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setCurrentView("documents")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("documents")}`}>
-                        <i className="fas fa-folder-open mr-3 w-4" />
-                        Documentos
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setCurrentView("notes")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("notes")}`}>
-                        <i className="fas fa-sticky-note mr-3 w-4" />
-                        Notas
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setCurrentView("history")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("history")}`}>
-                        <i className="fas fa-history mr-3 w-4" />
-                        Historial
-                      </button>
-                    </li>
-                  </ul>
-                )}
               </li>
               <li>
                 <button 
-                  onClick={() => setClientsMenuOpen(!clientsMenuOpen)} 
-                  className={`sidebar-item flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${
-                    currentView === "clients" || currentView === "client-list" || currentView === "client-contacts" 
-                      ? "bg-primary-50 text-primary-600 border-r-2 border-primary-600" 
-                      : "text-gray-700 hover:text-primary-600 hover:bg-primary-50"
-                  }`}
+                  onClick={() => setCurrentView("clients")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("clients")}`}
                 >
-                  <div className="flex items-center">
-                    <i className="fas fa-building mr-3 w-5" />
-                    Clientes
-                  </div>
-                  <i className={`fas fa-chevron-${clientsMenuOpen ? 'down' : 'right'} ml-auto text-xs transition-all duration-200`} />
+                  <i className="fas fa-building mr-3 w-5" />
+                  Clientes
                 </button>
-                
-                {/* Submenu de Clientes */}
-                <div className={`overflow-hidden transition-all duration-300 ${clientsMenuOpen ? "max-h-40" : "max-h-0"}`}>
-                  <div className="ml-6 mt-2 space-y-1">
-                    <button 
-                      onClick={() => setCurrentView("client-list")} 
-                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                        currentView === "client-list" 
-                          ? "bg-primary-100 text-primary-700" 
-                          : "text-gray-600 hover:text-primary-600 hover:bg-primary-50"
-                      }`}
-                    >
-                      <i className="fas fa-building mr-2" />
-                      Clientes
-                    </button>
-                    <button 
-                      onClick={() => setCurrentView("client-contacts")} 
-                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                        currentView === "client-contacts" 
-                          ? "bg-primary-100 text-primary-700" 
-                          : "text-gray-600 hover:text-primary-600 hover:bg-primary-50"
-                      }`}
-                    >
-                      <i className="fas fa-address-book mr-2" />
-                      Contactos
-                    </button>
-                  </div>
-                </div>
               </li>
               <li>
                 <button onClick={() => setCurrentView("client-progress")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("client-progress")}`}>
@@ -1834,8 +1769,11 @@ const loadApplicationsData = async () => {
             </div>
           )}
 
-          {/* CANDIDATES */}
-          {currentView === "candidates" && (
+          {/* CANDIDATES - Using new CandidatesMain component */}
+          {currentView === "candidates" && <CandidatesMain />}
+
+          {/* OLD CANDIDATES VIEW - DISABLED */}
+          {false && (
             <div className="p-6">
               <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -2812,8 +2750,11 @@ const loadApplicationsData = async () => {
             </div>
           )}
 
-          {/* CLIENTS */}
-          {currentView === "clients" && (
+          {/* CLIENTS - Using new ClientsMain component */}
+          {currentView === "clients" && <ClientsMain />}
+
+          {/* OLD CLIENTS VIEW - DISABLED */}
+          {false && (
             <div className="p-6">
               <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
