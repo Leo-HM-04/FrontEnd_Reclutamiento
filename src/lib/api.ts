@@ -82,7 +82,14 @@ class ApiClient {
         } as ApiError;
       }
 
-      return await response.json();
+      // Si la respuesta es 204 No Content o no tiene contenido, retornar objeto vacío
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return {};
+      }
+
+      // Intentar parsear JSON, si falla retornar objeto vacío
+      const text = await response.text();
+      return text ? JSON.parse(text) : {};
     } catch (error) {
       console.error('❌ API Request failed:', error);
       
