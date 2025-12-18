@@ -2,70 +2,82 @@
 
 import { useState, useEffect } from "react";
 
-interface EvaluationTemplate {
+interface CandidateEvaluation {
   id: number;
-  title: string;
-  description: string;
-  category: string;
-  duration_minutes: number;
-  passing_score: number;
-  is_active: boolean;
-  is_template: boolean;
-  created_at: string;
-  questions_count?: number;
+  candidate: number;
+  candidate_name: string;
+  template: number;
+  template_title: string;
+  status: string;
+  status_display: string;
+  final_score: number | null;
+  passed: boolean | null;
+  assigned_at: string;
+  completed_at: string | null;
+  progress_percentage: number | null;
 }
 
-export default function EvaluationTemplates() {
-  const [templates, setTemplates] = useState<EvaluationTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<EvaluationTemplate | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterCategory, setFilterCategory] = useState("all");
+interface Answer {
+  id: number;
+  question: number;
+  question_text: string;
+  question_type: string;
+  question_points: number;
+  answer_text: string;
+  selected_option: string;
+  is_correct: boolean | null;
+  points_earned: number;
+  feedback: string | null;
+}
 
-  const categories = [
-    { value: "technical", label: "Técnica" },
-    { value: "behavioral", label: "Conductual" },
-    { value: "cognitive", label: "Cognitiva" },
-    { value: "cultural", label: "Cultural Fit" },
-    { value: "leadership", label: "Liderazgo" },
-    { value: "other", label: "Otra" }
-  ];
+export default function EvaluationAnswers() {
+  const [evaluations, setEvaluations] = useState<CandidateEvaluation[]>([]);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<CandidateEvaluation | null>(null);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingAnswers, setLoadingAnswers] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    fetchTemplates();
+    fetchEvaluations();
   }, []);
 
-  const fetchTemplates = async () => {
+  const fetchEvaluations = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:8000/api/evaluations/templates/", {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch("http://localhost:8000/api/evaluations/candidate-evaluations/", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
+      console.log("Response status:", response.status);
+      const data = await response.json();
+      console.log("API Response:", data);
+      
       if (response.ok) {
-        const data = await response.json();
-        setTemplates(data);
+        const evaluationsList = Array.isArray(data) ? data : data.results || [];
+        console.log("Evaluations list:", evaluationsList);
+        setEvaluations(evaluationsList);
+      } else {
+        console.error("Error response:", data);
       }
     } catch (error) {
-      console.error("Error fetching templates:", error);
+      console.error("Error fetching evaluations:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar esta plantilla?")) return;
-
+  const fetchAnswers = async (evaluationId: number) => {
+    setLoadingAnswers(true);
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
       const response = await fetch(
-        `http://localhost:8000/api/evaluations/templates/${id}/`,
+        `http://localhost:8000/api/evaluations/answers/?evaluation=${evaluationId}`,
         {
-          method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -73,38 +85,40 @@ export default function EvaluationTemplates() {
       );
 
       if (response.ok) {
-        setTemplates(templates.filter((t) => t.id !== id));
+        const data = await response.json();
+        const answersList = Array.isArray(data) ? data : data.results || [];
+        setAnswers(answersList);
       }
     } catch (error) {
-      console.error("Error deleting template:", error);
+      console.error("Error fetching answers:", error);
+    } finally {
+      setLoadingAnswers(false);
     }
   };
 
-  const handleDuplicate = async (id: number) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `http://localhost:8000/api/evaluations/templates/${id}/duplicate/`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        fetchTemplates();
-      }
-    } catch (error) {
-      console.error("Error duplicating template:", error);
-    }
+  const handleViewAnswers = async (evaluation: CandidateEvaluation) => {
+    setSelectedEvaluation(evaluation);
+    await fetchAnswers(evaluation.id);
   };
 
-  const filteredTemplates = templates.filter((template) => {
-    const matchesSearch = template.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === "all" || template.category === filterCategory;
-    return matchesSearch && matchesCategory;
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      completed: { label: "Completada", color: "bg-green-100 text-green-800" },
+      in_progress: { label: "En Progreso", color: "bg-yellow-100 text-yellow-800" },
+      pending: { label: "Pendiente", color: "bg-gray-100 text-gray-800" },
+    };
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    return <span className={`px-3 py-1 rounded-full text-xs font-semibold ${config.color}`}>{config.label}</span>;
+  };
+
+  const filteredEvaluations = evaluations.filter((evaluation) => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      (evaluation.candidate_name?.toLowerCase().includes(searchLower)) ||
+      (evaluation.template_title?.toLowerCase().includes(searchLower)) ||
+      !searchTerm;
+    const matchesStatus = statusFilter === "all" || evaluation.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   if (loading) {
@@ -112,324 +126,260 @@ export default function EvaluationTemplates() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <i className="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
-          <p className="text-gray-600">Cargando plantillas...</p>
+          <p className="text-gray-600">Cargando evaluaciones...</p>
         </div>
       </div>
     );
   }
 
-  {/* Modal para Crear/Editar Plantilla */}
-    {showModal && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">
-                {selectedTemplate ? "Editar Plantilla" : "Nueva Plantilla"}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowModal(false);
-                  setSelectedTemplate(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <i className="fas fa-times text-xl"></i>
-              </button>
-            </div>
-
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              
-              const data = {
-                title: formData.get("title"),
-                description: formData.get("description"),
-                category: formData.get("category"),
-                duration_minutes: parseInt(formData.get("duration_minutes") as string),
-                passing_score: parseFloat(formData.get("passing_score") as string),
-                is_active: formData.get("is_active") === "on",
-                is_template: true
-              };
-
-              try {
-                const token = localStorage.getItem("token");
-                const url = selectedTemplate
-                  ? `http://localhost:8000/api/evaluations/templates/${selectedTemplate.id}/`
-                  : "http://localhost:8000/api/evaluations/templates/";
-                
-                const method = selectedTemplate ? "PUT" : "POST";
-
-                const response = await fetch(url, {
-                  method,
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify(data),
-                });
-
-                if (response.ok) {
-                  await fetchTemplates();
-                  setShowModal(false);
-                  setSelectedTemplate(null);
-                } else {
-                  const error = await response.json();
-                  alert("Error: " + JSON.stringify(error));
-                }
-              } catch (error) {
-                console.error("Error:", error);
-                alert("Error al guardar la plantilla");
-              }
-            }}>
-              <div className="space-y-4">
-                {/* Título */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Título *
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    defaultValue={selectedTemplate?.title || ""}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ej: Evaluación Python Senior"
-                  />
-                </div>
-
-                {/* Descripción */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Descripción
-                  </label>
-                  <textarea
-                    name="description"
-                    defaultValue={selectedTemplate?.description || ""}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Descripción de la evaluación"
-                  />
-                </div>
-
-                {/* Categoría */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Categoría *
-                  </label>
-                  <select
-                    name="category"
-                    defaultValue={selectedTemplate?.category || "technical"}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Duración */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Duración (minutos) *
-                  </label>
-                  <input
-                    type="number"
-                    name="duration_minutes"
-                    defaultValue={selectedTemplate?.duration_minutes || 60}
-                    required
-                    min="1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Puntaje mínimo */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Puntaje Mínimo Aprobatorio (%) *
-                  </label>
-                  <input
-                    type="number"
-                    name="passing_score"
-                    defaultValue={selectedTemplate?.passing_score || 70}
-                    required
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Activa */}
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="is_active"
-                    id="is_active"
-                    defaultChecked={selectedTemplate?.is_active !== false}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="is_active" className="ml-2 block text-sm text-gray-700">
-                    Plantilla activa
-                  </label>
-                </div>
-              </div>
-
-              {/* Botones */}
-              <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setSelectedTemplate(null);
-                  }}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  {selectedTemplate ? "Actualizar" : "Crear"} Plantilla
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    )}
-
-  return (
-    <div>
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Plantillas de Evaluación</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              {templates.length} plantillas disponibles
-            </p>
-          </div>
+  if (selectedEvaluation) {
+    return (
+      <div>
+        <div className="mb-6">
           <button
             onClick={() => {
-              setSelectedTemplate(null);
-              setShowModal(true);
+              setSelectedEvaluation(null);
+              setAnswers([]);
             }}
-            className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
           >
-            <i className="fas fa-plus mr-2"></i>
-            Nueva Plantilla
+            <i className="fas fa-arrow-left"></i>
+            Volver a la lista
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h3 className="text-2xl font-bold text-gray-900 mb-4">
+            {selectedEvaluation.template_title || 'Evaluación'}
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <p className="text-sm text-gray-600">Candidato</p>
+              <p className="font-semibold text-gray-900">
+                {selectedEvaluation.candidate_name || 'N/A'}
+              </p>
+            </div>
+            
+            <div>
+              <p className="text-sm text-gray-600">Puntuación Final</p>
+              <p className="text-3xl font-bold text-blue-600">
+                {selectedEvaluation.final_score !== null ? `${parseFloat(selectedEvaluation.final_score.toString()).toFixed(2)}%` : "N/A"}
+              </p>
+              {selectedEvaluation.passed !== null && (
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  selectedEvaluation.passed ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                }`}>
+                  {selectedEvaluation.passed ? "Aprobado" : "No Aprobado"}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <p className="text-gray-600">Estado</p>
+              {getStatusBadge(selectedEvaluation.status)}
+            </div>
+            <div>
+              <p className="text-gray-600">Asignada</p>
+              <p className="font-semibold">{selectedEvaluation.assigned_at ? new Date(selectedEvaluation.assigned_at).toLocaleString('es-MX') : 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-gray-600">Completada</p>
+              <p className="font-semibold">
+                {selectedEvaluation.completed_at 
+                  ? new Date(selectedEvaluation.completed_at).toLocaleString('es-MX')
+                  : "En progreso"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h4 className="text-xl font-bold text-gray-900 mb-4">Respuestas</h4>
+          
+          {loadingAnswers ? (
+            <div className="text-center py-8">
+              <i className="fas fa-spinner fa-spin text-3xl text-blue-600 mb-2"></i>
+              <p className="text-gray-600">Cargando respuestas...</p>
+            </div>
+          ) : answers.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <i className="fas fa-inbox text-4xl mb-3"></i>
+              <p>No hay respuestas registradas</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {answers.map((answer, index) => (
+                <div key={answer.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 mb-2">
+                        {index + 1}. {answer.question_text}
+                      </p>
+                      <span className="text-xs text-gray-500">
+                        Tipo: {answer.question_type}
+                      </span>
+                    </div>
+                    <div className="text-right ml-4">
+                      <p className="text-sm font-semibold text-blue-600">
+                        {answer.points_earned} / {answer.question_points} pts
+                      </p>
+                      {answer.is_correct !== null && (
+                        <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                          answer.is_correct ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        }`}>
+                          {answer.is_correct ? "Correcta" : "Incorrecta"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-sm text-gray-600 mb-1">Respuesta:</p>
+                    <p className="text-gray-900 font-medium">
+                      {answer.answer_text || answer.selected_option || "Sin respuesta"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-4">Respuestas de Evaluación</h3>
+        <p className="text-gray-600 mb-4">
+          Revisa las respuestas de las evaluaciones completadas por los candidatos
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <i className="fas fa-search mr-2"></i>
+              Buscar
+            </label>
             <input
               type="text"
-              placeholder="Buscar plantillas..."
+              placeholder="Buscar por candidato o plantilla..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">Todas las categorías</option>
-            {categories.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <i className="fas fa-filter mr-2"></i>
+              Estado
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Todos</option>
+              <option value="completed">Completadas</option>
+              <option value="in_progress">En Progreso</option>
+              <option value="pending">Pendientes</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Templates Grid */}
-      {filteredTemplates.length === 0 ? (
-        <div className="text-center py-12">
-          <i className="fas fa-inbox text-5xl text-gray-300 mb-4"></i>
-          <p className="text-gray-600">No se encontraron plantillas</p>
+      {filteredEvaluations.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+          <i className="fas fa-clipboard-check text-6xl text-gray-300 mb-4"></i>
+          <p className="text-gray-500 text-lg">No se encontraron evaluaciones</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredTemplates.map((template) => (
-            <div
-              key={template.id}
-              className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-gray-900">{template.title}</h4>
-                    {template.is_active ? (
-                      <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">
-                        Activa
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
-                        Inactiva
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 mb-2">{template.description}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                <div>
-                  <span className="text-gray-500">Categoría:</span>
-                  <p className="font-medium text-gray-900">
-                    {categories.find((c) => c.value === template.category)?.label || template.category}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Duración:</span>
-                  <p className="font-medium text-gray-900">{template.duration_minutes} min</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Puntaje mínimo:</span>
-                  <p className="font-medium text-gray-900">{template.passing_score}%</p>
-                </div>
-                <div>
-                  <span className="text-gray-500">Preguntas:</span>
-                  <p className="font-medium text-gray-900">{template.questions_count || 0}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    setSelectedTemplate(template);
-                    setShowModal(true);
-                  }}
-                  className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
-                >
-                  <i className="fas fa-edit mr-2"></i>
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleDuplicate(template.id)}
-                  className="px-3 py-2 text-sm bg-gray-50 text-gray-700 rounded hover:bg-gray-100"
-                >
-                  <i className="fas fa-copy"></i>
-                </button>
-                <button
-                  onClick={() => handleDelete(template.id)}
-                  className="px-3 py-2 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100"
-                >
-                  <i className="fas fa-trash"></i>
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Candidato
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Evaluación
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Estado
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Puntuación
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Fecha
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredEvaluations.map((evaluation) => (
+                  <tr key={evaluation.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {evaluation.candidate_name || 'N/A'}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-gray-900">{evaluation.template_title || 'N/A'}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      {getStatusBadge(evaluation.status)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {evaluation.final_score !== null ? (
+                        <div>
+                          <p className="font-semibold text-blue-600">
+                            {parseFloat(evaluation.final_score.toString()).toFixed(2)}%
+                          </p>
+                          {evaluation.passed !== null && (
+                            <span className={`text-xs ${
+                              evaluation.passed ? "text-green-600" : "text-red-600"
+                            }`}>
+                              {evaluation.passed ? "✓ Aprobado" : "✗ No aprobado"}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm text-gray-900">
+                        {evaluation.assigned_at ? new Date(evaluation.assigned_at).toLocaleDateString('es-MX') : 'N/A'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {evaluation.assigned_at ? new Date(evaluation.assigned_at).toLocaleTimeString('es-MX') : ''}
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => handleViewAnswers(evaluation)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-2"
+                      >
+                        <i className="fas fa-eye"></i>
+                        Ver Respuestas
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

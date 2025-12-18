@@ -15,6 +15,18 @@ interface EvaluationTemplate {
   questions_count?: number;
 }
 
+interface Question {
+  id?: number;
+  question_text: string;
+  question_type: string;
+  options: string[];
+  correct_answer: string | null;
+  points: number;
+  order: number;
+  is_required: boolean;
+  help_text: string;
+}
+
 export default function EvaluationTemplates() {
   const [templates, setTemplates] = useState<EvaluationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +35,10 @@ export default function EvaluationTemplates() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [questionCount, setQuestionCount] = useState(0);
+  const [existingQuestions, setExistingQuestions] = useState<Question[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLink, setShareLink] = useState("");
+  const [shareLoading, setShareLoading] = useState(false);
 
   const categories = [
     { value: "technical", label: "Técnica" },
@@ -45,6 +61,14 @@ export default function EvaluationTemplates() {
     fetchTemplates();
   }, []);
 
+  useEffect(() => {
+    if (selectedTemplate && showModal) {
+      fetchTemplateQuestions(selectedTemplate.id);
+    } else if (!selectedTemplate) {
+      setExistingQuestions([]);
+    }
+  }, [selectedTemplate, showModal]);
+
   const fetchTemplates = async () => {
     setLoading(true);
     try {
@@ -61,6 +85,24 @@ export default function EvaluationTemplates() {
       console.error("Error:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTemplateQuestions = async (templateId: number) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(`http://localhost:8000/api/evaluations/questions/?template=${templateId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const questions = Array.isArray(data) ? data : data.results || [];
+        setExistingQuestions(questions);
+        console.log('Preguntas cargadas:', questions);
+      }
+    } catch (error) {
+      console.error("Error cargando preguntas:", error);
     }
   };
 
@@ -89,6 +131,76 @@ export default function EvaluationTemplates() {
     } catch (error) {
       console.error("Error:", error);
     }
+  };
+
+  const handleDeleteQuestion = async (questionId: number) => {
+    if (!confirm("¿Eliminar esta pregunta?")) return;
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(`http://localhost:8000/api/evaluations/questions/${questionId}/`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setExistingQuestions(existingQuestions.filter((q) => q.id !== questionId));
+        alert("Pregunta eliminada exitosamente");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const handleUpdateQuestion = async (questionId: number, data: Question) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(`http://localhost:8000/api/evaluations/questions/${questionId}/`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify(data),
+      });
+      if (response.ok) {
+        alert("Pregunta actualizada exitosamente");
+        if (selectedTemplate) {
+          fetchTemplateQuestions(selectedTemplate.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error al actualizar la pregunta");
+    }
+  };
+
+  const handleShare = async (templateId: number) => {
+    setShareLoading(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(`http://localhost:8000/api/evaluations/templates/${templateId}/generate_share_link/`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const publicLink = `${window.location.origin}/evaluacion-publica/${data.share_token}`;
+        setShareLink(publicLink);
+        setShowShareModal(true);
+      } else {
+        alert("Error al generar link de compartir");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error al generar link de compartir");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(shareLink);
+    alert("✅ Link copiado al portapapeles!");
   };
 
   const addQuestion = () => {
@@ -120,7 +232,7 @@ export default function EvaluationTemplates() {
               <option value="true_false">Verdadero/Falso</option>
               <option value="short_answer">Respuesta Corta</option>
               <option value="essay">Ensayo</option>
-              <option value="rating">Calificación</option>
+              <option value="rating">Calificación (1-5)</option>
             </select>
           </div>
           <div>
@@ -133,23 +245,25 @@ export default function EvaluationTemplates() {
           </div>
         </div>
 
-        <div id="options_section_${index}">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Opciones (una por línea) *</label>
-          <textarea name="options_${index}" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="A) Opción 1&#10;B) Opción 2&#10;C) Opción 3&#10;D) Opción 4"></textarea>
-        </div>
+        <div id="options_container_${index}">
+          <div id="options_section_${index}">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Opciones (una por línea) *</label>
+            <textarea name="options_${index}" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Opción A&#10;Opción B&#10;Opción C&#10;Opción D"></textarea>
+          </div>
 
-        <div id="answer_section_${index}">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta</label>
-          <input type="text" name="correct_answer_${index}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Ej: A)" />
+          <div id="answer_section_${index}" class="mt-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta</label>
+            <input type="text" name="correct_answer_${index}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Escribe la opción correcta exacta" />
+          </div>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Texto de Ayuda (opcional)</label>
-          <input type="text" name="help_text_${index}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          <input type="text" name="help_text_${index}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Instrucciones adicionales para el candidato" />
         </div>
 
         <div class="flex items-center">
-          <input type="checkbox" name="is_required_${index}" id="required_${index}" class="h-4 w-4 rounded" />
+          <input type="checkbox" name="is_required_${index}" id="required_${index}" checked class="h-4 w-4 rounded" />
           <label for="required_${index}" class="ml-2 text-sm">Obligatoria</label>
         </div>
       </div>
@@ -161,31 +275,44 @@ export default function EvaluationTemplates() {
 
   useEffect(() => {
     (window as any).handleQuestionTypeChange = (index: number, type: string) => {
-      const optionsSection = document.getElementById(`options_section_${index}`);
-      const answerSection = document.getElementById(`answer_section_${index}`);
+      const optionsContainer = document.getElementById(`options_container_${index}`);
       
-      if (optionsSection && answerSection) {
+      if (optionsContainer) {
         if (type === "multiple_choice") {
-          optionsSection.style.display = "block";
-          answerSection.style.display = "block";
-          answerSection.innerHTML = `
-            <label class="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta</label>
-            <input type="text" name="correct_answer_${index}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Ej: A)" />
+          optionsContainer.innerHTML = `
+            <div id="options_section_${index}">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Opciones (una por línea) *</label>
+              <textarea name="options_${index}" rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Opción A&#10;Opción B&#10;Opción C&#10;Opción D"></textarea>
+            </div>
+            <div id="answer_section_${index}" class="mt-3">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta</label>
+              <input type="text" name="correct_answer_${index}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Escribe la opción correcta exacta" />
+            </div>
           `;
         } else if (type === "true_false") {
-          optionsSection.style.display = "none";
-          answerSection.style.display = "block";
-          answerSection.innerHTML = `
-            <label class="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta</label>
-            <select name="correct_answer_${index}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="">Seleccionar...</option>
-              <option value="Verdadero">Verdadero</option>
-              <option value="Falso">Falso</option>
-            </select>
+          optionsContainer.innerHTML = `
+            <div id="answer_section_${index}">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta *</label>
+              <select name="correct_answer_${index}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <option value="">Seleccionar...</option>
+                <option value="Verdadero">Verdadero</option>
+                <option value="Falso">Falso</option>
+              </select>
+            </div>
           `;
-        } else {
-          optionsSection.style.display = "none";
-          answerSection.style.display = "none";
+        } else if (type === "short_answer") {
+          optionsContainer.innerHTML = `
+            <div id="answer_section_${index}">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta (opcional)</label>
+              <input type="text" name="correct_answer_${index}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Respuesta esperada para auto-calificación" />
+            </div>
+          `;
+        } else if (type === "essay" || type === "rating") {
+          optionsContainer.innerHTML = `
+            <div class="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
+              ${type === "essay" ? "Las respuestas de ensayo requieren calificación manual." : "El candidato seleccionará un valor del 1 al 5."}
+            </div>
+          `;
         }
       }
     };
@@ -265,6 +392,7 @@ export default function EvaluationTemplates() {
 
               <div className="flex gap-2 pt-3 border-t">
                 <button onClick={() => { setSelectedTemplate(template); setShowModal(true); }} className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100"><i className="fas fa-edit mr-2"></i>Editar</button>
+                <button onClick={() => handleShare(template.id)} className="px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded hover:bg-purple-100" title="Compartir"><i className="fas fa-share-alt"></i></button>
                 <button onClick={() => handleDuplicate(template.id)} className="px-3 py-2 text-sm bg-gray-50 text-gray-700 rounded hover:bg-gray-100"><i className="fas fa-copy"></i></button>
                 <button onClick={() => handleDelete(template.id)} className="px-3 py-2 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100"><i className="fas fa-trash"></i></button>
               </div>
@@ -325,12 +453,15 @@ export default function EvaluationTemplates() {
                           
                           if (questionType === "multiple_choice") {
                             const optionsText = (document.querySelector(`[name="options_${index}"]`) as HTMLTextAreaElement)?.value;
-                            options = optionsText ? optionsText.split("\n").filter(opt => opt.trim()) : [];
+                            options = optionsText ? optionsText.split("\n").map(opt => opt.trim()).filter(opt => opt) : [];
                             correctAnswer = (document.querySelector(`[name="correct_answer_${index}"]`) as HTMLInputElement)?.value || "";
                           } else if (questionType === "true_false") {
                             options = ["Verdadero", "Falso"];
                             correctAnswer = (document.querySelector(`[name="correct_answer_${index}"]`) as HTMLSelectElement)?.value || "";
+                          } else if (questionType === "short_answer") {
+                            correctAnswer = (document.querySelector(`[name="correct_answer_${index}"]`) as HTMLInputElement)?.value || "";
                           }
+                          // essay y rating no necesitan opciones ni respuesta correcta
                           
                           if (questionText) {
                             questions.push({
@@ -346,12 +477,19 @@ export default function EvaluationTemplates() {
                           }
                         });
 
+                        console.log('Preguntas a crear:', questions);
+
                         if (questions.length > 0) {
-                          await fetch("http://localhost:8000/api/evaluations/questions/bulk_create/", {
+                          const questionsResponse = await fetch("http://localhost:8000/api/evaluations/questions/bulk_create/", {
                             method: "POST",
                             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                             body: JSON.stringify({ template_id: createdTemplate.id, questions: questions }),
                           });
+                          
+                          if (!questionsResponse.ok) {
+                            const error = await questionsResponse.json();
+                            console.error('Error al crear preguntas:', error);
+                          }
                         }
                       }
                     }
@@ -396,23 +534,191 @@ export default function EvaluationTemplates() {
                   </div>
                 </div>
 
-                {!selectedTemplate && (
-                  <div className="mt-6 border-t pt-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-lg font-semibold">Preguntas</h4>
+                {/* Sección de Preguntas - SIEMPRE VISIBLE */}
+                <div className="mt-6 border-t pt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-semibold">Preguntas</h4>
+                    {!selectedTemplate && (
                       <button type="button" onClick={addQuestion} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                         <i className="fas fa-plus mr-2"></i>Agregar Pregunta
                       </button>
-                    </div>
-                    <div id="questions-container"></div>
+                    )}
                   </div>
-                )}
+
+                  {/* Mostrar preguntas existentes cuando se edita */}
+                  {selectedTemplate && existingQuestions.length > 0 && (
+                    <div className="space-y-4 mb-4">
+                      {existingQuestions.map((question, index) => (
+                        <div key={question.id} className="border border-gray-300 rounded-lg p-4 bg-white">
+                          <div className="flex justify-between items-center mb-3">
+                            <h5 className="font-semibold text-gray-900">Pregunta {index + 1}</h5>
+                            <button 
+                              type="button"
+                              onClick={() => question.id && handleDeleteQuestion(question.id)} 
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <i className="fas fa-trash"></i>
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Pregunta</label>
+                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{question.question_text}</p>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                                <p className="text-sm text-gray-900">{
+                                  questionTypes.find(t => t.value === question.question_type)?.label || question.question_type
+                                }</p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Puntos</label>
+                                <p className="text-sm text-gray-900">{question.points}</p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
+                                <p className="text-sm text-gray-900">{question.order}</p>
+                              </div>
+                            </div>
+
+                            {question.options && question.options.length > 0 && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Opciones</label>
+                                <ul className="list-disc list-inside text-sm text-gray-900">
+                                  {question.options.map((opt, i) => (
+                                    <li key={i}>{opt}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {question.correct_answer && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta</label>
+                                <p className="text-sm text-green-700 font-medium">{question.correct_answer}</p>
+                              </div>
+                            )}
+
+                            {question.help_text && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Texto de Ayuda</label>
+                                <p className="text-sm text-gray-600 italic">{question.help_text}</p>
+                              </div>
+                            )}
+
+                            <div className="flex items-center">
+                              <span className="text-sm">
+                                {question.is_required ? (
+                                  <span className="text-green-600"><i className="fas fa-check-circle mr-1"></i>Obligatoria</span>
+                                ) : (
+                                  <span className="text-gray-500"><i className="fas fa-circle mr-1"></i>Opcional</span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedTemplate && existingQuestions.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <i className="fas fa-question-circle text-4xl mb-3"></i>
+                      <p>No hay preguntas en esta plantilla</p>
+                    </div>
+                  )}
+
+                  {/* Contenedor para nuevas preguntas (solo en modo crear) */}
+                  {!selectedTemplate && <div id="questions-container"></div>}
+                </div>
 
                 <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
                   <button type="button" onClick={() => { setShowModal(false); setSelectedTemplate(null); }} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
                   <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{selectedTemplate ? "Actualizar" : "Crear"}</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Compartir */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                <i className="fas fa-share-alt text-purple-600 mr-2"></i>
+                Compartir Evaluación
+              </h3>
+              <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-gray-600">
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-gray-600 mb-4">
+                  Comparte este enlace con cualquier persona para que pueda responder la evaluación sin necesidad de iniciar sesión.
+                </p>
+                
+                <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Enlace Público
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={shareLink}
+                      readOnly
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+                    />
+                    <button
+                      onClick={copyToClipboard}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                    >
+                      <i className="fas fa-copy"></i>
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <i className="fas fa-info-circle text-blue-600 mt-1"></i>
+                  <div className="text-sm text-blue-800">
+                    <p className="font-semibold mb-1">Información importante:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>El enlace es público y puede ser usado por cualquier persona</li>
+                      <li>Las respuestas se guardarán automáticamente en el sistema</li>
+                      <li>Puedes compartir este enlace por email, WhatsApp o redes sociales</li>
+                      <li>El enlace no expira y puede ser usado múltiples veces</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  Cerrar
+                </button>
+                <a
+                  href={shareLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <i className="fas fa-external-link-alt"></i>
+                  Abrir en nueva pestaña
+                </a>
+              </div>
             </div>
           </div>
         </div>
