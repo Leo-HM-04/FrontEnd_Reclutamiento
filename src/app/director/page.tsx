@@ -426,94 +426,157 @@ useEffect(() => {
   }
 
   async function loadDashboardData() {
-    // Mock data (igual que tu HTML)
-    setStats({ activeProcesses: 12, completedCandidates: 25, successRate: 85, clientSatisfaction: 4.7, activeProfiles: 8 });
+    setLoading(true);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        router.push('/auth');
+        return;
+      }
 
-    setNotifications({
-      unread: 3,
-      items: [
-        { id: 1, message: "Nuevo candidato requiere aprobación", time: "Hace 5 min", icon: "fas fa-user-plus" },
-        { id: 2, message: "Reporte mensual disponible", time: "Hace 1 hora", icon: "fas fa-chart-bar" },
-        { id: 3, message: "Cliente TechCorp agregó feedback", time: "Hace 2 horas", icon: "fas fa-comment" },
-      ],
-    });
+      console.log('🔵 Cargando dashboard del Director...');
 
-    setPendingApprovals([
-      {
-        id: 1,
-        candidate: "María García López",
-        email: "maria.garcia@email.com",
-        position: "Desarrolladora Frontend",
-        department: "Tecnología",
-        client: "TechCorp S.A.",
-        score: 92,
-        supervisor: "Juan Pérez",
-      },
-      {
-        id: 2,
-        candidate: "Carlos López Ruiz",
-        email: "carlos.lopez@email.com",
-        position: "DevOps Engineer",
-        department: "Infraestructura",
-        client: "StartupXYZ",
-        score: 88,
-        supervisor: "Ana Martínez",
-      },
-      {
-        id: 3,
-        candidate: "Ana Martínez Silva",
-        email: "ana.martinez@email.com",
-        position: "Product Manager",
-        department: "Producto",
-        client: "InnovaCorp",
-        score: 85,
-        supervisor: "Carlos Ruiz",
-      },
-    ]);
+      // Llamada al endpoint del backend
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/director/dashboard/`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-    setRecentActivity([
-      { id: 1, type: "success", icon: "fas fa-check", message: "Candidato aprobado para TechCorp", details: "Juan Pérez - Desarrollador Senior", time: "Hace 2 horas" },
-      { id: 2, type: "info", icon: "fas fa-file-alt", message: "Nuevo reporte generado", details: "Reporte mensual de actividad", time: "Hace 4 horas" },
-      { id: 3, type: "purple", icon: "fas fa-building", message: "Nuevo cliente registrado", details: "StartupXYZ - 5 posiciones abiertas", time: "Ayer" },
-    ]);
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.error('❌ Token inválido o expirado');
+          localStorage.removeItem('authToken');
+          router.push('/auth');
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    setProcesses([
-      {
-        id: 1,
-        title: "Desarrollador Senior",
-        processId: "PROC-001",
-        client: "TechCorp",
-        status: "active",
-        candidates: { current: 12, target: 20 },
-        progress: 60,
-        responsible: "Ana García",
-        priority: "high",
-      },
-      {
-        id: 2,
-        title: "Product Manager",
-        processId: "PROC-002",
-        client: "StartupXYZ",
-        status: "active",
-        candidates: { current: 8, target: 10 },
-        progress: 80,
-        responsible: "Carlos Ruiz",
-        priority: "medium",
-      },
-    ]);
+      const data = await response.json();
+      console.log('✅ Datos del dashboard recibidos:', data);
 
-    await loadCandidatesData();
+      // ========================================
+      // MAPEAR DATOS DEL BACKEND A STATS
+      // ========================================
+      setStats({
+        activeProcesses: data.overview?.active_profiles || 0,
+        completedCandidates: data.candidates?.by_status?.find((s: any) => s.status === 'hired')?.count || 0,
+        successRate: data.metrics?.success_rate || 0,
+        clientSatisfaction: data.client_satisfaction?.avg_score || 0,
+        activeProfiles: data.overview?.active_profiles || 0,
+      });
 
-    setClients([
-      { id: 1, name: "TechCorp", industry: "Tecnología", contact: "María González", email: "maria@techcorp.com", phone: "+52 555 987 6543", status: "active", activeProcesses: 5, totalCandidates: 45, lastActivity: "Hace 2 días" },
-      { id: 2, name: "StartupXYZ", industry: "Fintech", contact: "Pedro López", email: "pedro@startupxyz.com", phone: "+52 555 456 7890", status: "active", activeProcesses: 3, totalCandidates: 25, lastActivity: "Hace 1 semana" },
-    ]);
+      // ========================================
+      // NOTIFICACIONES
+      // ========================================
+      const alertsData = data.alerts || {};
+      const notificationsList: NotificationItem[] = [];
+      
+      if (alertsData.pending_approvals > 0) {
+        notificationsList.push({
+          id: 1,
+          message: `${alertsData.pending_approvals} candidato(s) requieren aprobación`,
+          time: 'Pendiente',
+          icon: 'fas fa-user-check'
+        });
+      }
+      
+      if (alertsData.expiring_profiles > 0) {
+        notificationsList.push({
+          id: 2,
+          message: `${alertsData.expiring_profiles} perfil(es) próximos a vencer`,
+          time: 'Urgente',
+          icon: 'fas fa-exclamation-triangle'
+        });
+      }
+      
+      if (alertsData.pending_evaluations > 0) {
+        notificationsList.push({
+          id: 3,
+          message: `${alertsData.pending_evaluations} evaluación(es) pendientes`,
+          time: 'Hoy',
+          icon: 'fas fa-clipboard-check'
+        });
+      }
 
-    setTeamMembers([
-      { id: 1, name: "Ana García", role: "Recruiter Senior", email: "ana.garcia@company.com", status: "active", assignedProcesses: 8, managedCandidates: 45, successRate: 92, avatar: "Ana+Garcia" },
-      { id: 2, name: "Carlos Ruiz", role: "Talent Acquisition", email: "carlos.ruiz@company.com", status: "active", assignedProcesses: 6, managedCandidates: 32, successRate: 88, avatar: "Carlos+Ruiz" },
-    ]);
+      setNotifications({
+        unread: notificationsList.length,
+        items: notificationsList
+      });
 
+      // ========================================
+      // ACTIVIDAD RECIENTE (del pipeline)
+      // ========================================
+      const pipelineData = data.pipeline || [];
+      const activityList: Activity[] = [];
+      
+      const candidatesQualified = pipelineData.find((p: any) => p.stage === 'candidates_qualified')?.count || 0;
+      const inInterviews = pipelineData.find((p: any) => p.stage === 'in_interviews')?.count || 0;
+      const hired = pipelineData.find((p: any) => p.stage === 'hired')?.count || 0;
+      
+      if (candidatesQualified > 0) {
+        activityList.push({
+          id: 1,
+          type: 'info',
+          icon: 'fas fa-users',
+          message: 'Candidatos Calificados',
+          details: `${candidatesQualified} candidatos han pasado el screening inicial`,
+          time: 'Hoy'
+        });
+      }
+      
+      if (inInterviews > 0) {
+        activityList.push({
+          id: 2,
+          type: 'purple',
+          icon: 'fas fa-comments',
+          message: 'En Proceso de Entrevistas',
+          details: `${inInterviews} candidatos en etapa de entrevistas`,
+          time: 'Esta semana'
+        });
+      }
+      
+      if (hired > 0) {
+        activityList.push({
+          id: 3,
+          type: 'success',
+          icon: 'fas fa-check-circle',
+          message: 'Candidatos Contratados',
+          details: `${hired} candidatos han sido contratados exitosamente`,
+          time: 'Este mes'
+        });
+      }
+
+      setRecentActivity(activityList);
+
+      // ========================================
+      // PROCESOS ACTIVOS
+      // ========================================
+      // Nota: Los procesos individuales requieren otro endpoint
+      // Por ahora mantenemos los datos de ejemplo o los cargamos desde otro endpoint
+      console.log('⚠️ Los procesos individuales requieren cargar desde /api/director/profiles/overview/');
+
+      // ========================================
+      // CARGAR CANDIDATOS
+      // ========================================
+      await loadCandidatesData();
+
+      console.log('✅ Dashboard cargado exitosamente');
+
+    } catch (err) {
+      console.error('❌ Error al cargar dashboard:', error);
+      error('Error al cargar los datos del dashboard');
+    } finally {
+      setLoading(false);
+    }
   }
 
   // ====== Acciones (toasts) ======
