@@ -185,9 +185,27 @@ export default function Page() {
   const { toasts, info, success, warning, error } = useToasts();
 
   // ====== State principal (equivalente a directorApp) ======
+  // Intentar restaurar la vista desde localStorage, si no existe usar "dashboard"
   const [currentView, setCurrentView] = useState<
     "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates" | "individual-reports"
   >("dashboard");
+
+// Restaurar vista guardada al montar el componente (PRIMERO)
+  useEffect(() => {
+    const savedView = localStorage.getItem('directorCurrentView');
+    if (savedView) {
+      setCurrentView(savedView as any);
+    }
+  }, []);
+
+  // Guardar la vista actual en localStorage cada vez que cambie (DESPUÉS)
+  useEffect(() => {
+    localStorage.setItem('directorCurrentView', currentView);
+    console.log('💾 Vista guardada:', currentView);
+  }, [currentView]);
+
+
+  
   const [loading, setLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -513,49 +531,150 @@ useEffect(() => {
       });
 
       // ========================================
-      // ACTIVIDAD RECIENTE (del pipeline)
+      // ACTIVIDAD RECIENTE - VERSIÓN MEJORADA
       // ========================================
-      const pipelineData = data.pipeline || [];
+      // Reemplaza el código actual de "Actividad Reciente" en loadDashboardData()
+      // Usa TODOS los datos disponibles del backend
+
+      const pipelineData = data.pipeline || {};
+      const thisMonth = data.this_month || {};
       const activityList: Activity[] = [];
-      
-      const candidatesQualified = pipelineData.find((p: any) => p.stage === 'candidates_qualified')?.count || 0;
-      const inInterviews = pipelineData.find((p: any) => p.stage === 'in_interviews')?.count || 0;
-      const hired = pipelineData.find((p: any) => p.stage === 'hired')?.count || 0;
-      
-      if (candidatesQualified > 0) {
+      let activityId = 1;
+
+      // 1️⃣ Nuevos perfiles creados este mes
+      if (thisMonth.new_profiles > 0) {
         activityList.push({
-          id: 1,
+          id: activityId++,
           type: 'info',
-          icon: 'fas fa-users',
-          message: 'Candidatos Calificados',
-          details: `${candidatesQualified} candidatos han pasado el screening inicial`,
-          time: 'Hoy'
-        });
-      }
-      
-      if (inInterviews > 0) {
-        activityList.push({
-          id: 2,
-          type: 'purple',
-          icon: 'fas fa-comments',
-          message: 'En Proceso de Entrevistas',
-          details: `${inInterviews} candidatos en etapa de entrevistas`,
-          time: 'Esta semana'
-        });
-      }
-      
-      if (hired > 0) {
-        activityList.push({
-          id: 3,
-          type: 'success',
-          icon: 'fas fa-check-circle',
-          message: 'Candidatos Contratados',
-          details: `${hired} candidatos han sido contratados exitosamente`,
+          icon: 'fas fa-briefcase',
+          message: 'Nuevos Perfiles Creados',
+          details: `${thisMonth.new_profiles} nuevo(s) perfil(es) de reclutamiento este mes`,
           time: 'Este mes'
         });
       }
 
-      setRecentActivity(activityList);
+      // 2️⃣ Perfiles completados este mes
+      if (thisMonth.completed_profiles > 0) {
+        activityList.push({
+          id: activityId++,
+          type: 'success',
+          icon: 'fas fa-check-circle',
+          message: 'Procesos Completados',
+          details: `${thisMonth.completed_profiles} proceso(s) de reclutamiento finalizado(s)`,
+          time: 'Este mes'
+        });
+      }
+
+      // 3️⃣ Candidatos contratados este mes
+      if (thisMonth.hired_candidates > 0) {
+        activityList.push({
+          id: activityId++,
+          type: 'success',
+          icon: 'fas fa-user-check',
+          message: 'Candidatos Contratados',
+          details: `${thisMonth.hired_candidates} candidato(s) contratado(s) exitosamente`,
+          time: 'Este mes'
+        });
+      }
+
+      // 4️⃣ Candidatos en entrevistas
+      if (pipelineData.in_interview > 0) {
+        activityList.push({
+          id: activityId++,
+          type: 'purple',
+          icon: 'fas fa-comments',
+          message: 'En Proceso de Entrevistas',
+          details: `${pipelineData.in_interview} candidato(s) en etapa de entrevistas`,
+          time: 'En curso'
+        });
+      }
+
+      // 5️⃣ Candidatos con oferta
+      if (pipelineData.with_offer > 0) {
+        activityList.push({
+          id: activityId++,
+          type: 'info',
+          icon: 'fas fa-handshake',
+          message: 'Ofertas Extendidas',
+          details: `${pipelineData.with_offer} oferta(s) de trabajo extendida(s)`,
+          time: 'Pendiente'
+        });
+      }
+
+      // 6️⃣ Evaluaciones completadas
+      if (thisMonth.cv_analyses > 0) {
+        activityList.push({
+          id: activityId++,
+          type: 'info',
+          icon: 'fas fa-robot',
+          message: 'Análisis de CVs con IA',
+          details: `${thisMonth.cv_analyses} CV(s) analizados automáticamente`,
+          time: 'Este mes'
+        });
+      }
+
+      // 7️⃣ Nuevos clientes
+      if (thisMonth.new_clients > 0) {
+        activityList.push({
+          id: activityId++,
+          type: 'success',
+          icon: 'fas fa-building',
+          message: 'Nuevos Clientes',
+          details: `${thisMonth.new_clients} nuevo(s) cliente(s) agregado(s) al sistema`,
+          time: 'Este mes'
+        });
+      }
+
+      // 8️⃣ Alertas pendientes (solo si hay)
+      if (alertsData.pending_approval > 0) {
+        activityList.push({
+          id: activityId++,
+          type: 'info',
+          icon: 'fas fa-exclamation-circle',
+          message: 'Aprobaciones Pendientes',
+          details: `${alertsData.pending_approval} perfil(es) esperando aprobación`,
+          time: 'Urgente'
+        });
+      }
+
+      // 9️⃣ Perfiles cerca de deadline
+      if (alertsData.near_deadline > 0) {
+        activityList.push({
+          id: activityId++,
+          type: 'info',
+          icon: 'fas fa-clock',
+          message: 'Perfiles Próximos a Vencer',
+          details: `${alertsData.near_deadline} perfil(es) cerca de su fecha límite`,
+          time: 'Esta semana'
+        });
+      }
+
+      // 🔟 Candidatos en screening
+      if (pipelineData.in_screening > 0) {
+        activityList.push({
+          id: activityId++,
+          type: 'info',
+          icon: 'fas fa-search',
+          message: 'Candidatos en Revisión',
+          details: `${pipelineData.in_screening} candidato(s) en proceso de screening`,
+          time: 'En curso'
+        });
+      }
+
+      // Si NO hay actividad, agregar un mensaje informativo
+      if (activityList.length === 0) {
+        activityList.push({
+          id: 1,
+          type: 'info',
+          icon: 'fas fa-info-circle',
+          message: 'No hay actividad reciente',
+          details: 'Comienza creando un nuevo perfil de reclutamiento',
+          time: 'Hoy'
+        });
+      }
+
+      // Limitar a las 5 actividades más recientes
+      setRecentActivity(activityList.slice(0, 5));
 
       // ========================================
       // PROCESOS ACTIVOS
@@ -572,7 +691,7 @@ useEffect(() => {
       console.log('✅ Dashboard cargado exitosamente');
 
     } catch (err) {
-      console.error('❌ Error al cargar dashboard:', error);
+      console.error('❌ Error al cargar dashboard:', err);
       error('Error al cargar los datos del dashboard');
     } finally {
       setLoading(false);
@@ -1083,6 +1202,7 @@ const loadApplicationsData = async () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
+    localStorage.removeItem("directorCurrentView");
     setTimeout(() => router.push("/auth"), 300);
   };
 
