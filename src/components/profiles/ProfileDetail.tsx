@@ -246,6 +246,26 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
                 <p className="text-sm text-gray-500">Asignado a</p>
                 <p className="font-medium">{profile.assigned_to_name || "Sin asignar"}</p>
               </div>
+              {/* Plataformas de Publicación - AL FINAL */}
+              {profile.published_platforms && profile.published_platforms.length > 0 && (
+                <div className="pt-3 border-t border-gray-200">
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    <i className="fas fa-globe text-orange-600 mr-1"></i>
+                    Plataformas de Publicación
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {profile.published_platforms.map((platform: string, index: number) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-600 text-white"
+                      >
+                        <i className="fas fa-check-circle mr-1"></i>
+                        {platform}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -343,26 +363,7 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
           </div>
         </div>
 
-        {/* Plataformas de Publicación */}
-            {profile.published_platforms && profile.published_platforms.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <i className="fas fa-globe text-orange-600 mr-2"></i>
-                  Plataformas de Publicación
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {profile.published_platforms.map((platform: string, index: number) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-                    >
-                      <i className="fas fa-check-circle mr-2"></i>
-                      {platform}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+        
 
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
