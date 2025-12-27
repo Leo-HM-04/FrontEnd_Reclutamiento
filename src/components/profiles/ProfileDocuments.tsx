@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getProfiles, getProfileDocuments, uploadProfileDocument } from "@/lib/api";
+import { getProfiles, getProfileDocuments, uploadProfileDocument, apiClient } from "@/lib/api";
 
 interface ProfileDocument {
   id: number;
@@ -23,6 +23,8 @@ export default function ProfileDocuments() {
   const [selectedProfile, setSelectedProfile] = useState<number | null>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<ProfileDocument | null>(null);
   const [uploadData, setUploadData] = useState({
     document_type: "requirement",
     description: "",
@@ -96,6 +98,35 @@ export default function ProfileDocuments() {
     }
   };
 
+  const handleDelete = async (docId: number) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) {
+      return;
+    }
+
+    try {
+      await apiClient.deleteProfileDocument(docId);
+      alert('Documento eliminado exitosamente');
+      loadDocuments();
+    } catch (error: any) {
+      console.error('Error deleting document:', error);
+      alert(`Error al eliminar: ${error.message}`);
+    }
+  };
+
+  const handleDownload = (doc: ProfileDocument) => {
+    // Construir URL completa del backend
+    const fileUrl = doc.file.startsWith('http') 
+      ? doc.file 
+      : `http://localhost:8000${doc.file}`;
+    
+    window.open(fileUrl, '_blank');
+  };
+
+  const handleView = (doc: ProfileDocument) => {
+    setSelectedDocument(doc);
+    setShowPreviewModal(true);
+  };
+
   const getDocumentIcon = (type: string) => {
     const icons: { [key: string]: string } = {
       requirement: "fa-file-alt",
@@ -117,12 +148,15 @@ export default function ProfileDocuments() {
     };
     return colors[type] || "text-gray-600";
   };
+  
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
     return (bytes / (1024 * 1024)).toFixed(2) + " MB";
   };
+
+
 
   return (
     <div>
@@ -220,16 +254,24 @@ export default function ProfileDocuments() {
                   </div>
 
                   <div className="flex space-x-2">
-                    <a
-                      href={doc.file}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 text-center"
+                    <button
+                      onClick={() => handleView(doc)}
+                      className="flex-1 px-3 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700"
+                      title="Ver documento"
+                    >
+                      <i className="fas fa-eye mr-1"></i>
+                      Ver
+                    </button>
+                    <button
+                      onClick={() => handleDownload(doc)}
+                      className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                      title="Descargar"
                     >
                       <i className="fas fa-download mr-1"></i>
                       Descargar
-                    </a>
+                    </button>
                     <button
+                      onClick={() => handleDelete(doc.id)}
                       className="px-3 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
                       title="Eliminar"
                     >
@@ -317,6 +359,82 @@ export default function ProfileDocuments() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {showPreviewModal && selectedDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-xl font-semibold">
+                {selectedDocument.description || 'Vista previa del documento'}
+              </h3>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleDownload(selectedDocument)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <i className="fas fa-download mr-2"></i>
+                  Descargar
+                </button>
+                <button
+                  onClick={() => {
+                    const fileUrl = selectedDocument.file.startsWith('http') 
+                      ? selectedDocument.file 
+                      : `http://localhost:8000${selectedDocument.file}`;
+                    window.open(fileUrl, '_blank');
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  <i className="fas fa-external-link-alt mr-2"></i>
+                  Abrir en nueva pestaña
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPreviewModal(false);
+                    setSelectedDocument(null);
+                  }}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                >
+                  <i className="fas fa-times mr-2"></i>
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            {/* Preview Content */}
+            <div className="flex-1 overflow-auto p-4">
+              {selectedDocument.file.toLowerCase().endsWith('.pdf') ? (
+                <iframe
+                  src={selectedDocument.file.startsWith('http') 
+                    ? selectedDocument.file 
+                    : `http://localhost:8000${selectedDocument.file}`}
+                  className="w-full h-full min-h-[600px]"
+                  title="Vista previa PDF"
+                />
+              ) : selectedDocument.file.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                <img
+                  src={selectedDocument.file.startsWith('http') 
+                    ? selectedDocument.file 
+                    : `http://localhost:8000${selectedDocument.file}`}
+                  alt="Vista previa"
+                  className="max-w-full h-auto mx-auto"
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <i className="fas fa-file text-gray-300 text-6xl mb-4"></i>
+                  <p className="text-gray-600">
+                    No se puede previsualizar este tipo de archivo.
+                  </p>
+                  <p className="text-gray-500 text-sm mt-2">
+                    Usa el botón "Abrir en nueva pestaña" para verlo o "Descargar" para guardarlo.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

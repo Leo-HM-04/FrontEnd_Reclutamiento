@@ -598,42 +598,33 @@ class ApiClient {
    * Upload document for a profile
    */
   async uploadProfileDocument(profileId: number, formData: FormData): Promise<any> {
-    // Aseguramos que el ID de perfil va en el formData, por si el backend lo espera así
-    if (!formData.has('profile')) {
-      formData.append('profile', String(profileId));
-    }
-
-    const token = localStorage.getItem('authToken');
-
-    const headers: HeadersInit = token
-      ? { Authorization: `Bearer ${token}` }
-      : {};
-
-    const response = await fetch(`${this.baseURL}/api/profiles/documents/`, {
-      method: 'POST',
-      headers,
-      body: formData,
-    });
+    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+    
+    const response = await fetch(
+      `${this.baseURL}/api/profiles/profiles/${profileId}/upload_document/`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // NO incluir Content-Type para que el navegador lo establezca automáticamente con boundary
+        },
+        body: formData,
+      }
+    );
 
     if (!response.ok) {
-      let errorData: any = null;
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        // ignoramos errores de parseo
-      }
-
-      throw {
-        message: errorData?.detail || 'Error uploading profile document',
-        status: response.status,
-        details: errorData,
-      } as ApiError;
+      const errorData = await response.json().catch(() => ({ detail: 'Error desconocido' }));
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    return response.json();
   }
 
-
+  async deleteProfileDocument(documentId: number): Promise<void> {
+    return this.makeRequest<void>(`/api/profiles/documents/${documentId}/`, {
+      method: 'DELETE',
+    });
+  }
 
 
 

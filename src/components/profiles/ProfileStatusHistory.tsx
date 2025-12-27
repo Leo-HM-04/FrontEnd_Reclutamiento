@@ -12,7 +12,7 @@ interface StatusHistory {
   changed_by: number;
   changed_by_name?: string;
   notes: string;
-  changed_at: string;
+  timestamp: string;
 }
 
 export default function ProfileStatusHistory() {
@@ -171,7 +171,7 @@ export default function ProfileStatusHistory() {
                         </div>
                         <div className="flex items-center">
                           <i className="fas fa-clock mr-1"></i>
-                          {new Date(history.changed_at).toLocaleString()}
+                          {new Date(history.timestamp).toLocaleString()}
                         </div>
                       </div>
                     </div>

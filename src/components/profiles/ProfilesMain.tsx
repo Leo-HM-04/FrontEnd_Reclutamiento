@@ -231,6 +231,8 @@ const handleDeleteProfile = async (profileId: number) => {
               <ProfilesList 
                 filterStatus="pending" 
                 onViewProfile={handleViewProfile}
+                onEditProfile={handleEditProfile}
+                onDeleteProfile={handleDeleteProfile}
               />
             )}
             {currentView === "profile-history" && (
