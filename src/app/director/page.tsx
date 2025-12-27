@@ -11,6 +11,8 @@ import CandidateNoteFormModal from "@/components/CandidateNoteFormModal";
 import ClientFormModal from "@/components/ClientFormModal";
 import EvaluationsMain from "@/components/evaluations/EvaluationsMain";
 import ProfilesMain from "@/components/profiles/ProfilesMain";
+import CandidatesMain from "@/components/candidates/CandidatesMain";
+import ClientsMain from "@/components/clients/ClientsMain";
 import ProfilesStatusDashboard from '@/components/ProfilesStatusDashboard';
 import CandidatesStatusDashboard from '@/components/CandidatesStatusDashboard';
 import ShortlistedCandidatesDashboard from '@/components/ShortlistedCandidatesDashboard';
@@ -424,94 +426,157 @@ useEffect(() => {
   }
 
   async function loadDashboardData() {
-    // Mock data (igual que tu HTML)
-    setStats({ activeProcesses: 12, completedCandidates: 25, successRate: 85, clientSatisfaction: 4.7, activeProfiles: 8 });
+    setLoading(true);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        router.push('/auth');
+        return;
+      }
 
-    setNotifications({
-      unread: 3,
-      items: [
-        { id: 1, message: "Nuevo candidato requiere aprobación", time: "Hace 5 min", icon: "fas fa-user-plus" },
-        { id: 2, message: "Reporte mensual disponible", time: "Hace 1 hora", icon: "fas fa-chart-bar" },
-        { id: 3, message: "Cliente TechCorp agregó feedback", time: "Hace 2 horas", icon: "fas fa-comment" },
-      ],
-    });
+      console.log('🔵 Cargando dashboard del Director...');
 
-    setPendingApprovals([
-      {
-        id: 1,
-        candidate: "María García López",
-        email: "maria.garcia@email.com",
-        position: "Desarrolladora Frontend",
-        department: "Tecnología",
-        client: "TechCorp S.A.",
-        score: 92,
-        supervisor: "Juan Pérez",
-      },
-      {
-        id: 2,
-        candidate: "Carlos López Ruiz",
-        email: "carlos.lopez@email.com",
-        position: "DevOps Engineer",
-        department: "Infraestructura",
-        client: "StartupXYZ",
-        score: 88,
-        supervisor: "Ana Martínez",
-      },
-      {
-        id: 3,
-        candidate: "Ana Martínez Silva",
-        email: "ana.martinez@email.com",
-        position: "Product Manager",
-        department: "Producto",
-        client: "InnovaCorp",
-        score: 85,
-        supervisor: "Carlos Ruiz",
-      },
-    ]);
+      // Llamada al endpoint del backend
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/director/dashboard/`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-    setRecentActivity([
-      { id: 1, type: "success", icon: "fas fa-check", message: "Candidato aprobado para TechCorp", details: "Juan Pérez - Desarrollador Senior", time: "Hace 2 horas" },
-      { id: 2, type: "info", icon: "fas fa-file-alt", message: "Nuevo reporte generado", details: "Reporte mensual de actividad", time: "Hace 4 horas" },
-      { id: 3, type: "purple", icon: "fas fa-building", message: "Nuevo cliente registrado", details: "StartupXYZ - 5 posiciones abiertas", time: "Ayer" },
-    ]);
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.error('❌ Token inválido o expirado');
+          localStorage.removeItem('authToken');
+          router.push('/auth');
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    setProcesses([
-      {
-        id: 1,
-        title: "Desarrollador Senior",
-        processId: "PROC-001",
-        client: "TechCorp",
-        status: "active",
-        candidates: { current: 12, target: 20 },
-        progress: 60,
-        responsible: "Ana García",
-        priority: "high",
-      },
-      {
-        id: 2,
-        title: "Product Manager",
-        processId: "PROC-002",
-        client: "StartupXYZ",
-        status: "active",
-        candidates: { current: 8, target: 10 },
-        progress: 80,
-        responsible: "Carlos Ruiz",
-        priority: "medium",
-      },
-    ]);
+      const data = await response.json();
+      console.log('✅ Datos del dashboard recibidos:', data);
 
-    await loadCandidatesData();
+      // ========================================
+      // MAPEAR DATOS DEL BACKEND A STATS
+      // ========================================
+      setStats({
+        activeProcesses: data.overview?.active_profiles || 0,
+        completedCandidates: data.candidates?.by_status?.find((s: any) => s.status === 'hired')?.count || 0,
+        successRate: data.metrics?.success_rate || 0,
+        clientSatisfaction: data.client_satisfaction?.avg_score || 0,
+        activeProfiles: data.overview?.active_profiles || 0,
+      });
 
-    setClients([
-      { id: 1, name: "TechCorp", industry: "Tecnología", contact: "María González", email: "maria@techcorp.com", phone: "+52 555 987 6543", status: "active", activeProcesses: 5, totalCandidates: 45, lastActivity: "Hace 2 días" },
-      { id: 2, name: "StartupXYZ", industry: "Fintech", contact: "Pedro López", email: "pedro@startupxyz.com", phone: "+52 555 456 7890", status: "active", activeProcesses: 3, totalCandidates: 25, lastActivity: "Hace 1 semana" },
-    ]);
+      // ========================================
+      // NOTIFICACIONES
+      // ========================================
+      const alertsData = data.alerts || {};
+      const notificationsList: NotificationItem[] = [];
+      
+      if (alertsData.pending_approvals > 0) {
+        notificationsList.push({
+          id: 1,
+          message: `${alertsData.pending_approvals} candidato(s) requieren aprobación`,
+          time: 'Pendiente',
+          icon: 'fas fa-user-check'
+        });
+      }
+      
+      if (alertsData.expiring_profiles > 0) {
+        notificationsList.push({
+          id: 2,
+          message: `${alertsData.expiring_profiles} perfil(es) próximos a vencer`,
+          time: 'Urgente',
+          icon: 'fas fa-exclamation-triangle'
+        });
+      }
+      
+      if (alertsData.pending_evaluations > 0) {
+        notificationsList.push({
+          id: 3,
+          message: `${alertsData.pending_evaluations} evaluación(es) pendientes`,
+          time: 'Hoy',
+          icon: 'fas fa-clipboard-check'
+        });
+      }
 
-    setTeamMembers([
-      { id: 1, name: "Ana García", role: "Recruiter Senior", email: "ana.garcia@company.com", status: "active", assignedProcesses: 8, managedCandidates: 45, successRate: 92, avatar: "Ana+Garcia" },
-      { id: 2, name: "Carlos Ruiz", role: "Talent Acquisition", email: "carlos.ruiz@company.com", status: "active", assignedProcesses: 6, managedCandidates: 32, successRate: 88, avatar: "Carlos+Ruiz" },
-    ]);
+      setNotifications({
+        unread: notificationsList.length,
+        items: notificationsList
+      });
 
+      // ========================================
+      // ACTIVIDAD RECIENTE (del pipeline)
+      // ========================================
+      const pipelineData = data.pipeline || [];
+      const activityList: Activity[] = [];
+      
+      const candidatesQualified = pipelineData.find((p: any) => p.stage === 'candidates_qualified')?.count || 0;
+      const inInterviews = pipelineData.find((p: any) => p.stage === 'in_interviews')?.count || 0;
+      const hired = pipelineData.find((p: any) => p.stage === 'hired')?.count || 0;
+      
+      if (candidatesQualified > 0) {
+        activityList.push({
+          id: 1,
+          type: 'info',
+          icon: 'fas fa-users',
+          message: 'Candidatos Calificados',
+          details: `${candidatesQualified} candidatos han pasado el screening inicial`,
+          time: 'Hoy'
+        });
+      }
+      
+      if (inInterviews > 0) {
+        activityList.push({
+          id: 2,
+          type: 'purple',
+          icon: 'fas fa-comments',
+          message: 'En Proceso de Entrevistas',
+          details: `${inInterviews} candidatos en etapa de entrevistas`,
+          time: 'Esta semana'
+        });
+      }
+      
+      if (hired > 0) {
+        activityList.push({
+          id: 3,
+          type: 'success',
+          icon: 'fas fa-check-circle',
+          message: 'Candidatos Contratados',
+          details: `${hired} candidatos han sido contratados exitosamente`,
+          time: 'Este mes'
+        });
+      }
+
+      setRecentActivity(activityList);
+
+      // ========================================
+      // PROCESOS ACTIVOS
+      // ========================================
+      // Nota: Los procesos individuales requieren otro endpoint
+      // Por ahora mantenemos los datos de ejemplo o los cargamos desde otro endpoint
+      console.log('⚠️ Los procesos individuales requieren cargar desde /api/director/profiles/overview/');
+
+      // ========================================
+      // CARGAR CANDIDATOS
+      // ========================================
+      await loadCandidatesData();
+
+      console.log('✅ Dashboard cargado exitosamente');
+
+    } catch (err) {
+      console.error('❌ Error al cargar dashboard:', error);
+      error('Error al cargar los datos del dashboard');
+    } finally {
+      setLoading(false);
+    }
   }
 
   // ====== Acciones (toasts) ======
@@ -1259,89 +1324,22 @@ const loadApplicationsData = async () => {
               </li>
 
               <li>
-                <button onClick={() => setCandidatesMenuOpen(!candidatesMenuOpen)} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}>
+                <button 
+                  onClick={() => setCurrentView("candidates")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}
+                >
                   <i className="fas fa-user-tie mr-3 w-5" />
                   Candidatos
-                  <i className={`fas fa-chevron-${candidatesMenuOpen ? 'down' : 'right'} ml-auto text-xs transition-transform`} />
                 </button>
-                {candidatesMenuOpen && (
-                  <ul className="ml-8 mt-1 space-y-1">
-                    <li>
-                      <button onClick={() => setCurrentView("candidates")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}>
-                        <i className="fas fa-users mr-3 w-4" />
-                        Ver Candidatos
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setCurrentView("applications")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("applications")}`}>
-                        <i className="fas fa-briefcase mr-3 w-4" />
-                        Aplicaciones
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setCurrentView("documents")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("documents")}`}>
-                        <i className="fas fa-folder-open mr-3 w-4" />
-                        Documentos
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setCurrentView("notes")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("notes")}`}>
-                        <i className="fas fa-sticky-note mr-3 w-4" />
-                        Notas
-                      </button>
-                    </li>
-                    <li>
-                      <button onClick={() => setCurrentView("history")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("history")}`}>
-                        <i className="fas fa-history mr-3 w-4" />
-                        Historial
-                      </button>
-                    </li>
-                  </ul>
-                )}
               </li>
               <li>
                 <button 
-                  onClick={() => setClientsMenuOpen(!clientsMenuOpen)} 
-                  className={`sidebar-item flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${
-                    currentView === "clients" || currentView === "client-list" || currentView === "client-contacts" 
-                      ? "bg-primary-50 text-primary-600 border-r-2 border-primary-600" 
-                      : "text-gray-700 hover:text-primary-600 hover:bg-primary-50"
-                  }`}
+                  onClick={() => setCurrentView("clients")} 
+                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("clients")}`}
                 >
-                  <div className="flex items-center">
-                    <i className="fas fa-building mr-3 w-5" />
-                    Clientes
-                  </div>
-                  <i className={`fas fa-chevron-${clientsMenuOpen ? 'down' : 'right'} ml-auto text-xs transition-all duration-200`} />
+                  <i className="fas fa-building mr-3 w-5" />
+                  Clientes
                 </button>
-                
-                {/* Submenu de Clientes */}
-                <div className={`overflow-hidden transition-all duration-300 ${clientsMenuOpen ? "max-h-40" : "max-h-0"}`}>
-                  <div className="ml-6 mt-2 space-y-1">
-                    <button 
-                      onClick={() => setCurrentView("client-list")} 
-                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                        currentView === "client-list" 
-                          ? "bg-primary-100 text-primary-700" 
-                          : "text-gray-600 hover:text-primary-600 hover:bg-primary-50"
-                      }`}
-                    >
-                      <i className="fas fa-building mr-2" />
-                      Clientes
-                    </button>
-                    <button 
-                      onClick={() => setCurrentView("client-contacts")} 
-                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                        currentView === "client-contacts" 
-                          ? "bg-primary-100 text-primary-700" 
-                          : "text-gray-600 hover:text-primary-600 hover:bg-primary-50"
-                      }`}
-                    >
-                      <i className="fas fa-address-book mr-2" />
-                      Contactos
-                    </button>
-                  </div>
-                </div>
               </li>
               <li>
                 <button onClick={() => setCurrentView("client-progress")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("client-progress")}`}>
@@ -1834,8 +1832,11 @@ const loadApplicationsData = async () => {
             </div>
           )}
 
-          {/* CANDIDATES */}
-          {currentView === "candidates" && (
+          {/* CANDIDATES - Using new CandidatesMain component */}
+          {currentView === "candidates" && <CandidatesMain />}
+
+          {/* OLD CANDIDATES VIEW - DISABLED */}
+          {false && (
             <div className="p-6">
               <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -2812,8 +2813,11 @@ const loadApplicationsData = async () => {
             </div>
           )}
 
-          {/* CLIENTS */}
-          {currentView === "clients" && (
+          {/* CLIENTS - Using new ClientsMain component */}
+          {currentView === "clients" && <ClientsMain />}
+
+          {/* OLD CLIENTS VIEW - DISABLED */}
+          {false && (
             <div className="p-6">
               <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div>

@@ -39,7 +39,7 @@ export default function EvaluationQuestions() {
   const fetchData = async () => {
   setLoading(true);
   try {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("authToken");
 
     // Fetch templates
     const templatesRes = await fetch("http://localhost:8000/api/evaluations/templates/", {
@@ -86,7 +86,7 @@ export default function EvaluationQuestions() {
     if (!confirm("¿Estás seguro de eliminar esta pregunta?")) return;
 
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("authToken");
       const response = await fetch(
         `http://localhost:8000/api/evaluations/questions/${id}/`,
         {
@@ -310,7 +310,7 @@ export default function EvaluationQuestions() {
                 };
 
                 try {
-                  const token = localStorage.getItem("token");
+                  const token = localStorage.getItem("authToken");
                   const url = selectedQuestion
                     ? `http://localhost:8000/api/evaluations/questions/${selectedQuestion.id}/`
                     : "http://localhost:8000/api/evaluations/questions/";

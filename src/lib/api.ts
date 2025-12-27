@@ -88,12 +88,14 @@ class ApiClient {
         } as ApiError;
       }
 
-      // Para DELETE que retorna 204 No Content
+      // Si la respuesta es 204 No Content o no tiene contenido, retornar objeto vacío
       if (response.status === 204 || response.headers.get('content-length') === '0') {
         return {} as T;
       }
 
-      return await response.json();
+      // Intentar parsear JSON, si falla retornar objeto vacío
+      const text = await response.text();
+      return text ? JSON.parse(text) : {} as T;
     } catch (error) {
       console.error('❌ API Request failed:', error);
       
