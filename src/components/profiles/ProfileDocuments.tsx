@@ -26,7 +26,7 @@ export default function ProfileDocuments() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<ProfileDocument | null>(null);
   const [uploadData, setUploadData] = useState({
-    document_type: "requirement",
+    document_type: "profile_pdf", 
     description: "",
     file: null as File | null,
   });
@@ -129,10 +129,9 @@ export default function ProfileDocuments() {
 
   const getDocumentIcon = (type: string) => {
     const icons: { [key: string]: string } = {
-      requirement: "fa-file-alt",
-      contract: "fa-file-contract",
-      proposal: "fa-file-invoice",
-      evaluation: "fa-clipboard-check",
+      profile_pdf: "fa-file-pdf",
+      client_approval: "fa-file-signature",
+      meeting_notes: "fa-sticky-note",
       other: "fa-file",
     };
     return icons[type] || "fa-file";
@@ -140,10 +139,9 @@ export default function ProfileDocuments() {
 
   const getDocumentColor = (type: string) => {
     const colors: { [key: string]: string } = {
-      requirement: "text-blue-600",
-      contract: "text-green-600",
-      proposal: "text-purple-600",
-      evaluation: "text-orange-600",
+      profile_pdf: "text-red-600",
+      client_approval: "text-green-600",
+      meeting_notes: "text-blue-600",
       other: "text-gray-600",
     };
     return colors[type] || "text-gray-600";
@@ -301,10 +299,9 @@ export default function ProfileDocuments() {
                   onChange={(e) => setUploadData({ ...uploadData, document_type: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 >
-                  <option value="requirement">Requisitos</option>
-                  <option value="contract">Contrato</option>
-                  <option value="proposal">Propuesta</option>
-                  <option value="evaluation">Evaluación</option>
+                  <option value="profile_pdf">PDF del Perfil</option>
+                  <option value="client_approval">Aprobación del Cliente</option>
+                  <option value="meeting_notes">Notas de Reunión</option>
                   <option value="other">Otro</option>
                 </select>
               </div>
@@ -406,16 +403,35 @@ export default function ProfileDocuments() {
             </div>
 
             {/* Preview Content */}
-            <div className="flex-1 overflow-auto p-4">
-              {selectedDocument.file.toLowerCase().endsWith('.pdf') ? (
-                <iframe
-                  src={selectedDocument.file.startsWith('http') 
-                    ? selectedDocument.file 
-                    : `http://localhost:8000${selectedDocument.file}`}
-                  className="w-full h-full min-h-[600px]"
-                  title="Vista previa PDF"
-                />
-              ) : selectedDocument.file.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+              <div className="flex-1 overflow-auto p-4">
+                {selectedDocument.file.toLowerCase().endsWith('.pdf') ? (
+                  <object
+                    data={selectedDocument.file.startsWith('http') 
+                      ? selectedDocument.file 
+                      : `http://localhost:8000${selectedDocument.file}`}
+                    type="application/pdf"
+                    className="w-full h-full min-h-[600px]"
+                  >
+                    <div className="text-center py-12">
+                      <i className="fas fa-file-pdf text-red-400 text-6xl mb-4"></i>
+                      <p className="text-gray-600 mb-4">
+                        No se puede mostrar el PDF en el navegador.
+                      </p>
+                      <button
+                        onClick={() => {
+                          const fileUrl = selectedDocument.file.startsWith('http') 
+                            ? selectedDocument.file 
+                            : `http://localhost:8000${selectedDocument.file}`;
+                          window.open(fileUrl, '_blank');
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      >
+                        <i className="fas fa-external-link-alt mr-2"></i>
+                        Abrir PDF en nueva pestaña
+                      </button>
+                    </div>
+                  </object>
+                ) : selectedDocument.file.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                 <img
                   src={selectedDocument.file.startsWith('http') 
                     ? selectedDocument.file 
