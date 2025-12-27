@@ -206,7 +206,7 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
         salary_period: profile.salary_period || "mensual",
         location: location,
         modality: modality,
-        published_platforms: [] as string[],
+        published_platforms: profile.published_platforms || [],
         work_schedule: profile.work_schedule || "",
         technical_skills: technicalSkills,
         soft_skills: softSkills,
@@ -291,6 +291,7 @@ ${formData.benefits || 'No especificados'}
       desired_start_date: formData.expected_start_date || null,
       assigned_to: formData.assigned_to ? parseInt(formData.assigned_to as any) : undefined,
       internal_notes: formData.internal_notes || '',
+      published_platforms: formData.published_platforms || [],
     };
 
     console.log('📤 Datos a enviar al backend:', submitData);
@@ -492,21 +493,33 @@ ${formData.benefits || 'No especificados'}
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Plataformas de Publicación
               </label>
-              <select
-                multiple
-                name="published_platforms"
-                value={formData.published_platforms}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions, option => option.value);
-                  setFormData(prev => ({ ...prev, published_platforms: selected }));
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="LinkedIn">LinkedIn</option>
-                <option value="Indeed">Indeed</option>
-                <option value="OCC">OCC</option>
-                <option value="CompuTrabajo">CompuTrabajo</option>
-              </select>
+              <div className="space-y-2 border border-gray-300 rounded-lg p-4">
+                {['LinkedIn', 'Indeed', 'OCC', 'CompuTrabajo'].map((platform) => (
+                  <label key={platform} className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      value={platform}
+                      checked={formData.published_platforms.includes(platform)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormData(prev => ({
+                            ...prev,
+                            published_platforms: [...prev.published_platforms, platform]
+                          }));
+                        } else {
+                          setFormData(prev => ({
+                            ...prev,
+                            published_platforms: prev.published_platforms.filter(p => p !== platform)
+                          }));
+                        }
+                      }}
+                      className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-700">{platform}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Selecciona las plataformas donde se publicará</p>
             </div>
           </div>
         </div>

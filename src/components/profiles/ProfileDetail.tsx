@@ -48,6 +48,7 @@ interface Profile {
   created_at: string;
   updated_at: string;
   created_by_name?: string;
+  published_platforms?: string[];
 }
 
 export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps) {
@@ -248,6 +249,8 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
             </div>
           </div>
 
+          
+
           {/* Descripción */}
           {profile.responsibilities && (
             <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -339,6 +342,27 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
             )}
           </div>
         </div>
+
+        {/* Plataformas de Publicación */}
+            {profile.published_platforms && profile.published_platforms.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <i className="fas fa-globe text-orange-600 mr-2"></i>
+                  Plataformas de Publicación
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {profile.published_platforms.map((platform: string, index: number) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                    >
+                      <i className="fas fa-check-circle mr-2"></i>
+                      {platform}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
