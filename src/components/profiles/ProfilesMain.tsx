@@ -10,6 +10,7 @@ import ProfileStats from "./ProfileStats";
 import CVAnalysisModal from "./CVAnalysisModal";
 import ProfileGenerationModal from "./ProfileGenerationModal";
 import BulkCVUploadModal from "./BulkCVUploadModal";
+import { apiClient } from "@/lib/api";
 
 type ProfileView = 
   | "profiles-list" 
@@ -135,17 +136,10 @@ const handleDeleteProfile = async (profileId: number) => {
   }
   
   try {
-    // Aquí llamarías a tu API para eliminar el perfil
-    // await deleteProfile(profileId);
-    console.log(`Eliminando perfil ${profileId}`);
-    
-    // Mostrar mensaje de éxito
+    await apiClient.deleteProfile(profileId);
     setSuccessMessage("Perfil eliminado exitosamente");
-    
-    // Recargar la lista (puedes implementar un refresh)
-    // await loadProfiles();
-    
     setTimeout(() => setSuccessMessage(""), 3000);
+    window.location.reload();
   } catch (error) {
     console.error("Error al eliminar perfil:", error);
     alert("Error al eliminar el perfil. Por favor, intenta de nuevo.");

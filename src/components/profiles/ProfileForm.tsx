@@ -31,6 +31,7 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
     // Información básica
     position_title: "",
     client: "",
+    department: "",
     status: "draft",
     priority: "medium",
     service_type: "normal",
@@ -73,6 +74,9 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
     
     // Notas
     internal_notes: "",
+
+    published_platforms: [] as string[],
+
   });
 
   useEffect(() => {
@@ -135,12 +139,12 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
   };
 
   const loadProfile = async () => {
-  if (!profileId) return;
-  
-  setLoading(true);
-  try {
-    const profile = await getProfile(profileId);
-      
+    if (!profileId) return;
+    
+    setLoading(true);
+    try {
+      const profile = await getProfile(profileId);
+        
       // Parsear JSON fields
       const technicalSkills = Array.isArray(profile.technical_skills) 
         ? profile.technical_skills.join(", ") 
@@ -148,22 +152,70 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
       const softSkills = Array.isArray(profile.soft_skills) 
         ? profile.soft_skills.join(", ") 
         : "";
-      const languages = Array.isArray(profile.languages_required) 
-        ? profile.languages_required.join(", ") 
+      const languages = Array.isArray(profile.languages) 
+        ? profile.languages.join(", ") 
         : "";
-      const certifications = Array.isArray(profile.certifications_required) 
-        ? profile.certifications_required.join(", ") 
-        : "";
+      const certifications = Array.isArray(profile.additional_requirements) 
+        ? profile.additional_requirements.join(", ") 
+        : (profile.additional_requirements || "");
+      
+      // Reconstruir ubicación desde location_city y location_state
+      const location = profile.location_city && profile.location_state 
+        ? `${profile.location_city}, ${profile.location_state}`
+        : profile.location_city || "";
+      
+      // Determinar modalidad desde is_remote e is_hybrid
+      let modality = "presencial";
+      if (profile.is_remote) modality = "remoto";
+      else if (profile.is_hybrid) modality = "hibrido";
+      
+      // Extraer responsabilidades, requisitos y beneficios desde position_description
+      const descriptionParts = (profile.position_description || "").split("\n\n");
+      let responsibilities = "";
+      let requirements = "";
+      let benefits = profile.benefits || "";
+      
+      descriptionParts.forEach((part: string) => {
+        if (part.includes("RESPONSABILIDADES:")) {
+          responsibilities = part.replace("RESPONSABILIDADES:", "").trim();
+        } else if (part.includes("REQUISITOS:")) {
+          requirements = part.replace("REQUISITOS:", "").trim();
+        } else if (part.includes("BENEFICIOS:")) {
+          benefits = part.replace("BENEFICIOS:", "").trim();
+        }
+      });
       
       setFormData({
-        ...formData,
-        ...profile,
+        position_title: profile.position_title || "",
         client: profile.client?.toString() || "",
-        assigned_to: profile.assigned_to?.toString() || "",
+        department: profile.department || "",
+        status: profile.status || "draft",
+        priority: profile.priority || "medium",
+        service_type: profile.service_type || "normal",
+        positions_available: profile.number_of_positions || 1,
+        responsibilities: responsibilities,
+        requirements: requirements,
+        benefits: benefits,
+        min_age: profile.age_min?.toString() || "",
+        max_age: profile.age_max?.toString() || "",
+        education_level: profile.education_level || "",
+        years_experience_required: profile.years_experience?.toString() || "",
+        salary_min: profile.salary_min?.toString() || "",
+        salary_max: profile.salary_max?.toString() || "",
+        salary_currency: profile.salary_currency || "MXN",
+        salary_period: profile.salary_period || "mensual",
+        location: location,
+        modality: modality,
+        published_platforms: [] as string[],
+        work_schedule: profile.work_schedule || "",
         technical_skills: technicalSkills,
         soft_skills: softSkills,
         languages_required: languages,
         certifications_required: certifications,
+        deadline_date: profile.deadline || "",
+        expected_start_date: profile.desired_start_date || "",
+        assigned_to: profile.assigned_to?.toString() || "",
+        internal_notes: profile.internal_notes || "",
       });
     } catch (error) {
       console.error("Error loading profile:", error);
@@ -179,54 +231,89 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      // Convertir strings separados por comas a arrays para JSON fields
-      const submitData = {
-        ...formData,
-        technical_skills: formData.technical_skills 
-          ? formData.technical_skills.split(",").map(s => s.trim()).filter(Boolean)
-          : [],
-        soft_skills: formData.soft_skills 
-          ? formData.soft_skills.split(",").map(s => s.trim()).filter(Boolean)
-          : [],
-        languages_required: formData.languages_required 
-          ? formData.languages_required.split(",").map(s => s.trim()).filter(Boolean)
-          : [],
-        certifications_required: formData.certifications_required 
-          ? formData.certifications_required.split(",").map(s => s.trim()).filter(Boolean)
-          : [],
-        // Convertir números
-        positions_available: parseInt(formData.positions_available as any) || 1,
-        min_age: formData.min_age ? parseInt(formData.min_age as any) : null,
-        max_age: formData.max_age ? parseInt(formData.max_age as any) : null,
-        years_experience_required: formData.years_experience_required 
-          ? parseInt(formData.years_experience_required as any) 
-          : null,
-        salary_min: formData.salary_min ? parseFloat(formData.salary_min as any) : null,
-        salary_max: formData.salary_max ? parseFloat(formData.salary_max as any) : null,
-        client: parseInt(formData.client as any),
-        assigned_to: formData.assigned_to ? parseInt(formData.assigned_to as any) : undefined
-      };
+  try {
+    // Preparar descripción completa del puesto
+    const position_description = `
+RESPONSABILIDADES:
+${formData.responsibilities || 'No especificadas'}
 
-      if (profileId) {
-        await updateProfile(profileId, submitData);
-        alert("Perfil actualizado exitosamente");
-      } else {
-        await createProfile(submitData);
-        alert("Perfil creado exitosamente");
-      }
-      
-      if (onSuccess) onSuccess();
-    } catch (error: any) {
-      console.error("Error saving profile:", error);
-      alert(`Error al guardar: ${error.response?.data?.detail || error.message}`);
-    } finally {
-      setLoading(false);
+REQUISITOS:
+${formData.requirements || 'No especificados'}
+
+BENEFICIOS:
+${formData.benefits || 'No especificados'}
+`.trim();
+
+    // Dividir ubicación en ciudad y estado
+    const locationParts = (formData.location || '').split(',').map(s => s.trim());
+    const location_city = locationParts[0] || 'Ciudad no especificada';
+    const location_state = locationParts[1] || 'Estado no especificado';
+
+    // Preparar datos para el backend
+    const submitData = {
+      client: parseInt(formData.client as any),
+      position_title: formData.position_title,
+      position_description: position_description,
+      department: formData.department || '',
+      location_city: location_city,
+      location_state: location_state,
+      is_remote: formData.modality === 'remoto',
+      is_hybrid: formData.modality === 'hibrido',
+      salary_min: formData.salary_min ? parseFloat(formData.salary_min as any) : 0,
+      salary_max: formData.salary_max ? parseFloat(formData.salary_max as any) : 0,
+      salary_currency: formData.salary_currency || 'MXN',
+      salary_period: formData.salary_period || 'mensual',
+      education_level: formData.education_level || 'No especificado',
+      years_experience: formData.years_experience_required 
+        ? parseInt(formData.years_experience_required as any) 
+        : 0,
+      age_min: formData.min_age ? parseInt(formData.min_age as any) : null,
+      age_max: formData.max_age ? parseInt(formData.max_age as any) : null,
+      technical_skills: formData.technical_skills 
+        ? formData.technical_skills.split(",").map(s => s.trim()).filter(Boolean)
+        : [],
+      soft_skills: formData.soft_skills 
+        ? formData.soft_skills.split(",").map(s => s.trim()).filter(Boolean)
+        : [],
+      languages: formData.languages_required 
+        ? formData.languages_required.split(",").map(s => s.trim()).filter(Boolean)
+        : [],
+      benefits: formData.benefits || '',
+      additional_requirements: formData.certifications_required || '',
+      status: formData.status || 'draft',
+      service_type: formData.service_type || 'normal',
+      number_of_positions: parseInt(formData.positions_available as any) || 1,
+      priority: formData.priority || 'medium',
+      deadline: formData.deadline_date || null,
+      desired_start_date: formData.expected_start_date || null,
+      assigned_to: formData.assigned_to ? parseInt(formData.assigned_to as any) : undefined,
+      internal_notes: formData.internal_notes || '',
+    };
+
+    console.log('📤 Datos a enviar al backend:', submitData);
+
+    if (profileId) {
+      await updateProfile(profileId, submitData);
+      alert("Perfil actualizado exitosamente");
+    } else {
+      await createProfile(submitData);
+      alert("Perfil creado exitosamente");
     }
-  };
+    
+    if (onSuccess) onSuccess();
+  } catch (error: any) {
+    console.error("❌ Error saving profile:", error);
+    console.error("📋 Detalles del error:", error.response?.data);
+    alert(`Error al guardar: ${error.response?.data?.detail || error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  
 
   if (loadingData) {
     return (
@@ -269,6 +356,19 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                 placeholder="Ej: Desarrollador Full Stack Senior"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Departamento
+              </label>
+              <input
+                type="text"
+                name="department"
+                value={formData.department}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                placeholder="Ej: Tecnología, Ventas, RRHH"
               />
             </div>
 
@@ -386,6 +486,27 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
               <p className="text-xs text-gray-500 mt-1">
                 Selecciona el supervisor o director responsable
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Plataformas de Publicación
+              </label>
+              <select
+                multiple
+                name="published_platforms"
+                value={formData.published_platforms}
+                onChange={(e) => {
+                  const selected = Array.from(e.target.selectedOptions, option => option.value);
+                  setFormData(prev => ({ ...prev, published_platforms: selected }));
+                }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="LinkedIn">LinkedIn</option>
+                <option value="Indeed">Indeed</option>
+                <option value="OCC">OCC</option>
+                <option value="CompuTrabajo">CompuTrabajo</option>
+              </select>
             </div>
           </div>
         </div>

@@ -23,12 +23,16 @@ interface Profile {
   min_age?: number;
   max_age?: number;
   education_level: string;
-  years_experience_required?: number;
+  years_experience: number;
+  years_experience_required: number;            
   salary_min?: number;
   salary_max?: number;
   salary_currency: string;
   salary_period: string;
-  location: string;
+  location_city: string;              
+  location_state: string;             
+  is_remote: boolean;                 
+  is_hybrid: boolean;                 
   modality: string;
   work_schedule: string;
   technical_skills: string[];
@@ -363,7 +367,7 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
               {profile.years_experience_required !== null && (
                 <div>
                   <p className="text-sm text-gray-500">Experiencia</p>
-                  <p className="font-medium">{profile.years_experience_required} años</p>
+                  <p className="font-medium">{profile.years_experience} años</p>
                 </div>
               )}
             </div>
@@ -388,11 +392,11 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
             <div className="space-y-3">
               <div>
                 <p className="text-sm text-gray-500">Lugar</p>
-                <p className="font-medium">{profile.location}</p>
+                <p className="font-medium">{profile.location_city}, {profile.location_state}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Modalidad</p>
-                <p className="font-medium capitalize">{profile.modality}</p>
+                <p className="font-medium capitalize">{profile.is_remote ? 'Remoto' : profile.is_hybrid ? 'Híbrido' : 'Presencial'}</p>
               </div>
               {profile.work_schedule && (
                 <div>

@@ -74,12 +74,23 @@ class ApiClient {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData: any = null;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          // Ignorar errores de parseo
+        }
+        
         throw {
-          message: errorData.message || 'Error en la solicitud',
+          message: errorData?.detail || `Error ${response.status}`,
           status: response.status,
           details: errorData,
         } as ApiError;
+      }
+
+      // Para DELETE que retorna 204 No Content
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return {} as T;
       }
 
       return await response.json();
