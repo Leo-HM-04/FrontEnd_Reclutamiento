@@ -8,14 +8,14 @@ import NotesPostItView from "../NotesPostItView";
 import CandidateNoteFormModal from "../CandidateNoteFormModal";
 import ProfileDetail from "../profiles/ProfileDetail";
 import ProfileForm from "../profiles/ProfileForm";
+import ApplicationDetailView from "./ApplicationDetailView";
 
 type CandidateView = 
   | "candidates-list" 
   | "candidate-create"
   | "candidate-detail"
   | "applications" 
-  | "profile-detail"
-  | "profile-edit"
+  | "application-detail"
   | "documents" 
   | "notes"
   | "history"
@@ -132,19 +132,10 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
     setCurrentView("candidates-list");
   };
 
-  const handleViewProfile = (profileId: number) => {
+  const handleViewProfile = (profileId: number, candidateId: number) => {
     setSelectedProfileId(profileId);
-    setCurrentView("profile-detail");
-  };
-
-  const handleEditProfile = (profileId: number) => {
-    setSelectedProfileId(profileId);
-    setCurrentView("profile-edit");
-  };
-
-  const handleBackToApplications = () => {
-    setSelectedProfileId(null);
-    setCurrentView("applications");
+    setSelectedCandidateId(candidateId);
+    setCurrentView("application-detail");
   };
 
   const menuItems: MenuItem[] = [
@@ -282,22 +273,12 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
               />
             )}
 
-            {/* PROFILE DETAIL */}
-            {currentView === "profile-detail" && selectedProfileId && (
-              <ProfileDetail 
-                profileId={selectedProfileId} 
-                onBack={handleBackToApplications}
-              />
-            )}
-
-            {/* PROFILE EDIT FORM */}
-            {currentView === "profile-edit" && selectedProfileId && (
-              <ProfileForm 
+            {/* APPLICATION DETAIL - CON PESTAÑAS */}
+            {currentView === "application-detail" && selectedProfileId && selectedCandidateId && (
+              <ApplicationDetailView 
                 profileId={selectedProfileId}
-                onSuccess={() => {
-                  handleBackToApplications();
-                  loadData();
-                }}
+                candidateId={selectedCandidateId}
+                onBack={handleBackToList}
               />
             )}
 
@@ -593,16 +574,15 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                             </td>
                             <td className="px-4 py-3 text-right text-sm">
                               <button 
-                                onClick={() => handleViewProfile(app.profile)}
+                                onClick={() => handleViewProfile(app.profile, app.candidate)}
                                 className="text-blue-600 hover:text-blue-800 mr-3"
-                                title="Ver perfil"
+                                title="Ver detalles"
                               >
                                 <i className="fas fa-eye"></i>
                               </button>
                               <button 
-                                onClick={() => handleEditProfile(app.profile)}
                                 className="text-green-600 hover:text-green-800"
-                                title="Editar perfil"
+                                title="Editar"
                               >
                                 <i className="fas fa-edit"></i>
                               </button>
