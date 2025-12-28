@@ -6,12 +6,16 @@ import CandidateDetail from "./CandidateDetail";
 import CandidateForm from "./CandidateForm";
 import NotesPostItView from "../NotesPostItView";
 import CandidateNoteFormModal from "../CandidateNoteFormModal";
+import ProfileDetail from "../profiles/ProfileDetail";
+import ProfileForm from "../profiles/ProfileForm";
 
 type CandidateView = 
   | "candidates-list" 
   | "candidate-create"
   | "candidate-detail"
   | "applications" 
+  | "profile-detail"
+  | "profile-edit"
   | "documents" 
   | "notes"
   | "history"
@@ -31,6 +35,7 @@ interface CandidatesMainProps {
 export default function CandidatesMain({ onClose }: CandidatesMainProps) {
   const [currentView, setCurrentView] = useState<CandidateView>("candidates-list");
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>("");
   
   // Data states
@@ -119,9 +124,27 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
     }
   };
 
+  
+
+
   const handleBackToList = () => {
     setSelectedCandidateId(null);
     setCurrentView("candidates-list");
+  };
+
+  const handleViewProfile = (profileId: number) => {
+    setSelectedProfileId(profileId);
+    setCurrentView("profile-detail");
+  };
+
+  const handleEditProfile = (profileId: number) => {
+    setSelectedProfileId(profileId);
+    setCurrentView("profile-edit");
+  };
+
+  const handleBackToApplications = () => {
+    setSelectedProfileId(null);
+    setCurrentView("applications");
   };
 
   const menuItems: MenuItem[] = [
@@ -254,6 +277,25 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                 candidateId={selectedCandidateId || undefined}
                 onSuccess={() => {
                   handleBackToList();
+                  loadData();
+                }}
+              />
+            )}
+
+            {/* PROFILE DETAIL */}
+            {currentView === "profile-detail" && selectedProfileId && (
+              <ProfileDetail 
+                profileId={selectedProfileId} 
+                onBack={handleBackToApplications}
+              />
+            )}
+
+            {/* PROFILE EDIT FORM */}
+            {currentView === "profile-edit" && selectedProfileId && (
+              <ProfileForm 
+                profileId={selectedProfileId}
+                onSuccess={() => {
+                  handleBackToApplications();
                   loadData();
                 }}
               />
@@ -550,10 +592,18 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                               {new Date(app.applied_at || app.created_at).toLocaleDateString('es-MX')}
                             </td>
                             <td className="px-4 py-3 text-right text-sm">
-                              <button className="text-blue-600 hover:text-blue-800 mr-3">
+                              <button 
+                                onClick={() => handleViewProfile(app.profile)}
+                                className="text-blue-600 hover:text-blue-800 mr-3"
+                                title="Ver perfil"
+                              >
                                 <i className="fas fa-eye"></i>
                               </button>
-                              <button className="text-green-600 hover:text-green-800">
+                              <button 
+                                onClick={() => handleEditProfile(app.profile)}
+                                className="text-green-600 hover:text-green-800"
+                                title="Editar perfil"
+                              >
                                 <i className="fas fa-edit"></i>
                               </button>
                             </td>
@@ -726,6 +776,8 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
             loadData(); // Recargar notas
           }}
         />
+
+       
     </div>
   );
 }
