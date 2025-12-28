@@ -326,7 +326,7 @@ export default function Page() {
     razonRechazo: ''
   });
 
-  // Manejar parámetros de URL para navegación desde aplicaciones
+// Manejar parámetros de URL para navegación desde aplicaciones
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view');
@@ -340,6 +340,9 @@ export default function Page() {
       } else if (editProfileId) {
         setProfileToOpen({ id: parseInt(editProfileId), action: 'edit' });
       }
+      
+      // Limpiar los parámetros URL después de usarlos
+      window.history.replaceState({}, '', '/director');
     }
   }, []);
 
@@ -4069,7 +4072,7 @@ const loadApplicationsData = async () => {
             initialAction={profileToOpen.action || undefined}
           />
         )}
-          
+
         {currentView === "candidates-status" && <CandidatesStatusDashboard />}
 
         {currentView === "shortlisted-candidates" && <ShortlistedCandidatesDashboard />}

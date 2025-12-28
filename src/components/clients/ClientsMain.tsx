@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api";
 import ClientDetail from "./ClientDetail";
 import ClientForm from "./ClientForm";
+import AddContactModal from "./AddContactModal";
+
 
 type ClientView = 
   | "clients-list" 
@@ -33,6 +35,7 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
   // Data states
   const [clients, setClients] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [loading, setLoading] = useState(false);
   
   // Filtros para clients-list
@@ -54,8 +57,9 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
           setClients(clientsData as any[]);
           break;
         case "contacts":
-          const contactsData = await apiClient.getContacts();
-          setContacts(contactsData as any[]);
+          // Los contactos se cargan junto con los clientes
+          const clientsForContacts = await apiClient.getClients();
+          setClients(clientsForContacts as any[]);
           break;
       }
     } catch (error) {
@@ -452,12 +456,87 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
 
             {currentView === "contacts" && (
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Contactos</h3>
-                <div className="text-center py-12 text-gray-500">
-                  <i className="fas fa-address-book text-5xl mb-4 text-gray-300"></i>
-                  <p className="text-lg">Vista de contactos en desarrollo</p>
-                  <p className="text-sm mt-2">Aquí se mostrarán los contactos de clientes</p>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900">Contactos de Clientes</h3>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowContactModal(true)}
+                      className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+                    >
+                      <i className="fas fa-plus"></i>
+                      Agregar Contacto
+                    </button>
+                    <button 
+                      onClick={loadData}
+                      className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
+                    >
+                      <i className="fas fa-sync"></i>
+                      Actualizar
+                    </button>
+                  </div>
                 </div>
+
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-4">Cargando contactos...</p>
+                  </div>
+                ) : clients.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <i className="fas fa-address-book text-5xl mb-4 text-gray-300"></i>
+                    <p className="text-lg">No hay clientes registrados</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {clients.map((client) => (
+                      <div key={client.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h4 className="text-lg font-semibold text-gray-900">{client.company_name}</h4>
+                            <p className="text-sm text-gray-500">{client.industry}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            client.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {client.is_active ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                        
+                        {client.contacts && client.contacts.length > 0 ? (
+                          <div className="space-y-3">
+                            {client.contacts.map((contact: any) => (
+                              <div key={contact.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-semibold">
+                                    {contact.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-gray-900">{contact.name}</p>
+                                    <p className="text-sm text-gray-500">{contact.position}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm text-gray-600">{contact.email}</p>
+                                  <p className="text-sm text-gray-600">{contact.phone}</p>
+                                  {contact.is_primary && (
+                                    <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                      Principal
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4 text-gray-400">
+                            <i className="fas fa-user-slash mb-2"></i>
+                            <p className="text-sm">No hay contactos registrados para este cliente</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -508,6 +587,20 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
           </div>
         </div>
       )}
+
+
+      {/* Add Contact Modal */}
+        {showContactModal && (
+          <AddContactModal
+            clients={clients}
+            onClose={() => setShowContactModal(false)}
+            onSuccess={() => {
+              setShowContactModal(false);
+              loadData();
+            }}
+          />
+        )}
     </div>
+    
   );
 }
