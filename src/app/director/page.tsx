@@ -1714,7 +1714,7 @@ const loadApplicationsData = async () => {
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 pt-16 bg-gray-50 transition-all duration-300 relative z-10 ${
+        <main className={`flex-1 pt-16 bg-gray-50 transition-all duration-300 relative z-25 min-h-screen ${
           sidebarOpen ? 'lg:ml-64' : 'ml-0'
         }`}>
           {/* DASHBOARD */}
