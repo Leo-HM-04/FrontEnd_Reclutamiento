@@ -321,6 +321,23 @@ export default function Page() {
     razonRechazo: ''
   });
 
+  // Agregar después de los useState existentes:
+  useEffect(() => {
+    // Manejar parámetros de URL para navegación desde aplicaciones
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view');
+    const profileId = params.get('profile');
+    const editProfileId = params.get('edit');
+    
+    if (view === 'profiles' && profileId) {
+      setCurrentView('profiles');
+      // Aquí podrías abrir el ProfileDetail automáticamente si implementas esa lógica
+    } else if (view === 'profiles' && editProfileId) {
+      setCurrentView('profiles');
+      // Aquí podrías abrir el ProfileForm en modo edición
+    }
+  }, []);
+
   // Inicializar sidebar después de hidratación (evita hydration mismatch)
 useEffect(() => {
   setMounted(true);
@@ -1264,7 +1281,7 @@ const loadApplicationsData = async () => {
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
-    <div className="min-h-screen bg-gray-50" onClick={() => {}}>
+  <div className="min-h-screen bg-gray-50 fixed inset-0 overflow-y-auto" onClick={() => {}}>
       {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">

@@ -173,6 +173,16 @@ export default function ApplicationsPage() {
     }
   };
 
+  const handleViewProfile = (profileId: number) => {
+    // Navegar a la vista de perfiles
+    window.location.href = `/director?view=profiles&profile=${profileId}`;
+  };
+
+  const handleEditProfile = (profileId: number) => {
+    // Navegar a editar el perfil
+    window.location.href = `/director?view=profiles&edit=${profileId}`;
+  };
+
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ show: true, message, type });
     setTimeout(() => {
@@ -463,12 +473,32 @@ export default function ApplicationsPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         #{application.id}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {application.profile_title || 'Sin título'}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          ID Perfil: {application.profile}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {application.profile_title || 'N/A'}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {application.profile_client || 'N/A'}
+                            </div>
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <button
+                              onClick={() => handleViewProfile(application.profile)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Ver perfil"
+                            >
+                              <FontAwesomeIcon icon={faEye} className="text-sm" />
+                            </button>
+                            <button
+                              onClick={() => handleEditProfile(application.profile)}
+                              className="text-green-600 hover:text-green-900"
+                              title="Editar perfil"
+                            >
+                              <FontAwesomeIcon icon={faEdit} className="text-sm" />
+                            </button>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -612,6 +642,18 @@ function EditApplicationModal({ application, onClose, onSave }: EditApplicationM
     }
 
     onSave(dataToSend);
+  };
+
+  // Agregar después de la función handleDelete (línea ~200 aprox):
+
+  const handleViewProfile = (profileId: number) => {
+    // Navegar a la vista de perfiles
+    window.location.href = `/director?view=profiles&profile=${profileId}`;
+  };
+
+  const handleEditProfile = (profileId: number) => {
+    // Navegar a editar el perfil
+    window.location.href = `/director?view=profiles&edit=${profileId}`;
   };
 
   return (
