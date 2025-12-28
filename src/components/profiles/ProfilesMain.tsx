@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProfilesList from "./ProfilesList";
 import ProfileForm from "./ProfileForm";
 import ProfileDetail from "./ProfileDetail";
@@ -11,6 +11,7 @@ import CVAnalysisModal from "./CVAnalysisModal";
 import ProfileGenerationModal from "./ProfileGenerationModal";
 import BulkCVUploadModal from "./BulkCVUploadModal";
 import { apiClient } from "@/lib/api";
+
 
 type ProfileView = 
   | "profiles-list" 
@@ -35,15 +36,29 @@ type ProfileView =
 
 interface ProfilesMainProps {
   onClose?: () => void;
+  initialProfileId?: number | null;
+  initialAction?: 'view' | 'edit';
 }
 
-export default function ProfilesMain({ onClose }: ProfilesMainProps) {
+export default function ProfilesMain({ onClose, initialProfileId, initialAction }: ProfilesMainProps) {
   const [currentView, setCurrentView] = useState<ProfileView>("profiles-list");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [showCVAnalysis, setShowCVAnalysis] = useState(false); // NUEVO
   const [showProfileGeneration, setShowProfileGeneration] = useState(false); // NUEVO
   const [successMessage, setSuccessMessage] = useState<string>(""); // NUEVO
   const [showBulkCVUpload, setShowBulkCVUpload] = useState(false);
+
+  // Manejar perfil inicial desde URL
+  useEffect(() => {
+    if (initialProfileId) {
+      setSelectedProfileId(initialProfileId);
+      if (initialAction === 'view') {
+        setCurrentView("profile-detail");
+      } else if (initialAction === 'edit') {
+        setCurrentView("profile-create");
+      }
+    }
+  }, [initialProfileId, initialAction]);
 
  const menuItems: MenuItem[] = [
     {

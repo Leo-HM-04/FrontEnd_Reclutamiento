@@ -302,6 +302,11 @@ export default function Page() {
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
   
+  // Estado para manejar navegación desde aplicaciones a perfiles
+    const [profileToOpen, setProfileToOpen] = useState<{id: number | null, action: 'view' | 'edit' | null}>({
+      id: null,
+      action: null
+    });
   // Estado para fases expandidas en client-progress
   const [expandedPhases, setExpandedPhases] = useState<Set<number>>(new Set());
 
@@ -321,20 +326,20 @@ export default function Page() {
     razonRechazo: ''
   });
 
-  // Agregar después de los useState existentes:
+  // Manejar parámetros de URL para navegación desde aplicaciones
   useEffect(() => {
-    // Manejar parámetros de URL para navegación desde aplicaciones
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view');
     const profileId = params.get('profile');
     const editProfileId = params.get('edit');
     
-    if (view === 'profiles' && profileId) {
+    if (view === 'profiles') {
       setCurrentView('profiles');
-      // Aquí podrías abrir el ProfileDetail automáticamente si implementas esa lógica
-    } else if (view === 'profiles' && editProfileId) {
-      setCurrentView('profiles');
-      // Aquí podrías abrir el ProfileForm en modo edición
+      if (profileId) {
+        setProfileToOpen({ id: parseInt(profileId), action: 'view' });
+      } else if (editProfileId) {
+        setProfileToOpen({ id: parseInt(editProfileId), action: 'edit' });
+      }
     }
   }, []);
 
@@ -4058,7 +4063,13 @@ const loadApplicationsData = async () => {
         {/* SISTEMA DE EVALUACIONES */}
         {currentView === "evaluations" && <EvaluationsMain />}
 
-        {currentView === "profiles" && <ProfilesMain />}  
+        {currentView === "profiles" && (
+          <ProfilesMain 
+            initialProfileId={profileToOpen.id}
+            initialAction={profileToOpen.action || undefined}
+          />
+        )}
+          
         {currentView === "candidates-status" && <CandidatesStatusDashboard />}
 
         {currentView === "shortlisted-candidates" && <ShortlistedCandidatesDashboard />}
