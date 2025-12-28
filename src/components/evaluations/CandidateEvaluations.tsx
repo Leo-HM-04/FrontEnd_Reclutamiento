@@ -41,6 +41,8 @@ export default function CandidateEvaluations() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedEvaluation, setSelectedEvaluation] = useState<CandidateEvaluation | null>(null);
 
   const statusOptions = [
     { value: "pending", label: "Pendiente", color: "yellow" },
@@ -114,6 +116,11 @@ export default function CandidateEvaluations() {
     } catch (error) {
       console.error("Error deleting evaluation:", error);
     }
+  };
+
+  const handleView = (evaluation: CandidateEvaluation) => {
+    setSelectedEvaluation(evaluation);
+    setShowDetailModal(true);
   };
 
   const filteredEvaluations = evaluations.filter((evaluation) => {
@@ -285,6 +292,7 @@ export default function CandidateEvaluations() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
+                        onClick={() => handleView(evaluation)}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                         title="Ver detalles"
                       >
@@ -440,6 +448,182 @@ export default function CandidateEvaluations() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Modal de Detalle de Evaluación */}
+      {showDetailModal && selectedEvaluation && (
+        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    Detalles de Evaluación
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    ID: {selectedEvaluation.id}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedEvaluation(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+
+              {/* Información Principal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* Candidato */}
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <i className="fas fa-user text-blue-600 mr-2"></i>
+                    <h4 className="font-semibold text-gray-900">Candidato</h4>
+                  </div>
+                  <p className="text-lg text-gray-900">
+                    {selectedEvaluation.candidate_name || 'No disponible'}
+                  </p>
+                </div>
+
+                {/* Plantilla */}
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <i className="fas fa-file-alt text-purple-600 mr-2"></i>
+                    <h4 className="font-semibold text-gray-900">Plantilla</h4>
+                  </div>
+                  <p className="text-lg text-gray-900">
+                    {selectedEvaluation.template_name || 'No disponible'}
+                  </p>
+                </div>
+
+                {/* Estado */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <i className="fas fa-info-circle text-gray-600 mr-2"></i>
+                    <h4 className="font-semibold text-gray-900">Estado</h4>
+                  </div>
+                  {(() => {
+                    const status = selectedEvaluation.status;
+                    const statusConfig: Record<string, { label: string; color: string }> = {
+                      pending: { label: "Pendiente", color: "bg-yellow-100 text-yellow-800" },
+                      in_progress: { label: "En Progreso", color: "bg-blue-100 text-blue-800" },
+                      completed: { label: "Completada", color: "bg-green-100 text-green-800" },
+                      reviewed: { label: "Revisada", color: "bg-purple-100 text-purple-800" },
+                      expired: { label: "Expirada", color: "bg-red-100 text-red-800" }
+                    };
+                    const config = statusConfig[status] || { label: status, color: "bg-gray-100 text-gray-800" };
+                    return (
+                      <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
+                        {config.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                {/* Calificación */}
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <i className="fas fa-chart-line text-green-600 mr-2"></i>
+                    <h4 className="font-semibold text-gray-900">Calificación</h4>
+                  </div>
+                  {selectedEvaluation.final_score !== undefined && selectedEvaluation.final_score !== null ? (
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {selectedEvaluation.final_score.toFixed(1)}%
+                      </p>
+                      {selectedEvaluation.passed !== undefined && (
+                        <p className={`text-sm font-medium mt-1 ${
+                          selectedEvaluation.passed ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {selectedEvaluation.passed ? '✅ Aprobado' : '❌ No Aprobado'}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">Pendiente</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Fechas */}
+              <div className="border-t pt-4 mb-6">
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  <i className="fas fa-calendar-alt text-gray-600 mr-2"></i>
+                  Fechas Importantes
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {selectedEvaluation.started_at && (
+                    <div>
+                      <p className="text-sm text-gray-600">Iniciada</p>
+                      <p className="font-medium text-gray-900">
+                        {new Date(selectedEvaluation.started_at).toLocaleString('es-MX')}
+                      </p>
+                    </div>
+                  )}
+                  {selectedEvaluation.completed_at && (
+                    <div>
+                      <p className="text-sm text-gray-600">Completada</p>
+                      <p className="font-medium text-gray-900">
+                        {new Date(selectedEvaluation.completed_at).toLocaleString('es-MX')}
+                      </p>
+                    </div>
+                  )}
+                  {selectedEvaluation.expires_at && (
+                    <div>
+                      <p className="text-sm text-gray-600">Fecha Límite</p>
+                      <p className="font-medium text-gray-900">
+                        {new Date(selectedEvaluation.expires_at).toLocaleString('es-MX')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Información Adicional */}
+              {selectedEvaluation.assigned_by_name && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">
+                    <i className="fas fa-user-tie text-gray-600 mr-2"></i>
+                    Información Adicional
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    Asignado por: <span className="font-medium text-gray-900">{selectedEvaluation.assigned_by_name}</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Botones de acción */}
+              <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedEvaluation(null);
+                  }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  Cerrar
+                </button>
+                {selectedEvaluation.status === 'completed' && (
+                  <button
+                    onClick={() => {
+                      // Aquí puedes agregar navegación a la vista de respuestas
+                      alert('Funcionalidad de ver respuestas por implementar');
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <i className="fas fa-eye mr-2"></i>
+                    Ver Respuestas
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
