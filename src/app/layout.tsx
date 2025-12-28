@@ -29,7 +29,7 @@ export default function RootLayout({
         {/* Chart.js */}
         <Script src="https://cdn.jsdelivr.net/npm/chart.js" strategy="afterInteractive" />
       </head>
-      <body className={`${inter.variable} bg-gray-50 font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>

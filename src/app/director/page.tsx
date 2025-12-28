@@ -1264,7 +1264,7 @@ const loadApplicationsData = async () => {
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
-    <div className="min-h-screen" onClick={() => {}}>
+    <div className="min-h-screen bg-gray-50" onClick={() => {}}>
       {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
@@ -1296,7 +1296,7 @@ const loadApplicationsData = async () => {
       </div>
 
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 relative z-10">
+      <header className="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo y Título */}
@@ -1425,8 +1425,7 @@ const loadApplicationsData = async () => {
       {/* Overlay cuando sidebar está abierta */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 transition-opacity duration-300"
-          style={{ top: '64px' }}
+          className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 z-20 transition-opacity duration-300"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -1715,7 +1714,7 @@ const loadApplicationsData = async () => {
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 pt-16 bg-gray-50 transition-all duration-300 ${
+        <main className={`flex-1 pt-16 bg-gray-50 transition-all duration-300 relative z-10 ${
           sidebarOpen ? 'lg:ml-64' : 'ml-0'
         }`}>
           {/* DASHBOARD */}
