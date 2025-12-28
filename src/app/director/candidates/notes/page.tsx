@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import NotesPostItView from '@/components/NotesPostItView';
+import { apiClient } from '@/lib/api';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faStickyNote,

@@ -207,6 +207,7 @@ export default function Page() {
 
   
   const [loading, setLoading] = useState(false);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -359,7 +360,9 @@ useEffect(() => {
 
   // ====== Carga inicial ======
   useEffect(() => {
-    (async () => {
+    let intervalId: NodeJS.Timeout | null = null;
+    
+    const initializeDashboard = async () => {
       setLoading(true);
       try {
         await loadDashboardData();
@@ -367,41 +370,72 @@ useEffect(() => {
         await loadDocumentsData();
         await loadNotesData();
         setupCharts();
-        // Actualizaciones cada 30s
-        const id = setInterval(() => loadDashboardData(), 30000);
-        return () => clearInterval(id);
       } catch (e) {
         console.error(e);
         error("Error cargando el dashboard");
       } finally {
         setLoading(false);
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    };
+    
+    initializeDashboard();
+    
+    // Configurar intervalo SOLO si estamos en dashboard
+    if (currentView === 'dashboard') {
+      intervalId = setInterval(() => {
+        loadDashboardData();
+      }, 30000);
+    }
+    
+    // ✅ Cleanup correcto
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
   }, []);
 
-  
 
- 
+  // Intervalo inteligente: solo activo cuando estamos en la vista dashboard
+useEffect(() => {
+  let intervalId: NodeJS.Timeout | null = null;
+  
+  if (currentView === 'dashboard') {
+    intervalId = setInterval(() => {
+      console.log('⏰ Actualizando dashboard (intervalo de 30s)');
+      loadDashboardData();
+    }, 30000);
+  }
+  
+  return () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+  };
+}, [currentView]);
+
+
 
   useEffect(() => {
-  if (currentView === 'candidates' && !loading) {
-    loadCandidatesData();
-  }
-}, [currentView]);useEffect(() => {
-  if (currentView === 'candidates' && !loading) {
-    loadCandidatesData();
-  }
-}, [currentView]);
+    if (currentView === 'candidates' && !loading) {
+      loadCandidatesData();
+    }
+  }, [currentView]);
 
   // Cargar datos de Celery cuando la vista sea "tasks"
   useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
     if (currentView === "tasks") {
       loadCeleryData();
-      // Actualizar cada 10 segundos cuando se esté viendo la sección de tareas
-      const interval = setInterval(loadCeleryData, 10000);
-      return () => clearInterval(interval);
+      interval = setInterval(loadCeleryData, 10000);
     }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
   }, [currentView]);
 
   // Cargar datos de clientes cuando sea necesario
@@ -444,7 +478,7 @@ useEffect(() => {
   }
 
   async function loadDashboardData() {
-    setLoading(true);
+    setDashboardLoading(true);
     
     try {
       const token = localStorage.getItem('authToken');
@@ -694,7 +728,7 @@ useEffect(() => {
       console.error('❌ Error al cargar dashboard:', err);
       error('Error al cargar los datos del dashboard');
     } finally {
-      setLoading(false);
+      setDashboardLoading(false);
     }
   }
 
@@ -1088,7 +1122,7 @@ const loadApplicationsData = async () => {
           general: notes.filter((n: any) => n.note_type === 'general').length,
           reference: notes.filter((n: any) => n.note_type === 'reference').length,
         },
-        recent: notes.slice(0, 2), // 2 más recientes para mostrar en dashboard
+        recent: notes, // ← TODAS las notas (no solo 2)
         loading: false
       };
       
@@ -1271,13 +1305,12 @@ const loadApplicationsData = async () => {
                 onClick={() => {
                   const newState = !sidebarOpen;
                   setSidebarOpen(newState);
-                  if (window.innerWidth < 1024) {
-                    localStorage.setItem('sidebarOpen', String(newState));
-                  }
+                  localStorage.setItem('sidebarOpen', String(newState));
                 }}
-                className="lg:hidden mr-4 text-gray-600 hover:text-gray-900"
+                className="mr-4 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title={sidebarOpen ? "Ocultar menú" : "Mostrar menú"}
               >
-                <i className="fas fa-bars text-xl"></i>
+                <i className={`fas ${sidebarOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
               </button>
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
@@ -1389,36 +1422,61 @@ const loadApplicationsData = async () => {
         </div>
       </header>
 
+      {/* Overlay cuando sidebar está abierta */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 transition-opacity duration-300"
+          style={{ top: '64px' }}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Layout: Sidebar + Main Content */}
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`fixed inset-y-0 left-0 top-16 w-64 bg-white border-r border-gray-200 overflow-y-auto ${mounted ? 'transition-transform duration-300' : ''} ease-in-out z-20 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        <aside className={`fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 ${
+          mounted ? 'transition-transform duration-300' : ''
+        } ease-in-out z-30 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}>
-          {/* Sidebar Header */}
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 shrink-0 bg-linear-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-                <i className="fas fa-chart-line text-white text-sm"></i>
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="font-semibold text-gray-900 truncate">Panel de Control</h2>
-                <p className="text-xs text-gray-500 truncate">Director RH</p>
+          {/* 🔧 WRAPPER PRINCIPAL - Controla el layout */}
+          <div className="h-full flex flex-col">
+            
+            {/* Sidebar Header - Fijo arriba */}
+            <div className="p-6 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 shrink-0 bg-linear-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-chart-line text-white text-sm"></i>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-semibold text-gray-900 truncate">Panel de Control</h2>
+                  <p className="text-xs text-gray-500 truncate">Director RH</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Navigation */}
-          <div className="p-4">
-            <ul className="space-y-1">
-              <li>
-                <button onClick={() => setCurrentView("dashboard")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("dashboard")}`}>
-                  <i className="fas fa-chart-line mr-3 w-5" />
+            {/* Navigation - Con scroll independiente */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4">
+                <ul className="space-y-1">
+                  <li>
+                    <button onClick={() => {
+                  setCurrentView("dashboard");
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("dashboard")}`}>
+                                  <i className="fas fa-chart-line mr-3 w-5" />
                   Dashboard
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView("processes")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("processes")}`}>
+                <button onClick={() => {
+                  setCurrentView("processes");
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("processes")}`}>
                   <i className="fas fa-cogs mr-3 w-5" />
                   Procesos
                   {stats.activeProcesses > 0 && (
@@ -1430,7 +1488,12 @@ const loadApplicationsData = async () => {
               </li>
               <li>
                 <button 
-                  onClick={() => setCurrentView("profiles")} 
+                  onClick={() => {
+                    setCurrentView("profiles");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} 
                   className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles")}`}
                 >
                   <i className="fas fa-briefcase mr-3 w-5" />
@@ -1445,7 +1508,12 @@ const loadApplicationsData = async () => {
 
               <li>
                 <button 
-                  onClick={() => setCurrentView("candidates")} 
+                  onClick={() => {
+                    setCurrentView("candidates");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} 
                   className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}
                 >
                   <i className="fas fa-user-tie mr-3 w-5" />
@@ -1454,7 +1522,12 @@ const loadApplicationsData = async () => {
               </li>
               <li>
                 <button 
-                  onClick={() => setCurrentView("clients")} 
+                  onClick={() => {
+                    setCurrentView("clients");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} 
                   className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("clients")}`}
                 >
                   <i className="fas fa-building mr-3 w-5" />
@@ -1462,19 +1535,34 @@ const loadApplicationsData = async () => {
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView("client-progress")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("client-progress")}`}>
+                <button onClick={() => {
+                    setCurrentView("client-progress");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("client-progress")}`}>
                   <i className="fas fa-chart-line mr-3 w-5" />
                   Avance de Cliente
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView("team")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("team")}`}>
+                <button onClick={() => {
+                  setCurrentView("team");
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("team")}`}>
                   <i className="fas fa-users mr-3 w-5" />
                   Equipo
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView("approvals")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("approvals")}`}>
+                <button onClick={() => {
+                  setCurrentView("approvals");
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("approvals")}`}>
                   <i className="fas fa-check-circle mr-3 w-5" />
                   Aprobaciones
                   {pendingApprovals.length > 0 && (
@@ -1485,13 +1573,23 @@ const loadApplicationsData = async () => {
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView("reports")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("reports")}`}>
+                <button onClick={() => {
+                  setCurrentView("reports");
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("reports")}`}>
                   <i className="fas fa-chart-bar mr-3 w-5" />
                   Reportes
                 </button>
               </li>
               <li>
-                <button onClick={() => setCurrentView("tasks")} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("tasks")}`}>
+                <button onClick={() => {
+                  setCurrentView("tasks");
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("tasks")}`}>
                   <i className="fas fa-cogs mr-3 w-5" />
                   Tareas de Sistema
                 </button>
@@ -1499,7 +1597,12 @@ const loadApplicationsData = async () => {
 
                <li>
                 <button 
-                  onClick={() => setCurrentView("evaluations")} 
+                  onClick={() => {
+                    setCurrentView("evaluations");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} 
                   className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("evaluations")}`}
                 >
                   <i className="fas fa-clipboard-check mr-3 w-5" />
@@ -1509,7 +1612,12 @@ const loadApplicationsData = async () => {
 
               <li>
                 <button 
-                  onClick={() => setCurrentView("profiles-status")} 
+                  onClick={() => {
+                    setCurrentView("profiles-status");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} 
                   className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles-status")}`}
                 >
                   <i className="fas fa-tasks mr-3 w-5" />
@@ -1519,7 +1627,12 @@ const loadApplicationsData = async () => {
 
               <li>
                 <button 
-                  onClick={() => setCurrentView("candidates-status")} 
+                  onClick={() => {
+                    setCurrentView("candidates-status");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} 
                   className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates-status")}`}
                 >
                   <i className="fas fa-user-check mr-3 w-5" />
@@ -1529,7 +1642,12 @@ const loadApplicationsData = async () => {
 
               <li>
                 <button 
-                  onClick={() => setCurrentView("shortlisted-candidates")} 
+                  onClick={() => {
+                    setCurrentView("shortlisted-candidates");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} 
                   className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("shortlisted-candidates")}`}
                 >
                   <i className="fas fa-star mr-3 w-5" />
@@ -1538,7 +1656,12 @@ const loadApplicationsData = async () => {
               </li>
               <li>
                 <button 
-                  onClick={() => setCurrentView("selected-candidates")} 
+                  onClick={() => {
+                    setCurrentView("selected-candidates");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} 
                   className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("selected-candidates")}`}
                 >
                   <i className="fas fa-user-check mr-3 w-5" />
@@ -1547,7 +1670,12 @@ const loadApplicationsData = async () => {
               </li>
               <li>
                 <button 
-                  onClick={() => setCurrentView("individual-reports")} 
+                  onClick={() => {
+                    setCurrentView("individual-reports");
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }} 
                   className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("individual-reports")}`}
                 >
                   <i className="fas fa-file-alt mr-3 w-5" />
@@ -1582,10 +1710,14 @@ const loadApplicationsData = async () => {
               </div>
             </div>
           </div>
+          </div>
+        </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 pt-16 lg:ml-64 bg-gray-50">
+        <main className={`flex-1 pt-16 bg-gray-50 transition-all duration-300 ${
+          sidebarOpen ? 'lg:ml-64' : 'ml-0'
+        }`}>
           {/* DASHBOARD */}
           {currentView === "dashboard" && (
             <div className="p-6">
@@ -1952,8 +2084,9 @@ const loadApplicationsData = async () => {
             </div>
           )}
 
-          {/* CANDIDATES - Using new CandidatesMain component */}
-          {currentView === "candidates" && <CandidatesMain />}
+          {currentView === "candidates" && (
+            <CandidatesMain />
+          )}
 
           {/* OLD CANDIDATES VIEW - DISABLED */}
           {false && (
@@ -2446,179 +2579,19 @@ const loadApplicationsData = async () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {notesData.loading ? (
-                  // Loading skeleton
-                  [1, 2, 3, 4].map((i) => (
-                    <div key={i} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="animate-pulse">
-                        <div className="flex items-center">
-                          <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                          <div className="ml-4 flex-1">
-                            <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
-                            <div className="h-6 bg-gray-200 rounded w-16"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <>
-                    {/* Total Notas */}
-                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-blue-100">
-                          <i className="fas fa-sticky-note text-blue-600 text-xl" />
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Total Notas</p>
-                          <p className="text-2xl font-bold text-gray-900">{notesData.total}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Entrevistas */}
-                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-green-100">
-                          <i className="fas fa-comments text-green-600 text-xl" />
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Entrevistas</p>
-                          <p className="text-2xl font-bold text-gray-900">{notesData.by_type.interview}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Preocupaciones */}
-                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-yellow-100">
-                          <i className="fas fa-exclamation-triangle text-yellow-600 text-xl" />
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Preocupaciones</p>
-                          <p className="text-2xl font-bold text-gray-900">{notesData.by_type.concern}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Referencias */}
-                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-purple-100">
-                          <i className="fas fa-flag text-purple-600 text-xl" />
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Referencias</p>
-                          <p className="text-2xl font-bold text-gray-900">{notesData.by_type.reference}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {notesData.loading ? (
-                  // Loading skeleton
-                  [1, 2].map((i) => (
-                    <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                      <div className="animate-pulse space-y-3">
-                        <div className="h-5 bg-gray-200 rounded w-3/4"></div>
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                          <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                            <div className="h-3 bg-gray-200 rounded w-1/4"></div>
-                          </div>
-                        </div>
-                        <div className="h-16 bg-gray-200 rounded"></div>
-                      </div>
-                    </div>
-                  ))
-                ) : notesData.recent.length === 0 ? (
-                  // No hay notas
-                  <div className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-                    <i className="fas fa-inbox text-gray-300 text-6xl mb-4"></i>
-                    <p className="text-lg font-medium text-gray-900">No hay notas recientes</p>
-                    <p className="text-gray-500 mt-1">Las notas aparecerán aquí cuando se creen</p>
-                  </div>
-                ) : (
-                  // Mostrar notas reales
-                  notesData.recent.map((note: any) => {
-                    // Calcular tiempo transcurrido
-                    const createdDate = new Date(note.created_date);
-                    const now = new Date();
-                    const diffMs = now.getTime() - createdDate.getTime();
-                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                    const diffDays = Math.floor(diffHours / 24);
-                    
-                    let timeAgo = '';
-                    if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
-                    else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
-                    else if (diffDays === 1) timeAgo = 'Hace 1 día';
-                    else timeAgo = `Hace ${diffDays} días`;
-
-                    // Configuración de badge según tipo
-                    const getBadgeConfig = (type: string) => {
-                      const configs: Record<string, { color: string; label: string }> = {
-                        interview: { color: 'bg-blue-100 text-blue-800', label: 'Entrevista' },
-                        evaluation: { color: 'bg-green-100 text-green-800', label: 'Evaluación' },
-                        concern: { color: 'bg-yellow-100 text-yellow-800', label: 'Preocupación' },
-                        reference: { color: 'bg-purple-100 text-purple-800', label: 'Referencia' },
-                        general: { color: 'bg-gray-100 text-gray-800', label: 'General' },
-                      };
-                      return configs[type] || configs.general;
-                    };
-
-                    const badgeConfig = getBadgeConfig(note.note_type);
-
-                    // Iniciales del candidato
-                    const candidateInitials = note.candidate?.first_name && note.candidate?.last_name
-                      ? `${note.candidate.first_name[0]}${note.candidate.last_name[0]}`.toUpperCase()
-                      : 'CD';
-
-                    return (
-                      <div key={note.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-semibold text-gray-900 flex-1">
-                            {note.title || 'Nota sin título'}
-                          </h3>
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${badgeConfig.color}`}>
-                            {badgeConfig.label}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center mb-3">
-                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                            {candidateInitials}
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900">
-                              {note.candidate?.first_name} {note.candidate?.last_name}
-                            </p>
-                            <p className="text-xs text-gray-500">{timeAgo}</p>
-                          </div>
-                        </div>
-
-                        <p className="text-gray-700 text-sm mb-4 line-clamp-3">
-                          {note.content || 'Sin contenido'}
-                        </p>
-
-                        {note.tags && note.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {note.tags.slice(0, 3).map((tag: string, idx: number) => (
-                              <span key={idx} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+                <i className="fas fa-sticky-note text-gray-300 text-6xl mb-4"></i>
+                <p className="text-lg font-medium text-gray-900">Sección de Notas</p>
+                <p className="text-gray-500 mt-1">
+                  Las notas detalladas están en: Candidatos → Notas
+                </p>
+                <button
+                  onClick={() => router.push('/director/candidates/notes')}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <i className="fas fa-arrow-right mr-2"></i>
+                  Ir a Notas
+                </button>
               </div>
             </div>
           )}

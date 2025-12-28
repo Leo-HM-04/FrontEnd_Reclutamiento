@@ -201,6 +201,36 @@ body {
   opacity: 0.85; 
 }
 
+/* Efecto de sombra para post-its */
+.post-it-shadow {
+  box-shadow: 
+    0 1px 3px rgba(0,0,0,0.12),
+    0 1px 2px rgba(0,0,0,0.24);
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+}
+
+.post-it-shadow:hover {
+  box-shadow: 
+    0 14px 28px rgba(0,0,0,0.15),
+    0 10px 10px rgba(0,0,0,0.12);
+}
+
+/* Animación de aparición */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.note-fade-in {
+  animation: fadeInUp 0.3s ease-out;
+}
+
 /* Colores primary custom (extiende Tailwind) */
 @theme {
   --color-primary-50: #eff6ff;

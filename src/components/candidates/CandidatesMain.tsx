@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api";
 import CandidateDetail from "./CandidateDetail";
 import CandidateForm from "./CandidateForm";
+import NotesPostItView from "../NotesPostItView";
+import CandidateNoteFormModal from "../CandidateNoteFormModal";
 
 type CandidateView = 
   | "candidates-list" 
@@ -37,6 +39,8 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
   const [documents, setDocuments] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  // Modal state
+  const [showNoteModal, setShowNoteModal] = useState(false);
   
   // Filtros para candidates-list
   const [searchTerm, setSearchTerm] = useState("");
@@ -626,53 +630,62 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-gray-900">Notas</h3>
-                  <button 
-                    onClick={loadData}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    <i className="fas fa-sync mr-2"></i>
-                    Actualizar
-                  </button>
+                  
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={loadData}
+                      className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all"
+                    >
+                      <i className="fas fa-sync mr-2"></i>
+                      Actualizar
+                    </button>
+                    
+                    <button 
+                      onClick={() => setShowNoteModal(true)}
+                      className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                    >
+                      <i className="fas fa-plus"></i>
+                      Nueva Nota
+                    </button>
+                  </div>
                 </div>
                 
                 {loading ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-500 mt-4">Cargando notas...</p>
-                  </div>
-                ) : notes.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <i className="fas fa-sticky-note text-5xl mb-4 text-gray-300"></i>
-                    <p className="text-lg">No hay notas registradas</p>
+                  <div className="flex justify-center items-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {notes.map((note) => (
-                      <div key={note.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-semibold">
-                              {note.created_by_name?.[0] || 'U'}
-                            </div>
-                            <div className="ml-3">
-                              <h4 className="text-sm font-semibold text-gray-900">{note.created_by_name || 'Usuario'}</h4>
-                              <p className="text-xs text-gray-500">{note.candidate_name || `Candidato #${note.candidate}`}</p>
-                            </div>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {new Date(note.created_at).toLocaleDateString('es-MX')}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-700 mt-2">{note.note}</p>
-                        {note.is_important && (
-                          <span className="inline-flex items-center px-2 py-1 mt-2 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                            <i className="fas fa-exclamation-circle mr-1"></i>
-                            Importante
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <NotesPostItView
+                    notes={notes}
+                    onEdit={(note: any) => {
+                      console.log('Editar nota:', note);
+                      alert('Función de edición en construcción');
+                    }}
+                    onDelete={async (noteId: number) => {
+                      try {
+                        if (!confirm('¿Eliminar esta nota?')) return;
+                        await apiClient.deleteCandidateNote(noteId);
+                        await loadData();
+                        alert('Nota eliminada exitosamente');
+                      } catch (error: any) {
+                        console.error('Error:', error);
+                        alert('Error al eliminar la nota');
+                      }
+                    }}
+                    onToggleImportant={async (note: any) => {
+                      try {
+                        await apiClient.updateCandidateNote(note.id, {
+                          candidate: note.candidate,
+                          note: note.note,
+                          is_important: !note.is_important
+                        });
+                        await loadData();
+                      } catch (error: any) {
+                        console.error('Error:', error);
+                        alert('Error al actualizar la nota');
+                      }
+                    }}
+                  />
                 )}
               </div>
             )}
@@ -703,6 +716,16 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
           </div>
         </div>
       )}
+
+      {/* Modal de Nueva Nota */}
+        <CandidateNoteFormModal
+          isOpen={showNoteModal}
+          onClose={() => setShowNoteModal(false)}
+          onSuccess={(message) => {
+            alert(message);
+            loadData(); // Recargar notas
+          }}
+        />
     </div>
   );
 }
