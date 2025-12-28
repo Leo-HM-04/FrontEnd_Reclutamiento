@@ -36,6 +36,8 @@ export default function EvaluationTemplates() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [questionCount, setQuestionCount] = useState(0);
   const [existingQuestions, setExistingQuestions] = useState<Question[]>([]);
+  const [editingQuestions, setEditingQuestions] = useState<{[key: number]: boolean}>({});
+  const [newQuestionsInEdit, setNewQuestionsInEdit] = useState<Question[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLink, setShareLink] = useState("");
   const [shareLoading, setShareLoading] = useState(false);
@@ -73,7 +75,8 @@ export default function EvaluationTemplates() {
     setLoading(true);
     try {
       const token = localStorage.getItem("authToken");
-      const response = await fetch("http://localhost:8000/api/evaluations/templates/", {
+      // Agregar parámetro para traer todas (activas e inactivas)
+      const response = await fetch("http://localhost:8000/api/evaluations/templates/?all=true", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -107,31 +110,107 @@ export default function EvaluationTemplates() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("¿Eliminar?")) return;
+    const template = templates.find(t => t.id === id);
+    
+    console.log("🗑️ Intentando eliminar plantilla:");
+    console.log("ID:", id);
+    console.log("Template encontrado:", template);
+    
+    if (!template) {
+      alert("❌ Error: No se encontró la plantilla en la lista local");
+      return;
+    }
+    
+    if (!confirm(`¿Estás seguro de eliminar la plantilla "${template.title}"?\n\nEsta acción no se puede deshacer.`)) return;
+    
     try {
       const token = localStorage.getItem("authToken");
-      const response = await fetch(`http://localhost:8000/api/evaluations/templates/${id}/`, {
+      const url = `http://localhost:8000/api/evaluations/templates/${id}/`;
+      
+      console.log("🌐 Llamando a:", url);
+      
+      const response = await fetch(url, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.ok) setTemplates(templates.filter((t) => t.id !== id));
+      
+      console.log("📊 Response status:", response.status);
+      
+      if (response.ok) {
+        setTemplates(templates.filter((t) => t.id !== id));
+        alert("✅ Plantilla eliminada exitosamente");
+      } else if (response.status === 404) {
+        const error = await response.json();
+        console.error("❌ Error 404:", error);
+        alert(`❌ No se encontró la plantilla. Puede que no tengas permisos para eliminarla o ya fue eliminada.`);
+        // Recargar plantillas para sincronizar
+        await fetchTemplates();
+      } else {
+        const error = await response.json();
+        console.error("❌ Error:", error);
+        alert(`❌ Error al eliminar: ${error.detail || 'Error desconocido'}`);
+      }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("❌ Error completo:", error);
+      alert("❌ Error al eliminar la plantilla");
     }
   };
 
   const handleDuplicate = async (id: number) => {
+    const template = templates.find(t => t.id === id);
+    if (!confirm(`¿Duplicar la plantilla "${template?.title}"?`)) return;
+    
     try {
       const token = localStorage.getItem("authToken");
-      await fetch(`http://localhost:8000/api/evaluations/templates/${id}/duplicate/`, {
+      const response = await fetch(`http://localhost:8000/api/evaluations/templates/${id}/duplicate/`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
       });
-      fetchTemplates();
+      
+      if (response.ok) {
+        await fetchTemplates();
+        alert("✅ Plantilla duplicada exitosamente (inactiva por defecto, actívala con el toggle)");
+      } else {
+        const error = await response.json();
+        alert(`❌ Error al duplicar: ${error.detail || 'Error desconocido'}`);
+      }
     } catch (error) {
       console.error("Error:", error);
+      alert("❌ Error al duplicar la plantilla");
     }
   };
+
+  const handleToggleActive = async (id: number, currentStatus: boolean) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(`http://localhost:8000/api/evaluations/templates/${id}/`, {
+        method: "PATCH",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ is_active: !currentStatus })
+      });
+      
+      if (response.ok) {
+        // Actualizar localmente sin recargar todo
+        setTemplates(templates.map(t => 
+          t.id === id ? { ...t, is_active: !currentStatus } : t
+        ));
+        alert(`✅ Plantilla ${!currentStatus ? 'activada' : 'desactivada'} exitosamente`);
+      } else {
+        const error = await response.json();
+        alert(`❌ Error: ${error.detail || 'No se pudo cambiar el estado'}`);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("❌ Error al cambiar el estado");
+    }
+  };
+
 
   const handleDeleteQuestion = async (questionId: number) => {
     if (!confirm("¿Eliminar esta pregunta?")) return;
@@ -273,6 +352,65 @@ export default function EvaluationTemplates() {
     setQuestionCount(index + 1);
   };
 
+  const addQuestionToEdit = () => {
+    const newQuestion: Question = {
+      question_text: "",
+      question_type: "multiple_choice",
+      options: [],
+      correct_answer: null,
+      points: 10,
+      order: existingQuestions.length + newQuestionsInEdit.length,
+      is_required: false,
+      help_text: ""
+    };
+    setNewQuestionsInEdit([...newQuestionsInEdit, newQuestion]);
+  };
+
+  const updateNewQuestion = (index: number, field: keyof Question, value: any) => {
+    const updated = [...newQuestionsInEdit];
+    updated[index] = { ...updated[index], [field]: value };
+    setNewQuestionsInEdit(updated);
+  };
+
+  const removeNewQuestion = (index: number) => {
+    setNewQuestionsInEdit(newQuestionsInEdit.filter((_, i) => i !== index));
+  };
+
+  const toggleEditQuestion = (questionId: number) => {
+    setEditingQuestions({
+      ...editingQuestions,
+      [questionId]: !editingQuestions[questionId]
+    });
+  };
+
+  const updateExistingQuestion = async (questionId: number, updatedData: Partial<Question>) => {
+    try {
+      const token = localStorage.getItem("authToken");
+      const response = await fetch(`http://localhost:8000/api/evaluations/questions/${questionId}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedData)
+      });
+
+      if (response.ok) {
+        // Recargar preguntas
+        if (selectedTemplate) {
+          await fetchTemplateQuestions(selectedTemplate.id);
+        }
+        setEditingQuestions({ ...editingQuestions, [questionId]: false });
+        alert("✅ Pregunta actualizada");
+      } else {
+        alert("❌ Error al actualizar pregunta");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("❌ Error al actualizar pregunta");
+    }
+  };
+
   useEffect(() => {
     (window as any).handleQuestionTypeChange = (index: number, type: string) => {
       const optionsContainer = document.getElementById(`options_container_${index}`);
@@ -371,13 +509,34 @@ export default function EvaluationTemplates() {
             <div key={template.id} className="bg-white border rounded-lg p-4 hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center justify-between gap-2 mb-1">
                     <h4 className="font-semibold text-gray-900">{template.title}</h4>
-                    {template.is_active ? (
-                      <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded">Activa</span>
-                    ) : (
-                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">Inactiva</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {/* Toggle de estado */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleActive(template.id, template.is_active);
+                        }}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          template.is_active ? 'bg-green-600' : 'bg-gray-300'
+                        }`}
+                        title={template.is_active ? 'Desactivar plantilla' : 'Activar plantilla'}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            template.is_active ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                      <span className={`px-2 py-0.5 text-xs rounded font-medium ${
+                        template.is_active 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {template.is_active ? 'Activa' : 'Inactiva'}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-sm text-gray-600">{template.description}</p>
                 </div>
@@ -433,6 +592,34 @@ export default function EvaluationTemplates() {
 
                   if (response.ok) {
                     const createdTemplate = await response.json();
+
+                    // Guardar nuevas preguntas si estamos en modo edición
+                    if (selectedTemplate && newQuestionsInEdit.length > 0) {
+                      const questions = newQuestionsInEdit.map((q, idx) => ({
+                        question_text: q.question_text,
+                        question_type: q.question_type,
+                        options: q.options,
+                        correct_answer: q.correct_answer,
+                        points: q.points,
+                        order: existingQuestions.length + idx,
+                        is_required: q.is_required,
+                        help_text: q.help_text
+                      }));
+
+                      if (questions.length > 0 && questions.every(q => q.question_text)) {
+                        const questionsResponse = await fetch("http://localhost:8000/api/evaluations/questions/bulk_create/", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                          body: JSON.stringify({ template_id: selectedTemplate.id, questions }),
+                        });
+                        
+                        if (!questionsResponse.ok) {
+                          const error = await questionsResponse.json();
+                          console.error('Error al crear nuevas preguntas:', error);
+                        }
+                      }
+                      setNewQuestionsInEdit([]);
+                    }
                     
                     if (!selectedTemplate) {
                       const questionElements = document.querySelectorAll('[data-question-index]');
@@ -538,9 +725,13 @@ export default function EvaluationTemplates() {
                 <div className="mt-6 border-t pt-6">
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="text-lg font-semibold">Preguntas</h4>
-                    {!selectedTemplate && (
+                    {!selectedTemplate ? (
                       <button type="button" onClick={addQuestion} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                         <i className="fas fa-plus mr-2"></i>Agregar Pregunta
+                      </button>
+                    ) : (
+                      <button type="button" onClick={addQuestionToEdit} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i className="fas fa-plus mr-2"></i>Agregar Nueva Pregunta
                       </button>
                     )}
                   </div>
@@ -550,75 +741,68 @@ export default function EvaluationTemplates() {
                     <div className="space-y-4 mb-4">
                       {existingQuestions.map((question, index) => (
                         <div key={question.id} className="border border-gray-300 rounded-lg p-4 bg-white">
-                          <div className="flex justify-between items-center mb-3">
-                            <h5 className="font-semibold text-gray-900">Pregunta {index + 1}</h5>
-                            <button 
-                              type="button"
-                              onClick={() => question.id && handleDeleteQuestion(question.id)} 
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <i className="fas fa-trash"></i>
-                            </button>
-                          </div>
-                          
-                          <div className="space-y-3">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">Pregunta</label>
-                              <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{question.question_text}</p>
+                          {!editingQuestions[question.id!] ? (
+                            // Modo Vista
+                            <>
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex-1">
+                                  <p className="font-medium text-gray-900">{question.question_text}</p>
+                                  <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
+                                    <span><i className="fas fa-list mr-1"></i>{questionTypes.find(t => t.value === question.question_type)?.label}</span>
+                                    <span><i className="fas fa-star mr-1"></i>{question.points} pts</span>
+                                    <span>
+                                      {question.is_required ? (
+                                        <span className="text-green-600"><i className="fas fa-check-circle mr-1"></i>Obligatoria</span>
+                                      ) : (
+                                        <span className="text-gray-500"><i className="fas fa-circle mr-1"></i>Opcional</span>
+                                      )}
+                                    </span>
+                                  </div>
+                                  {question.options && question.options.length > 0 && (
+                                    <div className="mt-2 text-sm text-gray-600">
+                                      <strong>Opciones:</strong> {question.options.join(", ")}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex gap-2 ml-4">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleEditQuestion(question.id!)}
+                                    className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                                  >
+                                    <i className="fas fa-edit mr-1"></i>Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteQuestion(question.id!)}
+                                    className="px-3 py-1 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100"
+                                  >
+                                    <i className="fas fa-trash"></i>
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            // Modo Edición
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center mb-3">
+                                <h5 className="font-semibold text-gray-900">Editando Pregunta {index + 1}</h5>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleEditQuestion(question.id!)}
+                                  className="text-gray-500 hover:text-gray-700"
+                                >
+                                  <i className="fas fa-times"></i>
+                                </button>
+                              </div>
+                              
+                              <QuestionEditForm
+                                question={question}
+                                onSave={(data) => updateExistingQuestion(question.id!, data)}
+                                onCancel={() => toggleEditQuestion(question.id!)}
+                              />
                             </div>
-
-                            <div className="grid grid-cols-3 gap-3">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                                <p className="text-sm text-gray-900">{
-                                  questionTypes.find(t => t.value === question.question_type)?.label || question.question_type
-                                }</p>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Puntos</label>
-                                <p className="text-sm text-gray-900">{question.points}</p>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
-                                <p className="text-sm text-gray-900">{question.order}</p>
-                              </div>
-                            </div>
-
-                            {question.options && question.options.length > 0 && (
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Opciones</label>
-                                <ul className="list-disc list-inside text-sm text-gray-900">
-                                  {question.options.map((opt, i) => (
-                                    <li key={i}>{opt}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {question.correct_answer && (
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Respuesta Correcta</label>
-                                <p className="text-sm text-green-700 font-medium">{question.correct_answer}</p>
-                              </div>
-                            )}
-
-                            {question.help_text && (
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Texto de Ayuda</label>
-                                <p className="text-sm text-gray-600 italic">{question.help_text}</p>
-                              </div>
-                            )}
-
-                            <div className="flex items-center">
-                              <span className="text-sm">
-                                {question.is_required ? (
-                                  <span className="text-green-600"><i className="fas fa-check-circle mr-1"></i>Obligatoria</span>
-                                ) : (
-                                  <span className="text-gray-500"><i className="fas fa-circle mr-1"></i>Opcional</span>
-                                )}
-                              </span>
-                            </div>
-                          </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -634,6 +818,152 @@ export default function EvaluationTemplates() {
                   {/* Contenedor para nuevas preguntas (solo en modo crear) */}
                   {!selectedTemplate && <div id="questions-container"></div>}
                 </div>
+
+                {/* Nuevas preguntas en modo edición */}
+                  {selectedTemplate && newQuestionsInEdit.length > 0 && (
+                    <div className="space-y-4 mb-4">
+                      <h5 className="font-semibold text-gray-700 text-sm">Nuevas Preguntas (sin guardar)</h5>
+                      {newQuestionsInEdit.map((question, index) => (
+                        <div key={`new-${index}`} className="border border-green-300 bg-green-50 rounded-lg p-4">
+                          <div className="flex justify-between items-center mb-3">
+                            <h5 className="font-semibold text-gray-900">
+                              Nueva Pregunta {existingQuestions.length + index + 1}
+                            </h5>
+                            <button
+                              type="button"
+                              onClick={() => removeNewQuestion(index)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Pregunta *</label>
+                              <textarea
+                                rows={2}
+                                value={question.question_text}
+                                onChange={(e) => updateNewQuestion(index, 'question_text', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                placeholder="Escribe la pregunta..."
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                                <select
+                                  value={question.question_type}
+                                  onChange={(e) => updateNewQuestion(index, 'question_type', e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                >
+                                  {questionTypes.map(type => (
+                                    <option key={type.value} value={type.value}>{type.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Puntos *</label>
+                                <input
+                                  type="number"
+                                  value={question.points}
+                                  onChange={(e) => updateNewQuestion(index, 'points', parseFloat(e.target.value))}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                  min="0"
+                                  step="0.5"
+                                />
+                              </div>
+                              <div className="flex items-end">
+                                <label className="flex items-center text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={question.is_required}
+                                    onChange={(e) => updateNewQuestion(index, 'is_required', e.target.checked)}
+                                    className="mr-2"
+                                  />
+                                  Obligatoria
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Opciones para multiple choice */}
+                            {question.question_type === "multiple_choice" && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Opciones (una por línea) *
+                                </label>
+                                <textarea
+                                  rows={4}
+                                  value={question.options?.join('\n') || ''}
+                                  onChange={(e) => {
+                                    const options = e.target.value.split('\n').filter(o => o.trim());
+                                    updateNewQuestion(index, 'options', options);
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                  placeholder="Opción 1&#10;Opción 2&#10;Opción 3"
+                                />
+                              </div>
+                            )}
+
+                            {/* Respuesta correcta */}
+                            {(question.question_type === "multiple_choice" || 
+                              question.question_type === "true_false" || 
+                              question.question_type === "short_answer") && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Respuesta Correcta
+                                </label>
+                                {question.question_type === "multiple_choice" ? (
+                                  <select
+                                    value={question.correct_answer || ''}
+                                    onChange={(e) => updateNewQuestion(index, 'correct_answer', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                  >
+                                    <option value="">Selecciona una opción...</option>
+                                    {question.options?.map((opt, i) => (
+                                      <option key={i} value={opt}>{opt}</option>
+                                    ))}
+                                  </select>
+                                ) : question.question_type === "true_false" ? (
+                                  <select
+                                    value={question.correct_answer || ''}
+                                    onChange={(e) => updateNewQuestion(index, 'correct_answer', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                  >
+                                    <option value="">Selecciona...</option>
+                                    <option value="Verdadero">Verdadero</option>
+                                    <option value="Falso">Falso</option>
+                                  </select>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={question.correct_answer || ''}
+                                    onChange={(e) => updateNewQuestion(index, 'correct_answer', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                    placeholder="Respuesta correcta..."
+                                  />
+                                )}
+                              </div>
+                            )}
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Texto de Ayuda
+                              </label>
+                              <input
+                                type="text"
+                                value={question.help_text}
+                                onChange={(e) => updateNewQuestion(index, 'help_text', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                placeholder="Pista o ayuda para el candidato..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                 <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
                   <button type="button" onClick={() => { setShowModal(false); setSelectedTemplate(null); }} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
@@ -725,4 +1055,161 @@ export default function EvaluationTemplates() {
       )}
     </div>
   );
+
+  // Componente auxiliar para editar preguntas
+  function QuestionEditForm({ question, onSave, onCancel }: {
+    question: Question;
+    onSave: (data: Partial<Question>) => void;
+    onCancel: () => void;
+  }) {
+    const [formData, setFormData] = useState(question);
+
+    const questionTypes = [
+      { value: "multiple_choice", label: "Opción Múltiple" },
+      { value: "true_false", label: "Verdadero/Falso" },
+      { value: "short_answer", label: "Respuesta Corta" },
+      { value: "essay", label: "Ensayo" },
+      { value: "rating", label: "Calificación" }
+    ];
+
+    const handleSave = () => {
+      onSave(formData);
+    };
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Pregunta *</label>
+          <textarea
+            rows={2}
+            value={formData.question_text}
+            onChange={(e) => setFormData({ ...formData, question_text: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+            <select
+              value={formData.question_type}
+              onChange={(e) => setFormData({ ...formData, question_type: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              {questionTypes.map(type => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Puntos *</label>
+            <input
+              type="number"
+              value={formData.points}
+              onChange={(e) => setFormData({ ...formData, points: parseFloat(e.target.value) })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              min="0"
+              step="0.5"
+              required
+            />
+          </div>
+          <div className="flex items-end">
+            <label className="flex items-center text-sm">
+              <input
+                type="checkbox"
+                checked={formData.is_required}
+                onChange={(e) => setFormData({ ...formData, is_required: e.target.checked })}
+                className="mr-2"
+              />
+              Obligatoria
+            </label>
+          </div>
+        </div>
+
+        {formData.question_type === "multiple_choice" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Opciones (una por línea) *
+            </label>
+            <textarea
+              rows={4}
+              value={formData.options?.join('\n') || ''}
+              onChange={(e) => {
+                const options = e.target.value.split('\n').filter(o => o.trim());
+                setFormData({ ...formData, options });
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+        )}
+
+        {(formData.question_type === "multiple_choice" || 
+          formData.question_type === "true_false" || 
+          formData.question_type === "short_answer") && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Respuesta Correcta
+            </label>
+            {formData.question_type === "multiple_choice" ? (
+              <select
+                value={formData.correct_answer || ''}
+                onChange={(e) => setFormData({ ...formData, correct_answer: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="">Selecciona una opción...</option>
+                {formData.options?.map((opt, i) => (
+                  <option key={i} value={opt}>{opt}</option>
+                ))}
+              </select>
+            ) : formData.question_type === "true_false" ? (
+              <select
+                value={formData.correct_answer || ''}
+                onChange={(e) => setFormData({ ...formData, correct_answer: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="">Selecciona...</option>
+                <option value="Verdadero">Verdadero</option>
+                <option value="Falso">Falso</option>
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={formData.correct_answer || ''}
+                onChange={(e) => setFormData({ ...formData, correct_answer: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            )}
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Texto de Ayuda</label>
+          <input
+            type="text"
+            value={formData.help_text}
+            onChange={(e) => setFormData({ ...formData, help_text: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-3 border-t">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Guardar Cambios
+          </button>
+        </div>
+      </div>
+    );
+  }
 }

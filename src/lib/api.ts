@@ -456,8 +456,7 @@ class ApiClient {
    * Create new contact
    */
   async createContact(contactData: any): Promise<any> {
-    // Usar la ruta completa del router de clients
-    return this.makeRequest<any>('/api/clients/contacts/', {
+    return this.makeRequest<any>('/api/contacts/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
