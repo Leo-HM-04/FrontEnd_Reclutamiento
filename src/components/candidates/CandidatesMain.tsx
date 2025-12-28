@@ -9,6 +9,7 @@ import CandidateNoteFormModal from "../CandidateNoteFormModal";
 import ProfileDetail from "../profiles/ProfileDetail";
 import ProfileForm from "../profiles/ProfileForm";
 import ApplicationDetailView from "./ApplicationDetailView";
+import UploadDocumentModal from "./UploadDocumentModal";
 
 type CandidateView = 
   | "candidates-list" 
@@ -36,6 +37,7 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
   const [currentView, setCurrentView] = useState<CandidateView>("candidates-list");
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
   
   // Data states
@@ -136,6 +138,37 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
     setSelectedProfileId(profileId);
     setSelectedCandidateId(candidateId);
     setCurrentView("application-detail");
+  };
+
+
+  const getDocumentIcon = (filename: string) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    if (ext === 'pdf') return 'fa-file-pdf';
+    if (['doc', 'docx'].includes(ext || '')) return 'fa-file-word';
+    if (['xls', 'xlsx'].includes(ext || '')) return 'fa-file-excel';
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) return 'fa-file-image';
+    return 'fa-file-alt';
+  };
+
+  const getDocumentColor = (filename: string) => {
+    const ext = filename.split('.').pop()?.toLowerCase();
+    if (ext === 'pdf') return 'text-red-600';
+    if (['doc', 'docx'].includes(ext || '')) return 'text-blue-600';
+    if (['xls', 'xlsx'].includes(ext || '')) return 'text-green-600';
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) return 'text-purple-600';
+    return 'text-gray-600';
+  };
+
+  const handleDeleteDocument = async (documentId: number) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) return;
+    
+    try {
+      await apiClient.deleteCandidateDocument(documentId);
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Error al eliminar el documento');
+    }
   };
 
   const menuItems: MenuItem[] = [
@@ -600,14 +633,23 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
             {currentView === "documents" && (
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-semibold text-gray-900">Documentos</h3>
-                  <button 
-                    onClick={loadData}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    <i className="fas fa-sync mr-2"></i>
-                    Actualizar
-                  </button>
+                  <h3 className="text-2xl font-bold text-gray-900">Documentos de Candidatos</h3>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowUploadModal(true)}
+                      className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
+                    >
+                      <i className="fas fa-upload"></i>
+                      Subir Documento
+                    </button>
+                    <button 
+                      onClick={loadData}
+                      className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+                    >
+                      <i className="fas fa-sync"></i>
+                      Actualizar
+                    </button>
+                  </div>
                 </div>
                 
                 {loading ? (
@@ -621,35 +663,98 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                     <p className="text-lg">No hay documentos registrados</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {documents.map((doc) => (
-                      <div key={doc.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-                              <i className="fas fa-file-alt"></i>
-                            </div>
-                            <div className="ml-3">
-                              <h4 className="text-sm font-semibold text-gray-900">{doc.document_type}</h4>
-                              <p className="text-xs text-gray-500">{doc.candidate_name || `Candidato #${doc.candidate}`}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                          <span className="text-xs text-gray-500">
-                            {new Date(doc.uploaded_at).toLocaleDateString('es-MX')}
-                          </span>
-                          <div className="flex space-x-2">
-                            <button className="text-green-600 hover:text-green-800 text-xs">
-                              <i className="fas fa-download"></i>
-                            </button>
-                            <button className="text-red-600 hover:text-red-800 text-xs">
-                              <i className="fas fa-trash"></i>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidato</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {documents.map((doc: any) => (
+                          <tr key={doc.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                                  {doc.candidate_name ? doc.candidate_name.charAt(0).toUpperCase() : 'C'}
+                                </div>
+                                <div className="ml-3">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {doc.candidate_name || `Candidato #${doc.candidate}`}
+                                  </div>
+                                  {doc.candidate_current_position && (
+                                    <div className="text-xs text-gray-500">{doc.candidate_current_position}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <i className={`fas ${getDocumentIcon(doc.original_filename || '')} ${getDocumentColor(doc.original_filename || '')} text-2xl`}></i>
+                                <div>
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    {doc.original_filename || 'Documento sin nombre'}
+                                  </div>
+                                  {doc.description && (
+                                    <div className="text-xs text-gray-500">{doc.description}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                {doc.document_type || 'Otro'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
+                              {new Date(doc.uploaded_at).toLocaleDateString('es-MX', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {doc.file_url && (
+                                  <button
+                                    onClick={() => window.open(doc.file_url, '_blank')}
+                                    className="text-blue-600 hover:text-blue-800"
+                                    title="Ver documento"
+                                  >
+                                    <i className="fas fa-eye"></i>
+                                  </button>
+                                )}
+                                {doc.file_url && (
+                                  <button
+                                    onClick={() => {
+                                      const link = document.createElement('a');
+                                      link.href = doc.file_url;
+                                      link.download = doc.original_filename || 'documento';
+                                      link.click();
+                                    }}
+                                    className="text-green-600 hover:text-green-800"
+                                    title="Descargar"
+                                  >
+                                    <i className="fas fa-download"></i>
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteDocument(doc.id)}
+                                  className="text-red-600 hover:text-red-800"
+                                  title="Eliminar"
+                                >
+                                  <i className="fas fa-trash"></i>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
@@ -718,6 +823,17 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                   />
                 )}
               </div>
+            )}
+
+            {/* Upload Document Modal */}
+            {showUploadModal && (
+              <UploadDocumentModal
+                onClose={() => setShowUploadModal(false)}
+                onSuccess={() => {
+                  setShowUploadModal(false);
+                  loadData();
+                }}
+              />
             )}
 
             {/* HISTORY */}
