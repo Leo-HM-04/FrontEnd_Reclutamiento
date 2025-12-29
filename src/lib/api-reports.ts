@@ -412,15 +412,18 @@ export interface CandidateFullReportData {
   }>;
   evaluations: Array<{
     id: number;
-    profile: {
-      id: number;
-      title: string;
-    };
     template: string | null;
-    evaluator: string | null;
-    score: number;
+    template_category: string | null;
+    assigned_by: string | null;
+    reviewed_by: string | null;
     status: string;
+    status_display: string;
+    final_score: number | null;
+    passed: boolean | null;
+    assigned_at: string | null;
+    started_at: string | null;
     completed_at: string | null;
+    reviewed_at: string | null;
   }>;
   notes: Array<{
     id: number;

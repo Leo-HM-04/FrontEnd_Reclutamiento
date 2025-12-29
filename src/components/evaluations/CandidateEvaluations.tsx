@@ -265,7 +265,7 @@ export default function CandidateEvaluations() {
                     {evaluation.final_score !== undefined && evaluation.final_score !== null ? (
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold text-gray-900">
-                          {evaluation.final_score.toFixed(1)}%
+                          {Number(evaluation.final_score).toFixed(1)}%
                         </span>
                         {evaluation.passed !== undefined && (
                           <span>
@@ -537,7 +537,7 @@ export default function CandidateEvaluations() {
                   {selectedEvaluation.final_score !== undefined && selectedEvaluation.final_score !== null ? (
                     <div>
                       <p className="text-2xl font-bold text-gray-900">
-                        {selectedEvaluation.final_score.toFixed(1)}%
+                        {Number(selectedEvaluation.final_score).toFixed(1)}%
                       </p>
                       {selectedEvaluation.passed !== undefined && (
                         <p className={`text-sm font-medium mt-1 ${

@@ -672,8 +672,13 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="new">Nuevo</option>
-                <option value="active">Activo</option>
-                <option value="inactive">Inactivo</option>
+                <option value="screening">En Revisión</option>
+                <option value="qualified">Calificado</option>
+                <option value="interview">En Entrevista</option>
+                <option value="offer">Oferta Extendida</option>
+                <option value="hired">Contratado</option>
+                <option value="rejected">Rechazado</option>
+                <option value="withdrawn">Retirado</option>
               </select>
             </div>
 

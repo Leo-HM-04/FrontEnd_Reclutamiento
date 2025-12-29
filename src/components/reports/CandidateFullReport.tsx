@@ -835,22 +835,32 @@ export default function CandidateFullReport({ candidateId, onBack }: Props) {
                   <div key={evaluation.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h4 className="font-semibold text-gray-900">{evaluation.profile.title}</h4>
-                        {evaluation.template && (
-                          <p className="text-sm text-gray-600">Plantilla: {evaluation.template}</p>
+                        <h4 className="font-semibold text-gray-900">{evaluation.template || 'Evaluación sin plantilla'}</h4>
+                        {evaluation.template_category && (
+                          <p className="text-sm text-gray-600">Categoría: {evaluation.template_category}</p>
                         )}
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-purple-600">{evaluation.score}/100</div>
-                        <span className="text-xs text-gray-500">{evaluation.status}</span>
+                        <div className="text-2xl font-bold text-purple-600">
+                          {evaluation.final_score !== null && evaluation.final_score !== undefined 
+                            ? `${Number(evaluation.final_score).toFixed(1)}%` 
+                            : 'N/A'}
+                        </div>
+                        <span className="text-xs text-gray-500">{evaluation.status_display || evaluation.status}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
-                      {evaluation.evaluator && (
-                        <span><i className="fas fa-user mr-1"></i>{evaluation.evaluator}</span>
+                      {evaluation.assigned_by && (
+                        <span><i className="fas fa-user mr-1"></i>Asignado por: {evaluation.assigned_by}</span>
                       )}
                       {evaluation.completed_at && (
                         <span><i className="fas fa-calendar mr-1"></i>{formatDate(evaluation.completed_at)}</span>
+                      )}
+                      {evaluation.passed !== null && evaluation.passed !== undefined && (
+                        <span className={evaluation.passed ? 'text-green-600' : 'text-red-600'}>
+                          <i className={`fas fa-${evaluation.passed ? 'check-circle' : 'times-circle'} mr-1`}></i>
+                          {evaluation.passed ? 'Aprobado' : 'No aprobado'}
+                        </span>
                       )}
                     </div>
                   </div>
