@@ -10,6 +10,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { getProfileCandidates, formatDate, getStatusColor, type ProfileCandidatesData } from '@/lib/api-reports';
+import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
 
 interface Props {
   profileId: number;
@@ -23,6 +25,7 @@ export default function ProfileCandidatesReport({ profileId, onBack, onViewCandi
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -39,6 +42,199 @@ export default function ProfileCandidatesReport({ profileId, onBack, onViewCandi
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════════
+  // EXPORTAR A PDF
+  // ═══════════════════════════════════════════════
+  const handleExportPDF = () => {
+    if (!data) return;
+    
+    setExporting(true);
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      let yPos = 20;
+      const leftMargin = 20;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const checkNewPage = (height: number) => {
+        if (yPos + height > pageHeight - 20) {
+          pdf.addPage();
+          yPos = 20;
+        }
+      };
+
+      // HEADER
+      pdf.setFillColor(147, 51, 234);
+      pdf.rect(0, 0, pageWidth, 50, 'F');
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('CANDIDATOS DEL PERFIL', leftMargin, 25);
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(data.profile.title, leftMargin, 35);
+      pdf.text(data.profile.client, leftMargin, 42);
+
+      yPos = 60;
+      pdf.setTextColor(0, 0, 0);
+
+      // RESUMEN
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Resumen', leftMargin, yPos);
+      yPos += 10;
+
+      const stats = [
+        { label: 'Total', value: data.summary.total_candidates, color: [147, 51, 234] },
+        { label: 'Match Promedio', value: `${data.summary.avg_match_percentage}%`, color: [34, 197, 94] },
+      ];
+
+      let xPos = leftMargin;
+      stats.forEach((stat) => {
+        pdf.setFillColor(stat.color[0], stat.color[1], stat.color[2]);
+        pdf.roundedRect(xPos, yPos, 60, 25, 3, 3, 'F');
+        
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(18);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(stat.value.toString(), xPos + 30, yPos + 12, { align: 'center' });
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(stat.label, xPos + 30, yPos + 20, { align: 'center' });
+        
+        xPos += 70;
+      });
+
+      pdf.setTextColor(0, 0, 0);
+      yPos += 35;
+
+      // CANDIDATOS
+      checkNewPage(20);
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Lista de Candidatos', leftMargin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      data.candidates.forEach((candidate, index) => {
+        checkNewPage(40);
+        
+        // Nombre
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${index + 1}. ${candidate.full_name}`, leftMargin, yPos);
+        yPos += 6;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Email: ${candidate.email}`, leftMargin + 5, yPos);
+        yPos += 5;
+        
+        if (candidate.phone) {
+          pdf.text(`Tel: ${candidate.phone}`, leftMargin + 5, yPos);
+          yPos += 5;
+        }
+        
+        pdf.text(`Estado: ${candidate.status_display}`, leftMargin + 5, yPos);
+        yPos += 5;
+        
+        if (candidate.match_percentage !== null) {
+          pdf.text(`Match: ${candidate.match_percentage}%`, leftMargin + 5, yPos);
+          yPos += 5;
+        }
+        
+        yPos += 3;
+      });
+
+      // FOOTER
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(
+          `Generado el ${new Date().toLocaleDateString('es-MX')} - Página ${i} de ${pageCount}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      }
+
+      pdf.save(`Candidatos_${data.profile.title}_${new Date().toISOString().split('T')[0]}.pdf`);
+      alert('✅ PDF generado exitosamente');
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      alert('❌ Error al generar PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════════
+  // EXPORTAR A EXCEL
+  // ═══════════════════════════════════════════════
+  const handleExportExcel = () => {
+    if (!data) return;
+    
+    setExporting(true);
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // HOJA 1: Lista de Candidatos
+      const candidatesData = [
+        ['CANDIDATOS DEL PERFIL'],
+        ['Perfil:', data.profile.title],
+        ['Cliente:', data.profile.client],
+        [''],
+        ['#', 'Nombre', 'Email', 'Teléfono', 'Estado', 'Match %', 'Rating', 'Posición Actual', 'Empresa Actual', 'Experiencia (años)'],
+        ...data.candidates.map((c, i) => [
+          i + 1,
+          c.full_name,
+          c.email,
+          c.phone || '',
+          c.status_display,
+          c.match_percentage || '',
+          c.overall_rating || '',
+          c.current_position || '',
+          c.current_company || '',
+          c.years_of_experience
+        ])
+      ];
+
+      const ws1 = XLSX.utils.aoa_to_sheet(candidatesData);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Candidatos');
+
+      // HOJA 2: Resumen
+      const summaryData = [
+        ['RESUMEN'],
+        [''],
+        ['Métrica', 'Valor'],
+        ['Total de Candidatos', data.summary.total_candidates],
+        ['Match Promedio', `${data.summary.avg_match_percentage}%`],
+        [''],
+        ['Por Estado'],
+        ...Object.entries(data.summary.by_status).map(([status, count]) => [status, count])
+      ];
+
+      const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Resumen');
+
+      XLSX.writeFile(wb, `Candidatos_${data.profile.title}_${new Date().toISOString().split('T')[0]}.xlsx`);
+      alert('✅ Excel generado exitosamente');
+    } catch (error) {
+      console.error('Error al exportar Excel:', error);
+      alert('❌ Error al generar Excel');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -104,9 +300,21 @@ export default function ProfileCandidatesReport({ profileId, onBack, onViewCandi
                 Volver
               </button>
             )}
-            <button className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
-              <i className="fas fa-download mr-2"></i>
-              Exportar
+            <button 
+              onClick={handleExportPDF}
+              disabled={exporting}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i className="fas fa-file-pdf mr-2"></i>
+              {exporting ? 'Generando...' : 'PDF'}
+            </button>
+            <button 
+              onClick={handleExportExcel}
+              disabled={exporting}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i className="fas fa-file-excel mr-2"></i>
+              {exporting ? 'Generando...' : 'Excel'}
             </button>
           </div>
         </div>

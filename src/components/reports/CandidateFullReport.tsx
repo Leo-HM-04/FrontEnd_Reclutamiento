@@ -264,9 +264,9 @@ export default function CandidateFullReport({ candidateId, onBack }: Props) {
                   <div>
                     <label className="text-sm font-medium text-gray-500">Idiomas</label>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {personal_info.languages.map((lang, idx) => (
+                      {personal_info.languages.map((lang: any, idx: number) => (
                         <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                          {lang}
+                          {typeof lang === 'object' ? `${lang.idioma} (${lang.nivel})` : lang}
                         </span>
                       ))}
                     </div>

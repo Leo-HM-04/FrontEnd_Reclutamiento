@@ -109,7 +109,7 @@ export default function IndividualReportsHub() {
     try {
       const token = localStorage.getItem('authToken');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/clients/clients/`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/clients/`,  // ✅ CORRECTO
         {
           headers: {
             'Authorization': `Bearer ${token}`,

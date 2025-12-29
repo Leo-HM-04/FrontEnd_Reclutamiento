@@ -10,6 +10,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { getProfileReport, formatDate, formatCurrency, getStatusColor, type ProfileReportData } from '@/lib/api-reports';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import * as XLSX from 'xlsx';
 
 interface Props {
   profileId: number;
@@ -20,6 +23,7 @@ export default function ProfileReport({ profileId, onBack }: Props) {
   const [data, setData] = useState<ProfileReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -36,6 +40,418 @@ export default function ProfileReport({ profileId, onBack }: Props) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════════
+  // EXPORTAR A PDF
+  // ═══════════════════════════════════════════════
+  const handleExportPDF = () => {
+    setExporting(true);
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      let yPos = 20;
+      const leftMargin = 20;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // ============================================
+      // HELPER: Verificar nueva página
+      // ============================================
+      const checkNewPage = (height: number) => {
+        if (yPos + height > pageHeight - 20) {
+          pdf.addPage();
+          yPos = 20;
+        }
+      };
+
+      // ============================================
+      // HEADER
+      // ============================================
+      pdf.setFillColor(37, 99, 235); // Azul
+      pdf.rect(0, 0, pageWidth, 50, 'F');
+      
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('REPORTE DE PERFIL', leftMargin, 25);
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(profile.position_title, leftMargin, 35);
+      pdf.text(client.company_name, leftMargin, 42);
+
+      yPos = 60;
+      pdf.setTextColor(0, 0, 0);
+
+      // ============================================
+      // INFORMACIÓN GENERAL
+      // ============================================
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Información General', leftMargin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      
+      const infoGeneral = [
+        ['Estado:', profile.status_display],
+        ['Prioridad:', profile.priority],
+        ['Tipo de Servicio:', profile.service_type],
+        ['Días Abierto:', `${progress.days_open} días`],
+        ['Supervisor:', supervisor?.name || 'No asignado'],
+      ];
+
+      infoGeneral.forEach(([label, value]) => {
+        checkNewPage(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(label, leftMargin, yPos);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(value, leftMargin + 50, yPos);
+        yPos += 7;
+      });
+
+      yPos += 5;
+      checkNewPage(25);
+
+      // ============================================
+      // UBICACIÓN Y SALARIO
+      // ============================================
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Ubicación y Salario', leftMargin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+
+      const ubicacionSalario = [
+        ['Ciudad:', profile.location.city],
+        ['Estado:', profile.location.state],
+        ['Modalidad:', profile.location.work_mode],
+        ['Salario:', `$${profile.salary.min} - $${profile.salary.max} ${profile.salary.currency}/${profile.salary.period}`],
+      ];
+
+      ubicacionSalario.forEach(([label, value]) => {
+        checkNewPage(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(label, leftMargin, yPos);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(value, leftMargin + 50, yPos);
+        yPos += 7;
+      });
+
+      yPos += 5;
+      checkNewPage(25);
+
+      // ============================================
+      // CLIENTE
+      // ============================================
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Información del Cliente', leftMargin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+
+      const clienteInfo = [
+        ['Empresa:', client.company_name],
+        ['Industria:', client.industry],
+        ['Contacto:', client.contact_name],
+        ['Email:', client.contact_email],
+        ['Teléfono:', client.contact_phone || 'No disponible'],
+      ];
+
+      clienteInfo.forEach(([label, value]) => {
+        checkNewPage(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(label, leftMargin, yPos);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(value, leftMargin + 50, yPos);
+        yPos += 7;
+      });
+
+      yPos += 10;
+      checkNewPage(40);
+
+      // ============================================
+      // DESCRIPCIÓN DEL PUESTO
+      // ============================================
+      if (profile.description) {
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Descripción del Puesto', leftMargin, yPos);
+        yPos += 10;
+
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        
+        // Dividir texto largo en líneas
+        const descriptionLines = pdf.splitTextToSize(
+          profile.description, 
+          pageWidth - (leftMargin * 2)
+        );
+        
+        descriptionLines.forEach((line: string) => {
+          checkNewPage(6);
+          pdf.text(line, leftMargin, yPos);
+          yPos += 5;
+        });
+
+        yPos += 5;
+      }
+
+      checkNewPage(50);
+
+      // ============================================
+      // REQUISITOS
+      // ============================================
+      if (profile.requirements) {
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Requisitos', leftMargin, yPos);
+        yPos += 10;
+
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        
+        const requirementsLines = pdf.splitTextToSize(
+          profile.requirements, 
+          pageWidth - (leftMargin * 2)
+        );
+        
+        requirementsLines.forEach((line: string) => {
+          checkNewPage(6);
+          pdf.text(line, leftMargin, yPos);
+          yPos += 5;
+        });
+
+        yPos += 5;
+      }
+
+      checkNewPage(50);
+
+      // ============================================
+      // BENEFICIOS
+      // ============================================
+      if (profile.benefits) {
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Beneficios', leftMargin, yPos);
+        yPos += 10;
+
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        
+        const benefitsLines = pdf.splitTextToSize(
+          profile.benefits, 
+          pageWidth - (leftMargin * 2)
+        );
+        
+        benefitsLines.forEach((line: string) => {
+          checkNewPage(6);
+          pdf.text(line, leftMargin, yPos);
+          yPos += 5;
+        });
+
+        yPos += 5;
+      }
+
+      checkNewPage(40);
+
+      // ============================================
+      // ESTADÍSTICAS DE CANDIDATOS
+      // ============================================
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Estadísticas de Candidatos', leftMargin, yPos);
+      yPos += 10;
+
+      // Cuadros de estadísticas
+      const stats = [
+        { label: 'Total', value: candidates_stats.total, color: [37, 99, 235] },
+        { label: 'Preseleccionados', value: candidates_stats.shortlisted, color: [147, 51, 234] },
+        { label: 'Entrevistados', value: candidates_stats.interviewed, color: [34, 197, 94] },
+      ];
+
+      let xPos = leftMargin;
+      stats.forEach((stat) => {
+        pdf.setFillColor(stat.color[0], stat.color[1], stat.color[2]);
+        pdf.roundedRect(xPos, yPos, 50, 25, 3, 3, 'F');
+        
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(20);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(stat.value.toString(), xPos + 25, yPos + 12, { align: 'center' });
+        
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(stat.label, xPos + 25, yPos + 20, { align: 'center' });
+        
+        xPos += 60;
+      });
+
+      pdf.setTextColor(0, 0, 0);
+      yPos += 35;
+
+      // ============================================
+      // HISTORIAL DE ESTADOS (últimos 5)
+      // ============================================
+      checkNewPage(40);
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Historial Reciente', leftMargin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+
+      status_history.slice(0, 5).forEach((history) => {
+        checkNewPage(15);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(formatDate(history.timestamp), leftMargin, yPos);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`${history.from_status_display} → ${history.to_status_display}`, leftMargin + 50, yPos);
+        yPos += 6;
+        if (history.notes) {
+          pdf.setFontSize(9);
+          pdf.setTextColor(100, 100, 100);
+          pdf.text(history.notes, leftMargin + 50, yPos);
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFontSize(10);
+          yPos += 6;
+        }
+        yPos += 2;
+      });
+
+      // ============================================
+      // FOOTER
+      // ============================================
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(
+          `Generado el ${new Date().toLocaleDateString('es-MX')} - Página ${i} de ${pageCount}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      }
+
+      // Guardar
+      pdf.save(`Reporte_Perfil_${profile.position_title}_${new Date().toISOString().split('T')[0]}.pdf`);
+      
+      alert('✅ PDF generado exitosamente');
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      alert('❌ Error al generar PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════════
+  // EXPORTAR A EXCEL
+  // ═══════════════════════════════════════════════
+  const handleExportExcel = () => {
+    setExporting(true);
+    try {
+      // Crear workbook
+      const wb = XLSX.utils.book_new();
+
+      // ============================================
+      // HOJA 1: Información del Perfil
+      // ============================================
+      const profileData = [
+        ['REPORTE DE PERFIL'],
+        [''],
+        ['Información General'],
+        ['Posición', profile.position_title],
+        ['Estado', profile.status_display],
+        ['Prioridad', profile.priority],
+        ['Tipo de Servicio', profile.service_type],
+        ['Días Abierto', progress.days_open],
+        [''],
+        ['Cliente'],
+        ['Empresa', client.company_name],
+        ['Industria', client.industry],
+        ['Contacto', client.contact_name],
+        ['Email', client.contact_email],
+        [''],
+        ['Ubicación'],
+        ['Ciudad', profile.location.city],
+        ['Estado', profile.location.state],
+        ['Modalidad', profile.location.work_mode],
+        [''],
+        ['Salario'],
+        ['Mínimo', `$${profile.salary.min}`],
+        ['Máximo', `$${profile.salary.max}`],
+        ['Moneda', profile.salary.currency],
+        ['Periodo', profile.salary.period],
+        [''],
+        ['Requisitos'],
+        ['Experiencia', `${profile.experience_required} años`],
+        ['Nivel Educativo', profile.education_level],
+      ];
+
+      const ws1 = XLSX.utils.aoa_to_sheet(profileData);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Información');
+
+      // ============================================
+      // HOJA 2: Estadísticas de Candidatos
+      // ============================================
+      const statsData = [
+        ['ESTADÍSTICAS DE CANDIDATOS'],
+        [''],
+        ['Métrica', 'Cantidad'],
+        ['Total de Candidatos', candidates_stats.total],
+        ['Preseleccionados', candidates_stats.shortlisted],
+        ['En Entrevista', candidates_stats.interviewed],
+        [''],
+        ['Por Estado'],
+        ...Object.entries(candidates_stats.by_status).map(([status, count]) => [status, count]),
+      ];
+
+      const ws2 = XLSX.utils.aoa_to_sheet(statsData);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Estadísticas');
+
+      // ============================================
+      // HOJA 3: Historial de Estados
+      // ============================================
+      const historyData = [
+        ['HISTORIAL DE CAMBIOS DE ESTADO'],
+        [''],
+        ['Fecha', 'Estado Anterior', 'Estado Nuevo', 'Usuario', 'Notas'],
+        ...status_history.map(h => [
+          formatDate(h.timestamp),
+          h.from_status_display,
+          h.to_status_display,
+          h.changed_by || 'Sistema',
+          h.notes || ''
+        ])
+      ];
+
+      const ws3 = XLSX.utils.aoa_to_sheet(historyData);
+      XLSX.utils.book_append_sheet(wb, ws3, 'Historial');
+
+      // Guardar archivo
+      XLSX.writeFile(wb, `Reporte_Perfil_${profile.position_title}_${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      alert('✅ Excel generado exitosamente');
+    } catch (error) {
+      console.error('Error al exportar Excel:', error);
+      alert('❌ Error al generar Excel');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -71,7 +487,7 @@ export default function ProfileReport({ profileId, onBack }: Props) {
   const { profile, client, supervisor, candidates_stats, progress, status_history } = data;
 
   return (
-    <div className="space-y-6">
+    <div id="report-content" className="space-y-6">
       {/* ═══════════════════════════════════════════════ */}
       {/* HEADER */}
       {/* ═══════════════════════════════════════════════ */}
@@ -86,17 +502,29 @@ export default function ProfileReport({ profileId, onBack }: Props) {
           </div>
           <div className="flex gap-2">
             {onBack && (
-              <button onClick={onBack} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+              <button 
+                onClick={onBack} 
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
+              >
                 <i className="fas fa-arrow-left mr-2"></i>
                 Volver
               </button>
             )}
-            <button className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
-              <i className="fas fa-download mr-2"></i>
-              Exportar
+            <button 
+              onClick={handleExportPDF}
+              disabled={exporting}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i className="fas fa-file-pdf mr-2"></i>
+              {exporting ? 'Generando...' : 'PDF'}
             </button>
-            <button onClick={() => window.print()} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
-              <i className="fas fa-print"></i>
+            <button 
+              onClick={handleExportExcel}
+              disabled={exporting}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i className="fas fa-file-excel mr-2"></i>
+              {exporting ? 'Generando...' : 'Excel'}
             </button>
           </div>
         </div>
