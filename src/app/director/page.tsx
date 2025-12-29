@@ -1483,258 +1483,194 @@ const loadApplicationsData = async () => {
             <div className="flex-1 overflow-y-auto">
               <div className="p-4">
                 <ul className="space-y-1">
+                  {/* 1. DASHBOARD */}
                   <li>
                     <button onClick={() => {
-                  setCurrentView("dashboard");
-                  if (window.innerWidth < 1024) {
-                    setSidebarOpen(false);
-                  }
-                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("dashboard")}`}>
-                                  <i className="fas fa-chart-line mr-3 w-5" />
-                  Dashboard
-                </button>
-              </li>
-              <li>
-                <button onClick={() => {
-                  setCurrentView("processes");
-                  if (window.innerWidth < 1024) {
-                    setSidebarOpen(false);
-                  }
-                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("processes")}`}>
-                  <i className="fas fa-cogs mr-3 w-5" />
-                  Procesos
-                  {stats.activeProcesses > 0 && (
-                    <span className="ml-auto bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
-                      {stats.activeProcesses}
-                    </span>
-                  )}
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => {
-                    setCurrentView("profiles");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} 
-                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles")}`}
-                >
-                  <i className="fas fa-briefcase mr-3 w-5" />
-                  Perfiles de Reclutamiento
-                  {stats.activeProfiles > 0 && (
-                    <span className="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
-                      {stats.activeProfiles}
-                    </span>
-                  )}
-                </button>
-              </li>
+                      setCurrentView("dashboard");
+                      if (window.innerWidth < 1024) {
+                        setSidebarOpen(false);
+                      }
+                    }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("dashboard")}`}>
+                      <i className="fas fa-chart-line mr-3 w-5" />
+                      Dashboard
+                    </button>
+                  </li>
 
-              <li>
-                <button 
-                  onClick={() => {
-                    setCurrentView("candidates");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} 
-                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}
-                >
-                  <i className="fas fa-user-tie mr-3 w-5" />
-                  Candidatos
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => {
-                    setCurrentView("clients");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} 
-                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("clients")}`}
-                >
-                  <i className="fas fa-building mr-3 w-5" />
-                  Clientes
-                </button>
-              </li>
-              <li>
-                <button onClick={() => {
-                    setCurrentView("client-progress");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("client-progress")}`}>
-                  <i className="fas fa-chart-line mr-3 w-5" />
-                  Avance de Cliente
-                </button>
-              </li>
-              <li>
-                <button onClick={() => {
-                  setCurrentView("team");
-                  if (window.innerWidth < 1024) {
-                    setSidebarOpen(false);
-                  }
-                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("team")}`}>
-                  <i className="fas fa-users mr-3 w-5" />
-                  Equipo
-                </button>
-              </li>
-              <li>
-                <button onClick={() => {
-                  setCurrentView("approvals");
-                  if (window.innerWidth < 1024) {
-                    setSidebarOpen(false);
-                  }
-                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("approvals")}`}>
-                  <i className="fas fa-check-circle mr-3 w-5" />
-                  Aprobaciones
-                  {pendingApprovals.length > 0 && (
-                    <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                      {pendingApprovals.length}
-                    </span>
-                  )}
-                </button>
-              </li>
-              <li>
-                <button onClick={() => {
-                  setCurrentView("reports");
-                  if (window.innerWidth < 1024) {
-                    setSidebarOpen(false);
-                  }
-                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("reports")}`}>
-                  <i className="fas fa-chart-bar mr-3 w-5" />
-                  Reportes
-                </button>
-              </li>
-              <li>
-                <button onClick={() => {
-                  setCurrentView("tasks");
-                  if (window.innerWidth < 1024) {
-                    setSidebarOpen(false);
-                  }
-                }} className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("tasks")}`}>
-                  <i className="fas fa-cogs mr-3 w-5" />
-                  Tareas de Sistema
-                </button>
-              </li>
+                  {/* 2. CLIENTES */}
+                  <li>
+                    <button 
+                      onClick={() => {
+                        setCurrentView("clients");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }} 
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("clients")}`}
+                    >
+                      <i className="fas fa-building mr-3 w-5" />
+                      Clientes
+                    </button>
+                  </li>
 
-               <li>
-                <button 
-                  onClick={() => {
-                    setCurrentView("evaluations");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} 
-                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("evaluations")}`}
-                >
-                  <i className="fas fa-clipboard-check mr-3 w-5" />
-                  Sistema de Evaluaciones
-                </button>
-              </li>
+                  {/* 3. PERFILES DE RECLUTAMIENTO */}
+                  <li>
+                    <button 
+                      onClick={() => {
+                        setCurrentView("profiles");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }} 
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles")}`}
+                    >
+                      <i className="fas fa-briefcase mr-3 w-5" />
+                      Perfiles de Reclutamiento
+                      {stats.activeProfiles > 0 && (
+                        <span className="ml-auto bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                          {stats.activeProfiles}
+                        </span>
+                      )}
+                    </button>
+                  </li>
 
-              <li>
-                <button 
-                  onClick={() => {
-                    setCurrentView("profiles-status");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} 
-                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles-status")}`}
-                >
-                  <i className="fas fa-tasks mr-3 w-5" />
-                  Estado de Perfiles
-                </button>
-              </li>
+                  {/* 4. CANDIDATOS */}
+                  <li>
+                    <button 
+                      onClick={() => {
+                        setCurrentView("candidates");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }} 
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}
+                    >
+                      <i className="fas fa-user-tie mr-3 w-5" />
+                      Candidatos
+                    </button>
+                  </li>
 
-              <li>
-                <button 
-                  onClick={() => {
-                    setCurrentView("candidates-status");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} 
-                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates-status")}`}
-                >
-                  <i className="fas fa-user-check mr-3 w-5" />
-                  Estado de Candidatos
-                </button>
-              </li>
+                  {/* 5. SISTEMA DE EVALUACIONES */}
+                  <li>
+                    <button 
+                      onClick={() => {
+                        setCurrentView("evaluations");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }} 
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("evaluations")}`}
+                    >
+                      <i className="fas fa-clipboard-check mr-3 w-5" />
+                      Sistema de Evaluaciones
+                    </button>
+                  </li>
 
-              <li>
-                <button 
-                  onClick={() => {
-                    setCurrentView("shortlisted-candidates");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} 
-                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("shortlisted-candidates")}`}
-                >
-                  <i className="fas fa-star mr-3 w-5" />
-                  Preseleccionados
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => {
-                    setCurrentView("selected-candidates");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} 
-                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("selected-candidates")}`}
-                >
-                  <i className="fas fa-user-check mr-3 w-5" />
-                  Candidatos Seleccionados
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => {
-                    setCurrentView("individual-reports");
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }} 
-                  className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("individual-reports")}`}
-                >
-                  <i className="fas fa-file-alt mr-3 w-5" />
-                  Reportes Individuales
-                </button>
-              </li>
+                  {/* 6. AVANCE DE CLIENTE - DESACTIVADO */}
+                  <li>
+                    <button 
+                      disabled
+                      className="sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-not-allowed transition-all w-full opacity-50 bg-gray-100 text-gray-500"
+                    >
+                      <i className="fas fa-chart-area mr-3 w-5" />
+                      Avance de Cliente
+                      <i className="fas fa-lock ml-auto text-xs"></i>
+                    </button>
+                  </li>
 
-              
+                  {/* 7. REPORTES - DESACTIVADO */}
+                  <li>
+                    <button 
+                      disabled
+                      className="sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-not-allowed transition-all w-full opacity-50 bg-gray-100 text-gray-500"
+                    >
+                      <i className="fas fa-chart-bar mr-3 w-5" />
+                      Reportes
+                      <i className="fas fa-lock ml-auto text-xs"></i>
+                    </button>
+                  </li>
 
-              
+                  {/* 8. ESTADO DE PERFILES */}
+                  <li>
+                    <button 
+                      onClick={() => {
+                        setCurrentView("profiles-status");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }} 
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles-status")}`}
+                    >
+                      <i className="fas fa-tasks mr-3 w-5" />
+                      Estado de Perfiles
+                    </button>
+                  </li>
 
-            </ul>
+                  {/* 9. ESTADO DE CANDIDATOS */}
+                  <li>
+                    <button 
+                      onClick={() => {
+                        setCurrentView("candidates-status");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }} 
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates-status")}`}
+                    >
+                      <i className="fas fa-user-check mr-3 w-5" />
+                      Estado de Candidatos
+                    </button>
+                  </li>
 
-            
+                  {/* 10. PRESELECCIONADOS */}
+                  <li>
+                    <button 
+                      onClick={() => {
+                        setCurrentView("shortlisted-candidates");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }} 
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("shortlisted-candidates")}`}
+                    >
+                      <i className="fas fa-star mr-3 w-5" />
+                      Preseleccionados
+                    </button>
+                  </li>
 
-            {/* Quick Actions */}
-            <div className="mt-8 pt-6 border-t border-gray-100">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Acciones Rápidas</h3>
-              <div className="space-y-2">
-                <button onClick={openNewProcessModal} className="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-                  <i className="fas fa-plus mr-3" />
-                  Nuevo Proceso
-                </button>
-                <button onClick={openUploadCVModal} className="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-                  <i className="fas fa-upload mr-3" />
-                  Subir CV
-                </button>
-                <button onClick={generateReport} className="w-full flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors">
-                  <i className="fas fa-download mr-3" />
-                  Generar Reporte
-                </button>
+                  {/* 11. CANDIDATOS SELECCIONADOS */}
+                  <li>
+                    <button 
+                      onClick={() => {
+                        setCurrentView("selected-candidates");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }} 
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("selected-candidates")}`}
+                    >
+                      <i className="fas fa-user-check mr-3 w-5" />
+                      Candidatos Seleccionados
+                    </button>
+                  </li>
+
+                  {/* 12. REPORTES INDIVIDUALES */}
+                  <li>
+                    <button 
+                      onClick={() => {
+                        setCurrentView("individual-reports");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }} 
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("individual-reports")}`}
+                    >
+                      <i className="fas fa-file-alt mr-3 w-5" />
+                      Reportes Individuales
+                    </button>
+                  </li>
+                </ul>
               </div>
             </div>
-          </div>
-          </div>
         </div>
         </aside>
 
