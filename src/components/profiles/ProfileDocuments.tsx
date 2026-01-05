@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getProfiles, getProfileDocuments, uploadProfileDocument, apiClient } from "@/lib/api";
+import { useModal } from "@/context/ModalContext";
 
 interface ProfileDocument {
   id: number;
@@ -30,6 +31,7 @@ export default function ProfileDocuments() {
     description: "",
     file: null as File | null,
   });
+  const { showConfirm, showSuccess, showError } = useModal();
 
   useEffect(() => {
     loadProfiles();
@@ -99,9 +101,8 @@ export default function ProfileDocuments() {
   };
 
   const handleDelete = async (docId: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) {
-      return;
-    }
+    const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar este documento?');
+    if (!confirmed) return;
 
     try {
       await apiClient.deleteProfileDocument(docId);

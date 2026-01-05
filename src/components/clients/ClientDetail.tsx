@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api";
+import { useModal } from "@/context/ModalContext";
 
 interface Client {
   id?: number;
@@ -38,6 +39,7 @@ interface ClientDetailProps {
 export default function ClientDetail({ clientId, onBack, onEdit, onDelete }: ClientDetailProps) {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
+  const { showConfirm, showAlert, showSuccess, showError } = useModal();
 
   useEffect(() => {
     loadClient();
@@ -50,7 +52,7 @@ export default function ClientDetail({ clientId, onBack, onEdit, onDelete }: Cli
       setClient(data as Client);
     } catch (error) {
       console.error("Error loading client:", error);
-      alert("Error al cargar el cliente");
+      await showError("Error al cargar el cliente");
     } finally {
       setLoading(false);
     }
@@ -65,14 +67,15 @@ export default function ClientDetail({ clientId, onBack, onEdit, onDelete }: Cli
   const handleDelete = async () => {
     if (!client?.id) return;
     
-    if (confirm(`¿Estás seguro de que deseas eliminar el cliente "${client.company_name}"?`)) {
+    const confirmed = await showConfirm(`¿Estás seguro de que deseas eliminar el cliente "${client.company_name}"?`);
+    if (confirmed) {
       try {
         await apiClient.deleteClient(client.id);
-        alert("Cliente eliminado exitosamente");
+        await showSuccess("Cliente eliminado exitosamente");
         onBack();
       } catch (error) {
         console.error("Error deleting client:", error);
-        alert("Error al eliminar el cliente");
+        await showError("Error al eliminar el cliente");
       }
     }
   };

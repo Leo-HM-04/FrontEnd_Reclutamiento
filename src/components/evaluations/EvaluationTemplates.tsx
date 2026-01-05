@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from "@/context/ModalContext";
 
 interface EvaluationTemplate {
   id: number;
@@ -41,6 +42,7 @@ export default function EvaluationTemplates() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareLink, setShareLink] = useState("");
   const [shareLoading, setShareLoading] = useState(false);
+  const { showConfirm, showAlert, showSuccess, showError } = useModal();
 
   const categories = [
     { value: "technical", label: "Técnica" },
@@ -121,7 +123,8 @@ export default function EvaluationTemplates() {
       return;
     }
     
-    if (!confirm(`¿Estás seguro de eliminar la plantilla "${template.title}"?\n\nEsta acción no se puede deshacer.`)) return;
+    const confirmed = await showConfirm(`¿Estás seguro de eliminar la plantilla "${template.title}"? Esta acción no se puede deshacer.`);
+      if (!confirmed) return;
     
     try {
       const token = localStorage.getItem("authToken");

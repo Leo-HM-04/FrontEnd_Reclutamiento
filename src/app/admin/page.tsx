@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, type User, type AdminDashboardStats, type UserActivity } from '@/lib/api';
+import { useModal } from "@/context/ModalContext";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -140,6 +141,10 @@ const [profileForm, setProfileForm] = useState({
     role: 'supervisor' as 'admin' | 'director' | 'supervisor',
     phone: '',
   });
+
+
+  // Notificactiosn Modal
+  const { showConfirm, showSuccess, showError } = useModal();
 
   // ============================================================
   // LIFECYCLE - Initial Load

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api";
+import { useModal } from "@/context/ModalContext";
 
 interface ClientFormProps {
   clientId?: number;
@@ -11,6 +12,7 @@ interface ClientFormProps {
 export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
+  const { showAlert, showSuccess, showError } = useModal();
   
   const [formData, setFormData] = useState({
     // Información de la Empresa
@@ -134,10 +136,10 @@ export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
 
       if (clientId) {
         await apiClient.updateClient(clientId, submitData);
-        alert("Cliente actualizado exitosamente");
+        await showSuccess("Cliente actualizado exitosamente");
       } else {
         await apiClient.createClient(submitData);
-        alert("Cliente creado exitosamente");
+        await showSuccess("Cliente creado exitosamente");
       }
       
       if (onSuccess) onSuccess();
@@ -163,7 +165,7 @@ export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
         errorMsg = error.message;
       }
       
-      alert(`Error al guardar cliente:\n\n${errorMsg}`);
+      await showError(`Error al guardar cliente: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -221,11 +223,15 @@ export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
                 type="text"
                 name="rfc"
                 value={formData.rfc}
-                onChange={handleChange}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase();
+                  setFormData(prev => ({ ...prev, rfc: value }));
+                }}
+                maxLength={13}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 placeholder="Ej: ABC123456XYZ"
               />
-            </div>
+                          </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

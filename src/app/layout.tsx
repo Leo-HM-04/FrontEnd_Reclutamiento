@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { ModalProvider } from "@/context/ModalContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,16 +22,16 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        {/* Font Awesome */}
         <link
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
         />
-        {/* Chart.js */}
         <Script src="https://cdn.jsdelivr.net/npm/chart.js" strategy="afterInteractive" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <ModalProvider>
+          {children}
+        </ModalProvider>
       </body>
     </html>
   );

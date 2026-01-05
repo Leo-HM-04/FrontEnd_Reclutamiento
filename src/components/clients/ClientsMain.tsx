@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/api";
 import ClientDetail from "./ClientDetail";
 import ClientForm from "./ClientForm";
 import AddContactModal from "./AddContactModal";
+import { useModal } from "@/context/ModalContext";
 
 
 type ClientView = 
@@ -42,6 +43,7 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [industryFilter, setIndustryFilter] = useState("all");
+  const { showConfirm, showAlert, showSuccess, showError } = useModal();
 
   // Load data when view changes
   useEffect(() => {
@@ -119,14 +121,15 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
   };
 
   const handleDeleteClient = async (clientId: number) => {
-    if (confirm('¿Estás seguro de que deseas eliminar este cliente?')) {
+    const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar este cliente?');
+    if (confirmed) {
       try {
         await apiClient.deleteClient(clientId);
-        alert('Cliente eliminado exitosamente');
+        await showSuccess('Cliente eliminado exitosamente');
         loadData();
       } catch (error) {
         console.error('Error deleting client:', error);
-        alert('Error al eliminar el cliente');
+        await showError('Error al eliminar el cliente');
       }
     }
   };
