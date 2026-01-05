@@ -481,3 +481,55 @@ export interface ClientFullReportData {
   profiles_by_status: Record<string, number>;
   generated_at: string;
 }
+
+// ════════════════════════════════════════════════════════════════════
+// MÉTRICAS COMBINADAS PARA REPORTES
+// ════════════════════════════════════════════════════════════════════
+
+export async function getCombinedMetrics() {
+  try {
+    const response = await fetch(
+      `${API_URL}/api/director/reports/combined-metrics/`,
+      {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching combined metrics:', error);
+    throw error;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// HELPERS DE CÁLCULO (NUEVOS)
+// ════════════════════════════════════════════════════════════════════
+
+export function calculateTrend(current: number, previous: number): {
+  value: number;
+  isPositive: boolean;
+  percentage: number;
+} {
+  if (previous === 0) {
+    return { value: current, isPositive: true, percentage: 0 };
+  }
+  
+  const diff = current - previous;
+  const percentage = (diff / previous) * 100;
+  
+  return {
+    value: diff,
+    isPositive: diff >= 0,
+    percentage: Math.abs(percentage),
+  };
+}
+
+export function formatPercentage(value: number, decimals: number = 1): string {
+  return `${value.toFixed(decimals)}%`;
+}
