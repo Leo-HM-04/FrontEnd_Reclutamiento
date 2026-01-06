@@ -879,7 +879,7 @@ useEffect(() => {
     try {
       const token = localStorage.getItem('authToken');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/profiles/${profileId}/generate_share_link/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/profiles/profiles/${profileId}/generate_share_link/`,
         {
           method: 'POST',
           headers: {
