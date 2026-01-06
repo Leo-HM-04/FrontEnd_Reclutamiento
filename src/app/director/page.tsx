@@ -20,6 +20,7 @@ import SelectedCandidatesDashboard from '@/components/SelectedCandidatesDashboar
 import ReportsDashboard from '@/components/ReportsDashboard';
 import IndividualReportsHub from '@/components/reports/IndividualReportsHub';
 import DirectorReportsHub from '@/components/reports/DirectorReportsHub';
+import ShareLinkModal from '@/components/ShareLinkModal';
 
 type Stats = {
   activeProcesses: number;
@@ -252,6 +253,15 @@ export default function Page() {
       setCurrentView(savedView as any);
     }
   }, []);
+
+
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareLink, setShareLink] = useState('');
+  const [selectedProfileForShare, setSelectedProfileForShare] = useState<{
+    profileId: number;
+    profileTitle: string;
+    clientName: string;
+  } | null>(null);
 
   // Guardar la vista actual en localStorage cada vez que cambie (DESPUÉS)
   useEffect(() => {
@@ -849,6 +859,41 @@ useEffect(() => {
   const viewDocument = (id: number) => info(`Viendo documento ${id}...`);
   const downloadDocument = (id: number) => info(`Descargando documento ${id}...`);
   const deleteDocument = (id: number) => warning(`Eliminando documento ${id}...`);
+
+
+  const handleGenerateShareLink = async (
+    profileId: number,
+    profileTitle: string,
+    clientName: string
+  ) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/profiles/${profileId}/generate_share_link/`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error('Error al generar enlace');
+
+      const data = await response.json();
+      setShareLink(data.share_url);
+      setSelectedProfileForShare({
+        profileId: data.profile_id,
+        profileTitle: data.position_title,
+        clientName: data.client_name,
+      });
+      setShareModalOpen(true);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al generar enlace para compartir');
+    }
+  };
 
   // ====== Funciones para datos de Celery ======
   const loadCeleryData = async () => {
