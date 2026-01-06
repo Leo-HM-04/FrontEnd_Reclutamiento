@@ -254,6 +254,12 @@ export default function Page() {
     }
   }, []);
 
+  useEffect(() => {
+    if (currentView === 'client-progress') {
+      loadClientProgressProfiles();
+    }
+  }, [currentView]);
+
 
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareLink, setShareLink] = useState('');
@@ -276,6 +282,10 @@ export default function Page() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+
+  const [clientProgressProfiles, setClientProgressProfiles] = useState<any[]>([]);
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
 
   const [stats, setStats] = useState<Stats>({
     activeProcesses: 0,
@@ -892,6 +902,32 @@ useEffect(() => {
     } catch (error) {
       console.error('Error:', error);
       alert('Error al generar enlace para compartir');
+    }
+  };
+
+  const loadClientProgressProfiles = async () => {
+    setLoadingProfiles(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/profiles/profiles/`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const profilesList = data.results || data;
+        setClientProgressProfiles(profilesList);
+      }
+    } catch (error) {
+      console.error('Error loading profiles:', error);
+    } finally {
+      setLoadingProfiles(false);
     }
   };
 
@@ -1650,17 +1686,25 @@ const loadApplicationsData = async () => {
                     </button>
                   </li>
 
-                  {/* 6. AVANCE DE CLIENTE - DESACTIVADO */}
-                  <li>
-                    <button 
-                      disabled
-                      className="sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-not-allowed transition-all w-full opacity-50 bg-gray-100 text-gray-500"
-                    >
-                      <i className="fas fa-chart-area mr-3 w-5" />
-                      Avance de Cliente
-                      <i className="fas fa-lock ml-auto text-xs"></i>
-                    </button>
-                  </li>
+                  {/* 6. AVANCE DE CLIENTE - ACTIVO ✅ */}
+                    <li>
+                      <button 
+                        onClick={() => {
+                          setCurrentView("client-progress");
+                          if (window.innerWidth < 1024) {
+                            setSidebarOpen(false);
+                          }
+                        }}
+                        className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${
+                          currentView === "client-progress"
+                            ? "bg-primary-600 text-white"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        <i className="fas fa-chart-area mr-3 w-5" />
+                        Avance de Cliente
+                      </button>
+                    </li>
 
                   {/* REPORTES */}
                   <li>
@@ -3198,384 +3242,154 @@ const loadApplicationsData = async () => {
           {/* REPORTES - CENTRO DE INTELIGENCIA */}
           {currentView === "reports" && <DirectorReportsHub />}
 
-          {/* AVANCE DE CLIENTE */}
           {currentView === "client-progress" && (
-            <div className="p-6">
-              <div className="mb-8">
+            <div className="space-y-6">
+              {/* Header */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                      <i className="fas fa-chart-line mr-3 text-blue-600" />
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <i className="fas fa-chart-line mr-3 text-blue-600"></i>
                       Avance de Cliente
                     </h2>
-                    <p className="text-gray-600">
-                      Visualiza el progreso de los procesos de reclutamiento para cada cliente
+                    <p className="text-gray-600 mt-1">
+                      Comparte el progreso de los procesos de reclutamiento con tus clientes
                     </p>
                   </div>
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      alert('¡Enlace del dashboard copiado al portapapeles!');
-                    }}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 font-medium flex items-center shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                  >
-                    <i className="fas fa-share-alt mr-2" />
-                    Compartir Dashboard
-                  </button>
+                </div>
+
+                {/* Información educativa */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center">
+                    <i className="fas fa-info-circle mr-2"></i>
+                    ¿Cómo funciona?
+                  </h3>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Genera un enlace único para cada perfil de reclutamiento</li>
+                    <li>• Comparte el enlace con tu cliente por email o mensaje</li>
+                    <li>• El cliente puede ver el avance en tiempo real sin iniciar sesión</li>
+                    <li>• El enlace se actualiza automáticamente conforme avanza el proceso</li>
+                  </ul>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Lista de Clientes */}
-                <div className="lg:col-span-1">
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div className="p-4 border-b border-gray-200">
-                      <h3 className="text-lg font-semibold text-gray-900">Clientes Activos</h3>
+              {/* Estadísticas rápidas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-100 text-sm font-medium">Perfiles Activos</p>
+                      <p className="text-4xl font-bold mt-2">
+                        {clientProgressProfiles.filter((p: any) => 
+                          p.status !== 'cancelled' && p.status !== 'completed'
+                        ).length}
+                      </p>
                     </div>
-                    <div className="divide-y divide-gray-200">
-                      {[
-                        { id: 1, name: 'Proyecto TechCorp', company: 'TechCorp Industries', progress: 60, phase: 3, assignedTo: 'Juan Pérez' },
-                        { id: 2, name: 'Reclutamiento StartupXYZ', company: 'StartupXYZ', progress: 40, phase: 2, assignedTo: 'María García' },
-                        { id: 3, name: 'Expansión GlobalTech', company: 'GlobalTech Solutions', progress: 80, phase: 4, assignedTo: 'Carlos Rodríguez' },
-                      ].map((client) => (
-                        <div key={client.id} className="p-4 hover:bg-gray-50 cursor-pointer transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-gray-900 mb-1">{client.name}</h4>
-                              <p className="text-sm text-gray-600 mb-2 flex items-center">
-                                <i className="fas fa-building w-3 h-3 mr-2" />
-                                {client.company}
-                              </p>
-                              <p className="text-xs text-gray-500 flex items-center">
-                                <i className="fas fa-user-tie w-3 h-3 mr-2" />
-                                {client.assignedTo}
-                              </p>
-                            </div>
-                            <div className="ml-4 text-right">
-                              <div className="text-2xl font-bold text-blue-600">{client.progress}%</div>
-                              <div className="text-xs text-gray-500">Completado</div>
-                            </div>
-                          </div>
-                          
-                          {/* Barra de progreso */}
-                          <div className="mt-3">
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${client.progress}%` }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Estadísticas rápidas */}
-                  <div className="mt-6 grid grid-cols-2 gap-4">
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                      <div className="text-3xl font-bold text-green-600 mb-1">3</div>
-                      <div className="text-sm text-gray-600">Clientes Activos</div>
-                    </div>
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                      <div className="text-3xl font-bold text-blue-600 mb-1">60%</div>
-                      <div className="text-sm text-gray-600">Progreso Promedio</div>
+                    <div className="bg-white bg-opacity-20 rounded-full p-4">
+                      <i className="fas fa-briefcase text-3xl"></i>
                     </div>
                   </div>
                 </div>
 
-                {/* Timeline de Progreso */}
-                <div className="lg:col-span-2">
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    {/* Header */}
-                    <div className="mb-8 pb-6 border-b border-gray-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h3 className="text-2xl font-bold text-gray-900">Proyecto TechCorp</h3>
-                          <p className="text-gray-600 flex items-center mt-1">
-                            <i className="fas fa-building w-4 h-4 mr-2" />
-                            TechCorp Industries
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-4xl font-bold text-blue-600">60%</div>
-                          <div className="text-sm text-gray-500">Progreso Total</div>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4 mt-4">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="fas fa-calendar-alt w-4 h-4 mr-2 text-gray-400" />
-                          Inicio: 15 Ene 2025
-                        </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <i className="fas fa-user-tie w-4 h-4 mr-2 text-gray-400" />
-                          Asignado a: Juan Pérez
-                        </div>
-                      </div>
+                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-100 text-sm font-medium">Perfiles Completados</p>
+                      <p className="text-4xl font-bold mt-2">
+                        {clientProgressProfiles.filter((p: any) => p.status === 'completed').length}
+                      </p>
                     </div>
-
-                    {/* Timeline de Fases */}
-                    <div className="space-y-6">
-                      {[
-                        { 
-                          id: 1, 
-                          name: 'Definición de Necesidades', 
-                          icon: 'fas fa-lightbulb', 
-                          status: 'completed', 
-                          date: '15/01/2025', 
-                          description: 'Análisis inicial y definición de requisitos del cliente',
-                          details: {
-                            duration: '5 días',
-                            participants: ['Director de Proyecto', 'Cliente', 'Analista de Negocio'],
-                            deliverables: ['Documento de Requisitos', 'Perfil del Candidato Ideal', 'Plan de Reclutamiento'],
-                            notes: 'Se realizaron 3 reuniones con el cliente para definir las necesidades específicas del puesto.'
-                          }
-                        },
-                        { 
-                          id: 2, 
-                          name: 'Búsqueda y Selección', 
-                          icon: 'fas fa-users', 
-                          status: 'completed', 
-                          date: '25/01/2025', 
-                          description: 'Reclutamiento activo y filtrado de candidatos',
-                          details: {
-                            duration: '10 días',
-                            participants: ['Reclutador', 'Coordinador de Talento'],
-                            deliverables: ['Base de Candidatos (50+)', 'Pre-filtro Inicial', 'Shortlist (15 candidatos)'],
-                            notes: 'Se utilizaron múltiples canales: LinkedIn, bolsas de trabajo, referidos internos.'
-                          }
-                        },
-                        { 
-                          id: 3, 
-                          name: 'Evaluación', 
-                          icon: 'fas fa-chart-bar', 
-                          status: 'in-progress', 
-                          date: null, 
-                          description: 'Entrevistas y evaluaciones técnicas',
-                          details: {
-                            duration: '15 días (estimado)',
-                            participants: ['Panel de Entrevistadores', 'Evaluador Técnico', 'Psicólogo Organizacional'],
-                            deliverables: ['Reportes de Entrevistas', 'Evaluaciones Técnicas', 'Perfiles Psicométricos'],
-                            notes: 'Proceso en curso: 8 entrevistas completadas, 7 pendientes. 3 candidatos en evaluación técnica.'
-                          }
-                        },
-                        { 
-                          id: 4, 
-                          name: 'Proceso de Onboarding', 
-                          icon: 'fas fa-cog', 
-                          status: 'pending', 
-                          date: null, 
-                          description: 'Integración y capacitación del personal',
-                          details: {
-                            duration: '20 días (estimado)',
-                            participants: ['RH del Cliente', 'Responsable de Capacitación', 'Mentor Asignado'],
-                            deliverables: ['Plan de Onboarding', 'Material de Capacitación', 'Evaluación 30-60-90 días'],
-                            notes: 'Pendiente de iniciar una vez se seleccione al candidato final.'
-                          }
-                        },
-                        { 
-                          id: 5, 
-                          name: 'Cierre y Seguimiento', 
-                          icon: 'fas fa-bullseye', 
-                          status: 'pending', 
-                          date: null, 
-                          description: 'Finalización del proyecto y seguimiento post-colocación',
-                          details: {
-                            duration: '90 días (seguimiento)',
-                            participants: ['Director de Proyecto', 'Cliente', 'Supervisor del Candidato'],
-                            deliverables: ['Reporte de Cierre', 'Encuesta de Satisfacción', 'Plan de Seguimiento'],
-                            notes: 'Se realizará seguimiento mensual durante los primeros 3 meses.'
-                          }
-                        },
-                      ].map((phase, index, array) => {
-                        const isExpanded = expandedPhases.has(phase.id);
-                        
-                        return (
-                          <div key={phase.id} className="relative">
-                            {/* Línea conectora */}
-                            {index < array.length - 1 && (
-                              <div
-                                className={`absolute left-8 top-16 w-0.5 h-full ${
-                                  phase.status === 'completed' ? 'bg-green-300' : 'bg-gray-300'
-                                }`}
-                              />
-                            )}
-
-                            <div className="flex items-start">
-                              {/* Icono de fase */}
-                              <div
-                                className={`relative z-10 flex items-center justify-center w-16 h-16 rounded-full border-4 ${
-                                  phase.status === 'completed'
-                                    ? 'text-green-600 bg-green-100 border-green-300'
-                                    : phase.status === 'in-progress'
-                                    ? 'text-blue-600 bg-blue-100 border-blue-300'
-                                    : 'text-gray-400 bg-gray-100 border-gray-300'
-                                }`}
-                              >
-                                <i className={`${phase.icon} text-2xl`} />
-                              </div>
-
-                              {/* Contenido de la fase */}
-                              <div className="ml-6 flex-1">
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="text-lg font-semibold text-gray-900">{phase.name}</h4>
-                                  <div className="flex items-center gap-3">
-                                    <i
-                                      className={`fas ${
-                                        phase.status === 'completed'
-                                          ? 'fa-check-circle text-green-600'
-                                          : phase.status === 'in-progress'
-                                          ? 'fa-spinner fa-spin text-blue-600'
-                                          : 'fa-circle text-gray-400'
-                                      } w-5 h-5`}
-                                    />
-                                    <span
-                                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                        phase.status === 'completed'
-                                          ? 'bg-green-100 text-green-800'
-                                          : phase.status === 'in-progress'
-                                          ? 'bg-blue-100 text-blue-800'
-                                          : 'bg-gray-100 text-gray-600'
-                                      }`}
-                                    >
-                                      {phase.status === 'completed'
-                                        ? 'Completado'
-                                        : phase.status === 'in-progress'
-                                        ? 'En Progreso'
-                                        : 'Pendiente'}
-                                    </span>
-                                    <button
-                                      onClick={() => {
-                                        const newExpanded = new Set(expandedPhases);
-                                        if (isExpanded) {
-                                          newExpanded.delete(phase.id);
-                                        } else {
-                                          newExpanded.add(phase.id);
-                                        }
-                                        setExpandedPhases(newExpanded);
-                                      }}
-                                      className="px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors flex items-center gap-1"
-                                    >
-                                      <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'}`} />
-                                      Ver Detalle
-                                    </button>
-                                  </div>
-                                </div>
-                                
-                                <p className="text-gray-600 text-sm mb-3">{phase.description}</p>
-                                
-                                {phase.date && (
-                                  <p className="text-xs text-gray-500 flex items-center">
-                                    <i className="fas fa-check-circle w-3 h-3 mr-2 text-green-600" />
-                                    Completado el {phase.date}
-                                  </p>
-                                )}
-
-                                {/* Detalles adicionales para fase en progreso */}
-                                {phase.status === 'in-progress' && !isExpanded && (
-                                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                    <p className="text-sm font-semibold text-blue-900 mb-2">Acciones Actuales:</p>
-                                    <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                                      <li>Revisión de perfiles en progreso</li>
-                                      <li>3 entrevistas programadas esta semana</li>
-                                      <li>Evaluación técnica pendiente</li>
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {/* Sección expandida con detalles completos */}
-                                {isExpanded && (
-                                  <div className="mt-4 space-y-4 animate-fade-in">
-                                    <div className="bg-gray-50 rounded-lg border border-gray-200 p-5">
-                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        {/* Duración */}
-                                        <div>
-                                          <div className="flex items-center mb-3">
-                                            <i className="fas fa-clock text-indigo-600 w-5 h-5 mr-2" />
-                                            <h5 className="font-semibold text-gray-900">Duración</h5>
-                                          </div>
-                                          <p className="text-gray-700 text-sm pl-7">{phase.details.duration}</p>
-                                        </div>
-
-                                        {/* Participantes */}
-                                        <div>
-                                          <div className="flex items-center mb-3">
-                                            <i className="fas fa-users text-purple-600 w-5 h-5 mr-2" />
-                                            <h5 className="font-semibold text-gray-900">Participantes</h5>
-                                          </div>
-                                          <ul className="text-sm text-gray-700 space-y-1 pl-7">
-                                            {phase.details.participants.map((p, idx) => (
-                                              <li key={idx} className="flex items-center">
-                                                <i className="fas fa-user-circle w-3 h-3 mr-2 text-purple-400" />
-                                                {p}
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        </div>
-
-                                        {/* Entregables */}
-                                        <div className="md:col-span-2">
-                                          <div className="flex items-center mb-3">
-                                            <i className="fas fa-file-alt text-green-600 w-5 h-5 mr-2" />
-                                            <h5 className="font-semibold text-gray-900">Entregables</h5>
-                                          </div>
-                                          <ul className="text-sm text-gray-700 space-y-1 pl-7">
-                                            {phase.details.deliverables.map((d, idx) => (
-                                              <li key={idx} className="flex items-center">
-                                                <i className="fas fa-check-square w-3 h-3 mr-2 text-green-500" />
-                                                {d}
-                                              </li>
-                                            ))}
-                                          </ul>
-                                        </div>
-
-                                        {/* Notas */}
-                                        <div className="md:col-span-2">
-                                          <div className="flex items-center mb-3">
-                                            <i className="fas fa-sticky-note text-amber-600 w-5 h-5 mr-2" />
-                                            <h5 className="font-semibold text-gray-900">Notas</h5>
-                                          </div>
-                                          <p className="text-sm text-gray-700 pl-7 leading-relaxed">
-                                            {phase.details.notes}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Botón de acción adicional en el detalle expandido */}
-                                    {phase.status === 'in-progress' && (
-                                      <div className="flex gap-3">
-                                        <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center">
-                                          <i className="fas fa-tasks mr-2" />
-                                          Ver Tareas Pendientes
-                                        </button>
-                                        <button className="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium flex items-center justify-center">
-                                          <i className="fas fa-calendar-plus mr-2" />
-                                          Programar Reunión
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Footer con botón de acción */}
-                    <div className="mt-8 pt-6 border-t border-gray-200 flex justify-between items-center">
-                      <button className="px-6 py-2.5 text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors font-medium">
-                        Ver Detalles Completos
-                      </button>
-                      <button className="px-6 py-2.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium flex items-center">
-                        <i className="fas fa-trophy mr-2" />
-                        Generar Reporte
-                      </button>
+                    <div className="bg-white bg-opacity-20 rounded-full p-4">
+                      <i className="fas fa-check-circle text-3xl"></i>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Lista de perfiles */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <i className="fas fa-list mr-2 text-gray-600"></i>
+                    Perfiles Disponibles para Compartir
+                  </h3>
+                </div>
+
+                <div className="p-6">
+                  {loadingProfiles ? (
+                    <div className="text-center py-12">
+                      <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+                      <p className="text-gray-600">Cargando perfiles...</p>
+                    </div>
+                  ) : clientProgressProfiles.length > 0 ? (
+                    <div className="space-y-4">
+                      {clientProgressProfiles
+                        .filter((profile: any) => profile.status !== 'cancelled')
+                        .map((profile: any) => (
+                          <div
+                            key={profile.id}
+                            className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                {/* Título y cliente */}
+                                <div className="mb-3">
+                                  <h4 className="text-lg font-semibold text-gray-900 mb-1">
+                                    {profile.position_title}
+                                  </h4>
+                                  <p className="text-gray-600 flex items-center">
+                                    <i className="fas fa-building mr-2 text-gray-400"></i>
+                                    {profile.client_name}
+                                  </p>
+                                </div>
+
+                                {/* Info adicional */}
+                                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                                  <span className="flex items-center">
+                                    <i className="fas fa-map-marker-alt mr-2 text-gray-400"></i>
+                                    {profile.location_city || 'No especificado'}
+                                  </span>
+                                  <span className="flex items-center">
+                                    <i className="fas fa-calendar mr-2 text-gray-400"></i>
+                                    {new Date(profile.created_at).toLocaleDateString('es-ES')}
+                                  </span>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                    profile.status === 'completed'
+                                      ? 'bg-green-100 text-green-800'
+                                      : profile.status === 'cancelled'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {profile.status_display || profile.status}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Botón de compartir */}
+                              <button
+                                onClick={() => handleGenerateShareLink(
+                                  profile.id,
+                                  profile.position_title,
+                                  profile.client_name
+                                )}
+                                className="ml-4 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-medium flex items-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                              >
+                                <i className="fas fa-share-alt"></i>
+                                Compartir Avance
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <i className="fas fa-folder-open text-6xl text-gray-300 mb-4"></i>
+                      <p className="text-gray-600 text-lg">No hay perfiles disponibles</p>
+                      <p className="text-gray-500 text-sm mt-2">
+                        Los perfiles aparecerán aquí cuando se creen procesos de reclutamiento
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -4444,6 +4258,16 @@ const loadApplicationsData = async () => {
           onClose={() => setShowClientForm(false)}
           onSuccess={success}
         />
+
+        {shareModalOpen && selectedProfileForShare && (
+          <ShareLinkModal
+            isOpen={shareModalOpen}
+            onClose={() => setShareModalOpen(false)}
+            shareLink={shareLink}
+            profileTitle={selectedProfileForShare.profileTitle}
+            clientName={selectedProfileForShare.clientName}
+          />
+        )}
       </div>
     </div>
   );
