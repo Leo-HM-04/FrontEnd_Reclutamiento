@@ -877,7 +877,7 @@ useEffect(() => {
     clientName: string
   ) => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem('authToken');
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/profiles/${profileId}/generate_share_link/`,
         {
