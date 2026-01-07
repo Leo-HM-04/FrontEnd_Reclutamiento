@@ -21,6 +21,7 @@ import ReportsDashboard from '@/components/ReportsDashboard';
 import IndividualReportsHub from '@/components/reports/IndividualReportsHub';
 import DirectorReportsHub from '@/components/reports/DirectorReportsHub';
 import ShareLinkModal from '@/components/ShareLinkModal';
+import EmailManagement from '@/components/EmailManagement'; 
 
 type Stats = {
   activeProcesses: number;
@@ -243,7 +244,7 @@ export default function Page() {
   // ====== State principal (equivalente a directorApp) ======
   // Intentar restaurar la vista desde localStorage, si no existe usar "dashboard"
   const [currentView, setCurrentView] = useState<
-    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates" | "individual-reports"
+    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates" | "individual-reports" | "email-management" 
   >("dashboard");
 
 // Restaurar vista guardada al montar el componente (PRIMERO)
@@ -1800,6 +1801,21 @@ const loadApplicationsData = async () => {
                       Reportes Individuales
                     </button>
                   </li>
+                  <li>
+                  {/* 12. GESTIÓN DE CORREOS */}
+                  <button
+                    onClick={() => {
+                      setCurrentView("email-management");
+                      if (window.innerWidth < 1024) {
+                        setSidebarOpen(false);
+                      }
+                    }}
+                    className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("email-management")}`}
+                  >
+                    <i className="fas fa-envelope mr-3 w-5" />
+                    Gestión de Correos
+                  </button>
+                </li>
                 </ul>
               </div>
             </div>
@@ -3911,6 +3927,7 @@ const loadApplicationsData = async () => {
           />
         )}
 
+
         {currentView === "candidates-status" && <CandidatesStatusDashboard />}
 
         {currentView === "shortlisted-candidates" && <ShortlistedCandidatesDashboard />}
@@ -4072,6 +4089,9 @@ const loadApplicationsData = async () => {
           )}
 
           {currentView === "profiles-status" && <ProfilesStatusDashboard />}
+
+
+          {currentView === "email-management" && <EmailManagement />}
 
           {/* LISTA DE CONTACTOS */}
           {currentView === "client-contacts" && (
@@ -4268,6 +4288,8 @@ const loadApplicationsData = async () => {
             clientName={selectedProfileForShare.clientName}
           />
         )}
+
+        
       </div>
     </div>
   );

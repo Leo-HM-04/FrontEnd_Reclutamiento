@@ -12,6 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, type User, type AdminDashboardStats, type UserActivity } from '@/lib/api';
 import { useModal } from "@/context/ModalContext";
+import EmailManagement from '@/components/EmailManagement';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -1153,6 +1154,9 @@ const getPriorityDisplay = (priority: string) => {
             <p className="text-xs text-gray-600">Backend Conectado ✓</p>
           </div>
         </aside>
+
+
+
 
         {/* Main Content */}
         <main 

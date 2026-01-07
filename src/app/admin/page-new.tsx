@@ -11,6 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, type User, type AdminDashboardStats, type UserActivity } from '@/lib/api';
+import EmailManagement from '@/components/EmailManagement'; 
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -765,6 +766,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+              
 
               {/* Users Table */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
