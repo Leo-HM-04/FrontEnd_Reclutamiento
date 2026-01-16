@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useModal } from '@/context/ModalContext';
 import { Chart, ArcElement, Tooltip, Legend, DoughnutController } from "chart.js";
 
 Chart.register(ArcElement, Tooltip, Legend, DoughnutController);
@@ -161,7 +162,7 @@ export default function SupervisorPage() {
           },
         ]);
       } catch (e) {
-        alert("Error cargando el dashboard");
+        await showAlert("Error cargando el dashboard");
         console.error(e);
       } finally {
         setLoading(false);
@@ -217,7 +218,7 @@ export default function SupervisorPage() {
       await new Promise((r) => setTimeout(r, 400));
       console.info("✅ Dashboard actualizado");
     } catch {
-      alert("Error actualizando dashboard");
+      await showAlert("Error actualizando dashboard");
     } finally {
       setLoading(false);
     }

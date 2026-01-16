@@ -9,9 +9,19 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { getCandidateFullReport, formatDate, formatCurrency, getStatusColor, type CandidateFullReportData } from '@/lib/api-reports';
-import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
+import {
+  generatePDF,
+  generateHeader,
+  generateKPIRow,
+  generateSection,
+  generateInfoGrid,
+  generateTable,
+  generateBadge,
+  wrapInPage,
+} from '@/lib/pdf-generator';
 
 interface Props {
   candidateId: number;
@@ -19,6 +29,7 @@ interface Props {
 }
 
 export default function CandidateFullReport({ candidateId, onBack }: Props) {
+  const { showAlert } = useModal();
   const [data, setData] = useState<CandidateFullReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,353 +86,89 @@ export default function CandidateFullReport({ candidateId, onBack }: Props) {
   // ═══════════════════════════════════════════════
   // EXPORTAR A PDF COMPLETO
   // ═══════════════════════════════════════════════
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!data) return;
     
     setExporting(true);
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      let htmlContent = '';
 
-      let yPos = 20;
-      const leftMargin = 15;
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const contentWidth = pageWidth - (leftMargin * 2);
+      // Header institucional
+      htmlContent += generateHeader('REPORTE DE CANDIDATO', data.personal_info.full_name);
 
-      const checkNewPage = (height: number) => {
-        if (yPos + height > pageHeight - 20) {
-          pdf.addPage();
-          yPos = 20;
-        }
-      };
+      // KPIs principales
+      htmlContent += generateKPIRow([
+        { label: 'Aplicaciones', value: data.statistics.total_applications, type: 'primary' },
+        { label: 'Documentos', value: data.statistics.total_documents, type: 'success' },
+        { label: 'Evaluaciones', value: data.statistics.total_evaluations, type: 'accent' },
+        { label: 'Experiencia', value: `${data.personal_info.years_of_experience} años`, type: 'warning' },
+      ]);
 
-      // ============================================
-      // HEADER
-      // ============================================
-      pdf.setFillColor(234, 88, 12);
-      pdf.rect(0, 0, pageWidth, 70, 'F');
-      
-      // Avatar circular
-      pdf.setFillColor(255, 255, 255, 0.2);
-      pdf.circle(leftMargin + 10, 35, 12, 'F');
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(20);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(data.personal_info.full_name.charAt(0), leftMargin + 10, 38, { align: 'center' });
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(24);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(data.personal_info.full_name, leftMargin + 28, 30);
-      
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
+      // Información de contacto
+      htmlContent += generateSection('Información de Contacto',
+        generateInfoGrid([
+          { label: 'Email', value: data.personal_info.email },
+          { label: 'Teléfono', value: data.personal_info.phone },
+          { label: 'Ciudad', value: data.personal_info.location.city },
+          { label: 'Estado', value: data.personal_info.location.state },
+        ])
+      );
+
+      // Información profesional
+      const professionalInfo = [
+        { label: 'Educación', value: data.personal_info.education_level },
+      ];
       if (data.personal_info.current_position) {
-        pdf.text(data.personal_info.current_position, leftMargin + 28, 40);
+        professionalInfo.unshift({ label: 'Posición Actual', value: data.personal_info.current_position });
       }
-      
-      pdf.setFontSize(12);
       if (data.personal_info.current_company) {
-        pdf.text(data.personal_info.current_company, leftMargin + 28, 48);
+        professionalInfo.unshift({ label: 'Empresa Actual', value: data.personal_info.current_company });
       }
-
-      // Contacto
-      pdf.setFontSize(9);
-      let contactY = 60;
-      pdf.text(`📧 ${data.personal_info.email}`, leftMargin, contactY);
-      pdf.text(`📞 ${data.personal_info.phone}`, leftMargin + 70, contactY);
-      pdf.text(`📍 ${data.personal_info.location.city}, ${data.personal_info.location.state}`, leftMargin + 130, contactY);
-
-      yPos = 80;
-      pdf.setTextColor(0, 0, 0);
-
-      // ============================================
-      // ESTADÍSTICAS
-      // ============================================
-      const stats = [
-        { label: 'Aplicaciones', value: data.statistics.total_applications, color: [234, 88, 12] },
-        { label: 'Documentos', value: data.statistics.total_documents, color: [34, 197, 94] },
-        { label: 'Evaluaciones', value: data.statistics.total_evaluations, color: [59, 130, 246] },
-        { label: 'Experiencia', value: `${data.personal_info.years_of_experience} años`, color: [168, 85, 247] },
-      ];
-
-      let xPos = leftMargin;
-      const statWidth = (contentWidth - 15) / 4;
-      stats.forEach((stat) => {
-        pdf.setFillColor(stat.color[0], stat.color[1], stat.color[2]);
-        pdf.roundedRect(xPos, yPos, statWidth, 20, 3, 3, 'F');
-        
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(stat.value.toString(), xPos + statWidth / 2, yPos + 10, { align: 'center' });
-        
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(stat.label, xPos + statWidth / 2, yPos + 16, { align: 'center' });
-        
-        xPos += statWidth + 5;
-      });
-
-      pdf.setTextColor(0, 0, 0);
-      yPos += 28;
-
-      // ============================================
-      // INFORMACIÓN PERSONAL
-      // ============================================
-      checkNewPage(15);
-      pdf.setFillColor(249, 250, 251);
-      pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(234, 88, 12);
-      pdf.text('INFORMACIÓN PERSONAL', leftMargin + 3, yPos + 7);
-      pdf.setTextColor(0, 0, 0);
-      yPos += 15;
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
+      if (data.personal_info.university) {
+        professionalInfo.push({ label: 'Universidad', value: data.personal_info.university });
+      }
       
-      const personalData = [
-        ['Nivel Educativo:', data.personal_info.education_level],
-        ['Universidad:', data.personal_info.university || 'No especificado'],
-        ['Título:', data.personal_info.degree || 'No especificado'],
-      ];
+      htmlContent += generateSection('Información Profesional',
+        generateInfoGrid(professionalInfo)
+      );
 
-      personalData.forEach(([label, value]) => {
-        checkNewPage(6);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(label, leftMargin, yPos);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(value, leftMargin + 45, yPos);
-        yPos += 6;
-      });
-
-      // Expectativa Salarial
-      if (data.personal_info.salary_expectation) {
-        checkNewPage(6);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Expectativa Salarial:', leftMargin, yPos);
-        pdf.setFont('helvetica', 'normal');
-        const salaryText = `${formatCurrency(data.personal_info.salary_expectation.min, data.personal_info.salary_expectation.currency)} - ${formatCurrency(data.personal_info.salary_expectation.max, data.personal_info.salary_expectation.currency)}`;
-        pdf.text(salaryText, leftMargin + 45, yPos);
-        yPos += 6;
-      }
-
-      yPos += 5;
-
-      // ============================================
-      // HABILIDADES
-      // ============================================
+      // Habilidades
       if (data.personal_info.skills && data.personal_info.skills.length > 0) {
-        checkNewPage(15);
-        pdf.setFillColor(249, 250, 251);
-        pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(234, 88, 12);
-        pdf.text('HABILIDADES', leftMargin + 3, yPos + 7);
-        pdf.setTextColor(0, 0, 0);
-        yPos += 15;
-
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        
-        let skillX = leftMargin;
-        let skillY = yPos;
-        
-        data.personal_info.skills.forEach((skill: string) => {
-          const skillWidth = pdf.getTextWidth(skill) + 8;
-          
-          if (skillX + skillWidth > pageWidth - leftMargin) {
-            skillX = leftMargin;
-            skillY += 8;
-            checkNewPage(8);
-          }
-          
-          pdf.setFillColor(255, 237, 213);
-          pdf.roundedRect(skillX, skillY - 5, skillWidth, 7, 2, 2, 'F');
-          pdf.setTextColor(234, 88, 12);
-          pdf.text(skill, skillX + 4, skillY);
-          
-          skillX += skillWidth + 3;
-        });
-        
-        yPos = skillY + 8;
-        pdf.setTextColor(0, 0, 0);
+        const skillBadges = data.personal_info.skills.map(skill => generateBadge(skill, 'primary')).join(' ');
+        htmlContent += generateSection('Habilidades', `<div style="display: flex; flex-wrap: wrap; gap: 8px;">${skillBadges}</div>`);
       }
 
-      // ============================================
-      // IDIOMAS
-      // ============================================
-      if (data.personal_info.languages && data.personal_info.languages.length > 0) {
-        checkNewPage(15);
-        pdf.setFillColor(249, 250, 251);
-        pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(234, 88, 12);
-        pdf.text('IDIOMAS', leftMargin + 3, yPos + 7);
-        pdf.setTextColor(0, 0, 0);
-        yPos += 15;
-
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        
-        let langX = leftMargin;
-        let langY = yPos;
-        
-        data.personal_info.languages.forEach((lang: any) => {
-          const langText = typeof lang === 'object' ? `${lang.idioma} (${lang.nivel})` : lang;
-          const langWidth = pdf.getTextWidth(langText) + 8;
-          
-          if (langX + langWidth > pageWidth - leftMargin) {
-            langX = leftMargin;
-            langY += 8;
-            checkNewPage(8);
-          }
-          
-          pdf.setFillColor(219, 234, 254);
-          pdf.roundedRect(langX, langY - 5, langWidth, 7, 2, 2, 'F');
-          pdf.setTextColor(37, 99, 235);
-          pdf.text(langText, langX + 4, langY);
-          
-          langX += langWidth + 3;
-        });
-        
-        yPos = langY + 8;
-        pdf.setTextColor(0, 0, 0);
-      }
-
-      // ============================================
-      // CERTIFICACIONES
-      // ============================================
-      if (data.personal_info.certifications && data.personal_info.certifications.length > 0) {
-        checkNewPage(15);
-        pdf.setFillColor(249, 250, 251);
-        pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(234, 88, 12);
-        pdf.text('CERTIFICACIONES', leftMargin + 3, yPos + 7);
-        pdf.setTextColor(0, 0, 0);
-        yPos += 15;
-
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        
-        data.personal_info.certifications.forEach((cert: string) => {
-          checkNewPage(6);
-          pdf.text(`• ${cert}`, leftMargin, yPos);
-          yPos += 6;
-        });
-        
-        yPos += 3;
-      }
-
-      // ============================================
-      // ENLACES
-      // ============================================
-      const hasLinks = data.personal_info.linkedin_url || data.personal_info.portfolio_url || data.personal_info.github_url;
-      
-      if (hasLinks) {
-        checkNewPage(15);
-        pdf.setFillColor(249, 250, 251);
-        pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(234, 88, 12);
-        pdf.text('ENLACES', leftMargin + 3, yPos + 7);
-        pdf.setTextColor(0, 0, 0);
-        yPos += 15;
-
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(37, 99, 235);
-        
-        if (data.personal_info.linkedin_url) {
-          checkNewPage(6);
-          pdf.text(`🔗 LinkedIn: ${data.personal_info.linkedin_url}`, leftMargin, yPos);
-          yPos += 6;
-        }
-        
-        if (data.personal_info.portfolio_url) {
-          checkNewPage(6);
-          pdf.text(`🔗 Portafolio: ${data.personal_info.portfolio_url}`, leftMargin, yPos);
-          yPos += 6;
-        }
-        
-        if (data.personal_info.github_url) {
-          checkNewPage(6);
-          pdf.text(`🔗 GitHub: ${data.personal_info.github_url}`, leftMargin, yPos);
-          yPos += 6;
-        }
-        
-        pdf.setTextColor(0, 0, 0);
-        yPos += 3;
-      }
-
-      // ============================================
-      // APLICACIONES
-      // ============================================
+      // Aplicaciones
       if (data.applications.length > 0) {
-        checkNewPage(15);
-        pdf.setFillColor(249, 250, 251);
-        pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(234, 88, 12);
-        pdf.text('APLICACIONES A PERFILES', leftMargin + 3, yPos + 7);
-        pdf.setTextColor(0, 0, 0);
-        yPos += 15;
-
-        pdf.setFontSize(10);
-        data.applications.forEach((app, idx) => {
-          checkNewPage(20);
-          
-          pdf.setFillColor(255, 255, 255);
-          pdf.roundedRect(leftMargin, yPos, contentWidth, 18, 2, 2, 'D');
-          
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(`${idx + 1}. ${app.profile.title}`, leftMargin + 3, yPos + 6);
-          
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(9);
-          pdf.text(`Cliente: ${app.profile.client}`, leftMargin + 3, yPos + 11);
-          pdf.text(`Estado: ${app.status_display}`, leftMargin + 3, yPos + 15);
-          
-          if (app.match_percentage !== null) {
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(34, 197, 94);
-            pdf.text(`Match: ${app.match_percentage}%`, leftMargin + contentWidth - 25, yPos + 11);
-            pdf.setTextColor(0, 0, 0);
-          }
-          
-          yPos += 22;
-        });
-      }
-
-      // ============================================
-      // FOOTER
-      // ============================================
-      const pageCount = pdf.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text(
-          `Generado el ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })} - Página ${i} de ${pageCount}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: 'center' }
+        htmlContent += generateSection('Historial de Aplicaciones',
+          generateTable(
+            [
+              { key: 'profile', header: 'Perfil/Vacante' },
+              { key: 'client', header: 'Cliente' },
+              { key: 'status', header: 'Estado' },
+              { key: 'date', header: 'Fecha' },
+            ],
+            data.applications.slice(0, 10).map(app => ({
+              profile: app.profile.title.substring(0, 35),
+              client: app.profile.client.substring(0, 25),
+              status: app.status_display,
+              date: formatDate(app.applied_at),
+            }))
+          )
         );
       }
 
-      pdf.save(`Reporte_Candidato_${data.personal_info.full_name}_${new Date().toISOString().split('T')[0]}.pdf`);
-      alert('✅ PDF generado exitosamente');
+      // Envolver en página completa con estilos
+      const fullHtml = wrapInPage(htmlContent, { title: 'REPORTE DE CANDIDATO', subtitle: data.personal_info.full_name });
+
+      // Generar PDF
+      await generatePDF(fullHtml, {
+        filename: `Candidato_${data.personal_info.full_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+      });
+
+      await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
-      alert('❌ Error al generar PDF');
     } finally {
       setExporting(false);
     }
@@ -430,7 +177,7 @@ export default function CandidateFullReport({ candidateId, onBack }: Props) {
   // ═══════════════════════════════════════════════
   // EXPORTAR A EXCEL
   // ═══════════════════════════════════════════════
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!data) return;
     
     setExporting(true);
@@ -490,10 +237,10 @@ export default function CandidateFullReport({ candidateId, onBack }: Props) {
       XLSX.utils.book_append_sheet(wb, ws3, 'Documentos');
 
       XLSX.writeFile(wb, `Reporte_Candidato_${data.personal_info.full_name}_${new Date().toISOString().split('T')[0]}.xlsx`);
-      alert('✅ Excel generado exitosamente');
+      await showAlert('✅ Excel generado exitosamente');
     } catch (error) {
       console.error('Error al exportar Excel:', error);
-      alert('❌ Error al generar Excel');
+      await showAlert('❌ Error al generar Excel');
     } finally {
       setExporting(false);
     }

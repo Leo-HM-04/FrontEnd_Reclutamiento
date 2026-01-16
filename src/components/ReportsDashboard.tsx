@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 
 // ============================================================
 // INTERFACES
@@ -51,6 +52,7 @@ interface MonthlyReport {
 // ============================================================
 
 export default function ReportsDashboard() {
+  const { showAlert } = useModal();
   // Estado
   const [report, setReport] = useState<MonthlyReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -174,9 +176,9 @@ export default function ReportsDashboard() {
   // HELPERS
   // ============================================================
 
-  const showNotification = (message: string, type: 'success' | 'error') => {
+  const showNotification = async (message: string, type: 'success' | 'error') => {
     console.log(`[${type}] ${message}`);
-    alert(message);
+    await showAlert(message);
   };
 
   const getMonthName = (month: number) => {
@@ -201,7 +203,7 @@ export default function ReportsDashboard() {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Centro de Reportes</h2>
           <p className="text-gray-600 mt-1">Analiza métricas y genera reportes detallados del sistema</p>

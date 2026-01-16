@@ -461,7 +461,7 @@ export default function NotesPage() {
 
       {/* Add/Edit Note Modal */}
       {(showAddModal || showEditModal) && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center p-4 z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">

@@ -82,7 +82,7 @@ const Modal = ({
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
       {/* Overlay */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0  transition-opacity" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
         onClick={showCancelButton ? onCancel : onConfirm}
       />
       

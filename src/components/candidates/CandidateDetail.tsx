@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from "@/lib/api";
+import CandidateFormModal from "@/components/CandidateFormModal";
+import CandidateDocuments from "@/components/candidates/CandidateDocuments";
+import CandidateNotes from "@/components/candidates/CandidateNotes";
+import CandidateApplications from "@/components/candidates/CandidateApplications";
 
 interface CandidateDetailProps {
   candidateId: number;
@@ -50,6 +55,11 @@ interface Candidate {
 export default function CandidateDetail({ candidateId, onBack }: CandidateDetailProps) {
   const [candidate, setCandidate] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showApplications, setShowApplications] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const { showAlert } = useModal();
 
   useEffect(() => {
     loadCandidate();
@@ -62,7 +72,7 @@ export default function CandidateDetail({ candidateId, onBack }: CandidateDetail
       setCandidate(data as Candidate);
     } catch (error) {
       console.error("Error loading candidate:", error);
-      alert("Error al cargar el candidato");
+      await showAlert("Error al cargar el candidato");
     } finally {
       setLoading(false);
     }
@@ -130,19 +140,31 @@ export default function CandidateDetail({ candidateId, onBack }: CandidateDetail
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button 
+            onClick={() => setShowEditModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             <i className="fas fa-edit mr-2"></i>
             Editar
           </button>
-          <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+          <button 
+            onClick={() => setShowApplications(!showApplications)}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
             <i className="fas fa-file-alt mr-2"></i>
             Ver Aplicaciones
           </button>
-          <button className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+          <button 
+            onClick={() => setShowDocuments(!showDocuments)}
+            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+          >
             <i className="fas fa-folder mr-2"></i>
             Ver Documentos
           </button>
-          <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+          <button 
+            onClick={() => setShowNotes(!showNotes)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
             <i className="fas fa-sticky-note mr-2"></i>
             Ver Notas
           </button>
@@ -414,6 +436,39 @@ export default function CandidateDetail({ candidateId, onBack }: CandidateDetail
           </div>
         </div>
       </div>
+
+      {/* Secciones Expandibles */}
+      {showApplications && (
+        <div className="mt-6">
+          <CandidateApplications candidateId={candidateId} />
+        </div>
+      )}
+
+      {showDocuments && (
+        <div className="mt-6">
+          <CandidateDocuments candidateId={candidateId} />
+        </div>
+      )}
+
+      {showNotes && (
+        <div className="mt-6">
+          <CandidateNotes candidateId={candidateId} />
+        </div>
+      )}
+
+      {/* Modal de Edición */}
+      <CandidateFormModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          loadCandidate();
+        }}
+        candidate={candidate}
+        onSuccess={(message) => {
+          console.log(message);
+          loadCandidate();
+        }}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useModal } from '@/context/ModalContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -35,12 +36,12 @@ export default function RegisterPage() {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      alert('Las contraseñas no coinciden');
+      await showAlert('Las contraseñas no coinciden');
       return;
     }
 
     if (!formData.acceptTerms) {
-      alert('Debes aceptar los términos y condiciones');
+      await showAlert('Debes aceptar los términos y condiciones');
       return;
     }
 

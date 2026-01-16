@@ -79,7 +79,7 @@ export default function ProfileDocuments() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProfile || !uploadData.file) {
-      alert("Por favor seleccione un perfil y un archivo");
+      await showAlert("Por favor seleccione un perfil y un archivo");
       return;
     }
 
@@ -90,13 +90,13 @@ export default function ProfileDocuments() {
 
     try {
       await uploadProfileDocument(selectedProfile, formData);
-      alert("Documento subido exitosamente");
+      await showAlert("Documento subido exitosamente");
       setShowUploadModal(false);
       setUploadData({ document_type: "requirement", description: "", file: null });
       loadDocuments();
     } catch (error: any) {
       console.error("Error uploading document:", error);
-      alert(`Error al subir documento: ${error.response?.data?.detail || error.message}`);
+      await showAlert(`Error al subir documento: ${error.response?.data?.detail || error.message}`);
     }
   };
 
@@ -106,11 +106,11 @@ export default function ProfileDocuments() {
 
     try {
       await apiClient.deleteProfileDocument(docId);
-      alert('Documento eliminado exitosamente');
+      await showAlert('Documento eliminado exitosamente');
       loadDocuments();
     } catch (error: any) {
       console.error('Error deleting document:', error);
-      alert(`Error al eliminar: ${error.message}`);
+      await showAlert(`Error al eliminar: ${error.message}`);
     }
   };
 
@@ -286,7 +286,7 @@ export default function ProfileDocuments() {
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-xl font-semibold mb-4">Subir Documento</h3>
             
@@ -363,7 +363,7 @@ export default function ProfileDocuments() {
 
       {/* Preview Modal */}
       {showPreviewModal && selectedDocument && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b">

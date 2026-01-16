@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from "@/lib/api";
 
 interface AddContactModalProps {
@@ -26,7 +27,7 @@ export default function AddContactModal({ clients, onClose, onSuccess }: AddCont
     e.preventDefault();
 
     if (!formData.client || !formData.name || !formData.email) {
-      alert('Por favor completa todos los campos obligatorios');
+      await showAlert('Por favor completa todos los campos obligatorios');
       return;
     }
 
@@ -45,18 +46,18 @@ export default function AddContactModal({ clients, onClose, onSuccess }: AddCont
 
       await apiClient.createContact(contactData);
       
-      alert('Contacto agregado exitosamente');
+      await showAlert('Contacto agregado exitosamente');
       onSuccess();
     } catch (error: any) {
       console.error('Error al agregar contacto:', error);
-      alert(`Error al agregar contacto: ${error.message || 'Error desconocido'}`);
+      await showAlert(`Error al agregar contacto: ${error.message || 'Error desconocido'}`);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[calc(100vh-5rem)] flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4 rounded-t-2xl">

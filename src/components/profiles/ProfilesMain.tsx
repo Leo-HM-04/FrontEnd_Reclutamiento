@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import ProfilesList from "./ProfilesList";
 import ProfileForm from "./ProfileForm";
 import ProfileDetail from "./ProfileDetail";
@@ -41,6 +42,7 @@ interface ProfilesMainProps {
 }
 
 export default function ProfilesMain({ onClose, initialProfileId, initialAction }: ProfilesMainProps) {
+  const { showAlert, showConfirm } = useModal();
   const [currentView, setCurrentView] = useState<ProfileView>("profiles-list");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [showCVAnalysis, setShowCVAnalysis] = useState(false); // NUEVO
@@ -146,7 +148,8 @@ export default function ProfilesMain({ onClose, initialProfileId, initialAction 
 };
 
 const handleDeleteProfile = async (profileId: number) => {
-  if (!confirm("¿Estás seguro de que deseas eliminar este perfil? Esta acción no se puede deshacer.")) {
+  const confirmed = await showConfirm("¿Estás seguro de que deseas eliminar este perfil? Esta acción no se puede deshacer.");
+  if (!confirmed) {
     return;
   }
   
@@ -157,7 +160,7 @@ const handleDeleteProfile = async (profileId: number) => {
     window.location.reload();
   } catch (error) {
     console.error("Error al eliminar perfil:", error);
-    alert("Error al eliminar el perfil. Por favor, intenta de nuevo.");
+    await showAlert("Error al eliminar el perfil. Por favor, intenta de nuevo.");
   }
 };
 

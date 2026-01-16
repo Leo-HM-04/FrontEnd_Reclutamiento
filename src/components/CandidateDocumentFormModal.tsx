@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from '@/lib/api';
 
 interface CandidateDocumentFormModalProps {
@@ -90,12 +91,12 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
     e.preventDefault();
     
     if (!documentForm.archivo) {
-      alert('Por favor selecciona un archivo');
+      await showAlert('Por favor selecciona un archivo');
       return;
     }
 
     if (!documentForm.candidato) {
-      alert('Por favor selecciona un candidato');
+      await showAlert('Por favor selecciona un candidato');
       return;
     }
 
@@ -131,7 +132,7 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
       onClose();
     } catch (error: any) {
       console.error('❌ Error al subir documento:', error);
-      alert(`Error al subir documento: ${error.message || 'Error desconocido'}`);
+      await showAlert(`Error al subir documento: ${error.message || 'Error desconocido'}`);
     } finally {
       setUploading(false);
     }
@@ -140,7 +141,7 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
         {/* Header - Degradado azul */}
         <div className="bg-linear-to-r from-blue-50 via-blue-100 to-indigo-50 px-6 py-5 shadow-lg border-b-4 border-blue-500">
@@ -171,8 +172,8 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
 
             {/* DOCUMENTO */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-blue-600 px-5 py-3.5 border-b-2 border-blue-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-blue-500/10 border-b-2 border-blue-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-blue-800 tracking-wide flex items-center">
                   <i className="fas fa-file-alt mr-2" />
                   DOCUMENTO
                 </h3>
@@ -321,16 +322,16 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
 
             {/* ANÁLISIS DE IA (Opcional) */}
             <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${showAIAnalysis ? 'block' : 'hidden'}`}>
-              <div className="bg-purple-600 px-5 py-3.5 border-b-2 border-purple-700">
+              <div className="bg-purple-500/10 border-b-2 border-purple-500 px-5 py-3.5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+                  <h3 className="text-lg font-bold text-purple-800 tracking-wide flex items-center">
                     <i className="fas fa-brain mr-2" />
-                    ANÁLISIS DE IA (Mostrar)
+                    ANÁLISIS DE IA
                   </h3>
                   <button
                     type="button"
                     onClick={() => setShowAIAnalysis(false)}
-                    className="text-white hover:text-gray-200 text-sm transition-colors"
+                    className="text-purple-600 hover:text-purple-800 text-sm font-medium transition-colors"
                   >
                     (Ocultar)
                   </button>
@@ -366,16 +367,16 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
 
             {/* METADATOS (Opcional) */}
             <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${showMetadata ? 'block' : 'hidden'}`}>
-              <div className="bg-gray-600 px-5 py-3.5 border-b-2 border-gray-700">
+              <div className="bg-gray-500/10 border-b-2 border-gray-500 px-5 py-3.5">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+                  <h3 className="text-lg font-bold text-gray-800 tracking-wide flex items-center">
                     <i className="fas fa-info-circle mr-2" />
-                    METADATOS (Mostrar)
+                    METADATOS
                   </h3>
                   <button
                     type="button"
                     onClick={() => setShowMetadata(false)}
-                    className="text-white hover:text-gray-200 text-sm transition-colors"
+                    className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
                   >
                     (Ocultar)
                   </button>

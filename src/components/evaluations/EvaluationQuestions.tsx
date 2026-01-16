@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 
 interface EvaluationQuestion {
   id: number;
@@ -83,7 +84,8 @@ export default function EvaluationQuestions() {
 
 
   const handleDelete = async (id: number) => {
-    if (!confirm("¿Estás seguro de eliminar esta pregunta?")) return;
+    const confirmed = await showConfirm("¿Estás seguro de eliminar esta pregunta?");
+    if (!confirmed) return;
 
     try {
       const token = localStorage.getItem("authToken");
@@ -270,7 +272,7 @@ export default function EvaluationQuestions() {
 
       {/* Modal para Crear/Editar Pregunta */}
       {showModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
@@ -341,11 +343,11 @@ export default function EvaluationQuestions() {
                     setSelectedQuestion(null);
                   } else {
                     const error = await response.json();
-                    alert("Error: " + JSON.stringify(error));
+                    await showAlert("Error: " + JSON.stringify(error));
                   }
                 } catch (error) {
                   console.error("Error:", error);
-                  alert("Error al guardar la pregunta");
+                  await showAlert("Error al guardar la pregunta");
                 }
               }}>
                 <div className="space-y-4">

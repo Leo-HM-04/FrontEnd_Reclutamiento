@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faFileAlt,
@@ -85,6 +86,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function ApplicationsPage() {
+  const { showConfirm } = useModal();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -131,7 +133,8 @@ export default function ApplicationsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta aplicación?')) {
+    const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar esta aplicación?');
+    if (!confirmed) {
       return;
     }
 
@@ -657,7 +660,7 @@ function EditApplicationModal({ application, onClose, onSave }: EditApplicationM
   };
 
   return (
-    <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 rounded-t-2xl">

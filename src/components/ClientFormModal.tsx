@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from '@/lib/api';
 
 interface ClientFormModalProps {
@@ -75,17 +76,17 @@ export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFo
 
     // Validaciones
     if (!clientForm.company_name.trim()) {
-      alert('Por favor ingresa el nombre de la empresa');
+      await showAlert('Por favor ingresa el nombre de la empresa');
       return;
     }
 
     if (!clientForm.rfc.trim()) {
-      alert('Por favor ingresa el RFC');
+      await showAlert('Por favor ingresa el RFC');
       return;
     }
 
     if (!clientForm.contact_email.trim()) {
-      alert('Por favor ingresa el email del contacto');
+      await showAlert('Por favor ingresa el email del contacto');
       return;
     }
 
@@ -112,7 +113,7 @@ export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFo
       onClose();
     } catch (error: any) {
       console.error('❌ Error al crear cliente:', error);
-      alert(`Error al crear cliente: ${error.message || 'Error desconocido'}`);
+      await showAlert(`Error al crear cliente: ${error.message || 'Error desconocido'}`);
     } finally {
       setSubmitting(false);
     }
@@ -141,7 +142,7 @@ export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
         {/* Header - Degradado azul */}
         <div className="bg-linear-to-r from-blue-50 via-blue-100 to-indigo-50 px-6 py-5 shadow-lg border-b-4 border-blue-500">
@@ -172,13 +173,13 @@ export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFo
 
             {/* INFORMACIÓN DE LA EMPRESA */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-blue-600 px-5 py-3.5 border-b-2 border-blue-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-blue-500/10 border-b-2 border-blue-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-blue-800 tracking-wide flex items-center">
                   <i className="fas fa-building mr-2.5 text-xl" />
                   INFORMACIÓN DE LA EMPRESA
                 </h3>
               </div>
-              <div className="p-6 space-y-4 bg-gray-50">
+              <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -237,13 +238,13 @@ export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFo
 
             {/* CONTACTO PRINCIPAL */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-teal-600 px-5 py-3.5 border-b-2 border-teal-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-teal-500/10 border-b-2 border-teal-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-teal-800 tracking-wide flex items-center">
                   <i className="fas fa-user-tie mr-2.5 text-xl" />
                   CONTACTO PRINCIPAL
                 </h3>
               </div>
-              <div className="p-6 space-y-4 bg-gray-50">
+              <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -300,13 +301,13 @@ export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFo
 
             {/* DIRECCIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-purple-600 px-5 py-3.5 border-b-2 border-purple-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-purple-500/10 border-b-2 border-purple-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-purple-800 tracking-wide flex items-center">
                   <i className="fas fa-map-marker-alt mr-2.5 text-xl" />
                   DIRECCIÓN
                 </h3>
               </div>
-              <div className="p-6 space-y-4 bg-gray-50">
+              <div className="p-6 space-y-4">
                 <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -377,13 +378,13 @@ export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFo
 
             {/* GESTIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-indigo-600 px-5 py-3.5 border-b-2 border-indigo-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-indigo-500/10 border-b-2 border-indigo-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-indigo-800 tracking-wide flex items-center">
                   <i className="fas fa-cogs mr-2.5 text-xl" />
                   GESTIÓN
                 </h3>
               </div>
-              <div className="p-6 space-y-4 bg-gray-50">
+              <div className="p-6 space-y-4">
                 <div>
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input
@@ -415,13 +416,13 @@ export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFo
 
             {/* CONTACTOS ADICIONALES */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-orange-600 px-5 py-3.5 border-b-2 border-orange-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-orange-500/10 border-b-2 border-orange-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-orange-800 tracking-wide flex items-center">
                   <i className="fas fa-users mr-2.5 text-xl" />
                   CONTACTOS ADICIONALES
                 </h3>
               </div>
-              <div className="p-6 bg-gray-50">
+              <div className="p-6">
                 {contacts.length === 0 ? (
                   <p className="text-gray-500 text-center py-4">
                     No hay contactos adicionales. Haz clic en "Agregar Contacto" para añadir uno.

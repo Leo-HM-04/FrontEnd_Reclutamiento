@@ -127,7 +127,7 @@ export function Navigation({ userRole = 'admin' }: NavigationProps) {
       {/* Overlay for mobile */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black bg-opacity-50 lg:hidden"
+          className="fixed inset-0 z-30  lg:hidden" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
           onClick={() => setIsSidebarOpen(false)}
         />
       )}

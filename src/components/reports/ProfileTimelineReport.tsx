@@ -9,9 +9,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { getProfileTimeline, formatDateTime, type ProfileTimelineData, type TimelineEvent } from '@/lib/api-reports';
-import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
+import {
+  generatePDF,
+  generateHeader,
+  generateKPIRow,
+  generateSection,
+  generateTimeline,
+  wrapInPage,
+} from '@/lib/pdf-generator';
 
 interface Props {
   profileId: number;
@@ -19,6 +27,7 @@ interface Props {
 }
 
 export default function ProfileTimelineReport({ profileId, onBack }: Props) {
+  const { showAlert } = useModal();
   const [data, setData] = useState<ProfileTimelineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,119 +119,51 @@ export default function ProfileTimelineReport({ profileId, onBack }: Props) {
   // ═══════════════════════════════════════════════
   // EXPORTAR A PDF
   // ═══════════════════════════════════════════════
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!data) return;
     
     setExporting(true);
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      let htmlContent = '';
 
-      let yPos = 20;
-      const leftMargin = 15;
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      // Header institucional
+      htmlContent += generateHeader('TIMELINE DEL PERFIL', data.profile.title);
 
-      const checkNewPage = (height: number) => {
-        if (yPos + height > pageHeight - 20) {
-          pdf.addPage();
-          yPos = 20;
-        }
-      };
+      // KPIs principales
+      htmlContent += generateKPIRow([
+        { label: 'Total Eventos', value: data.total_events, type: 'primary' },
+        { label: 'Cliente', value: data.profile.client.substring(0, 20), type: 'accent' },
+      ]);
 
-      // HEADER
-      pdf.setFillColor(34, 197, 94); // Green
-      pdf.rect(0, 0, pageWidth, 60, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(28);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('TIMELINE DEL PERFIL', leftMargin, 25);
-      
-      pdf.setFontSize(16);
-      pdf.text(data.profile.title, leftMargin, 38);
-      
-      pdf.setFontSize(12);
-      pdf.text(data.profile.client, leftMargin, 48);
-
-      yPos = 70;
-      pdf.setTextColor(0, 0, 0);
-
-      // RESUMEN
-      pdf.setFillColor(240, 253, 244);
-      pdf.roundedRect(leftMargin, yPos, pageWidth - (leftMargin * 2), 20, 3, 3, 'F');
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(`Total de Eventos: ${data.total_events}`, leftMargin + 5, yPos + 12);
-
-      yPos += 30;
-
-      // EVENTOS DEL TIMELINE
+      // Filtrar eventos
       const events = filterType 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ? data.timeline.filter((e: any) => e.type === filterType)
         : data.timeline;
 
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Cronología de Eventos', leftMargin, yPos);
-      yPos += 10;
+      // Timeline de eventos
+      htmlContent += generateSection('Cronología de Eventos',
+        generateTimeline(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          events.map((event: any) => ({
+            date: formatDateTime(event.timestamp),
+            title: event.title,
+            description: event.description,
+          }))
+        )
+      );
 
-      pdf.setFontSize(10);
-      events.forEach((event: any, idx: number) => {
-        checkNewPage(25);
-        
-        // Fecha y título
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`${idx + 1}. ${event.title}`, leftMargin, yPos);
-        yPos += 5;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text(new Date(event.timestamp).toLocaleString('es-MX'), leftMargin + 5, yPos);
-        yPos += 5;
-        
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFontSize(10);
-        
-        // Descripción
-        const description = pdf.splitTextToSize(event.description, pageWidth - (leftMargin * 2) - 10);
-        description.forEach((line: string) => {
-          checkNewPage(5);
-          pdf.text(line, leftMargin + 5, yPos);
-          yPos += 5;
-        });
-        
-        // Usuario
-        if (event.user) {
-          pdf.setFontSize(9);
-          pdf.setTextColor(100, 100, 100);
-          pdf.text(`Usuario: ${event.user}`, leftMargin + 5, yPos);
-          yPos += 5;
-        }
-        
-        pdf.setTextColor(0, 0, 0);
-        yPos += 3;
+      // Envolver en página completa con estilos
+      const fullHtml = wrapInPage(htmlContent, { title: 'TIMELINE DEL PERFIL', subtitle: data.profile.title });
+
+      // Generar PDF
+      await generatePDF(fullHtml, {
+        filename: `Timeline_${data.profile.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
       });
 
-      // FOOTER
-      const pageCount = pdf.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text(
-          `Generado el ${new Date().toLocaleDateString('es-MX')} - Página ${i} de ${pageCount}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: 'center' }
-        );
-      }
-
-      pdf.save(`Timeline_${data.profile.title}_${new Date().toISOString().split('T')[0]}.pdf`);
-      alert('✅ PDF generado exitosamente');
+      await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
-      alert('❌ Error al generar PDF');
     } finally {
       setExporting(false);
     }
@@ -231,7 +172,7 @@ export default function ProfileTimelineReport({ profileId, onBack }: Props) {
   // ═══════════════════════════════════════════════
   // EXPORTAR A EXCEL
   // ═══════════════════════════════════════════════
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!data) return;
     
     setExporting(true);
@@ -263,10 +204,10 @@ export default function ProfileTimelineReport({ profileId, onBack }: Props) {
       XLSX.utils.book_append_sheet(wb, ws, 'Timeline');
 
       XLSX.writeFile(wb, `Timeline_${data.profile.title}_${new Date().toISOString().split('T')[0]}.xlsx`);
-      alert('✅ Excel generado exitosamente');
+      await showAlert('✅ Excel generado exitosamente');
     } catch (error) {
       console.error('Error al exportar Excel:', error);
-      alert('❌ Error al generar Excel');
+      await showAlert('❌ Error al generar Excel');
     } finally {
       setExporting(false);
     }

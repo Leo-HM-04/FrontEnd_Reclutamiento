@@ -6,6 +6,7 @@ import ClientDetail from "./ClientDetail";
 import ClientForm from "./ClientForm";
 import AddContactModal from "./AddContactModal";
 import { useModal } from "@/context/ModalContext";
+import Pagination from "../ui/Pagination";
 
 
 type ClientView = 
@@ -44,6 +45,12 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [industryFilter, setIndustryFilter] = useState("all");
   const { showConfirm, showAlert, showSuccess, showError } = useModal();
+  
+  // Pagination states
+  const [clientsPage, setClientsPage] = useState(1);
+  const [clientsPerPage, setClientsPerPage] = useState(10);
+  const [contactsPage, setContactsPage] = useState(1);
+  const [contactsPerPage, setContactsPerPage] = useState(10);
 
   // Load data when view changes
   useEffect(() => {
@@ -371,8 +378,8 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {clients
-                            .filter(client => {
+                          {(() => {
+                            const filteredClients = clients.filter(client => {
                               const matchesSearch = searchTerm === "" || 
                                 client.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                 client.industry?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -381,8 +388,10 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
                                 (statusFilter === "inactive" && !client.is_active);
                               const matchesIndustry = industryFilter === "all" || client.industry === industryFilter;
                               return matchesSearch && matchesStatus && matchesIndustry;
-                            })
-                            .map((client) => (
+                            });
+                            const startIndex = (clientsPage - 1) * clientsPerPage;
+                            const paginatedClients = filteredClients.slice(startIndex, startIndex + clientsPerPage);
+                            return paginatedClients.map((client) => (
                             <tr key={client.id} className="hover:bg-gray-50 cursor-pointer">
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center">
@@ -448,10 +457,34 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
                                 </div>
                               </td>
                             </tr>
-                          ))}
+                          ));
+                          })()}
                         </tbody>
                       </table>
                     </div>
+                    {/* Pagination for clients */}
+                    {(() => {
+                      const filteredClients = clients.filter(client => {
+                        const matchesSearch = searchTerm === "" || 
+                          client.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          client.industry?.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesStatus = statusFilter === "all" || 
+                          (statusFilter === "active" && client.is_active) ||
+                          (statusFilter === "inactive" && !client.is_active);
+                        const matchesIndustry = industryFilter === "all" || client.industry === industryFilter;
+                        return matchesSearch && matchesStatus && matchesIndustry;
+                      });
+                      return (
+                        <Pagination
+                          currentPage={clientsPage}
+                          totalItems={filteredClients.length}
+                          itemsPerPage={clientsPerPage}
+                          onPageChange={setClientsPage}
+                          onItemsPerPageChange={setClientsPerPage}
+                          className="border-t border-gray-200 px-4"
+                        />
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -490,55 +523,68 @@ export default function ClientsMain({ onClose }: ClientsMainProps) {
                     <p className="text-lg">No hay clientes registrados</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {clients.map((client) => (
-                      <div key={client.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h4 className="text-lg font-semibold text-gray-900">{client.company_name}</h4>
-                            <p className="text-sm text-gray-500">{client.industry}</p>
+                  <>
+                    <div className="space-y-4">
+                      {clients
+                        .slice((contactsPage - 1) * contactsPerPage, contactsPage * contactsPerPage)
+                        .map((client) => (
+                        <div key={client.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between mb-4">
+                            <div>
+                              <h4 className="text-lg font-semibold text-gray-900">{client.company_name}</h4>
+                              <p className="text-sm text-gray-500">{client.industry}</p>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              client.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {client.is_active ? 'Activo' : 'Inactivo'}
+                            </span>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            client.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {client.is_active ? 'Activo' : 'Inactivo'}
-                          </span>
+                          
+                          {client.contacts && client.contacts.length > 0 ? (
+                            <div className="space-y-3">
+                              {client.contacts.map((contact: any) => (
+                                <div key={contact.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-semibold">
+                                      {contact.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-gray-900">{contact.name}</p>
+                                      <p className="text-sm text-gray-500">{contact.position}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-sm text-gray-600">{contact.email}</p>
+                                    <p className="text-sm text-gray-600">{contact.phone}</p>
+                                    {contact.is_primary && (
+                                      <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                        Principal
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-4 text-gray-400">
+                              <i className="fas fa-user-slash mb-2"></i>
+                              <p className="text-sm">No hay contactos registrados para este cliente</p>
+                            </div>
+                          )}
                         </div>
-                        
-                        {client.contacts && client.contacts.length > 0 ? (
-                          <div className="space-y-3">
-                            {client.contacts.map((contact: any) => (
-                              <div key={contact.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-semibold">
-                                    {contact.name.charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <p className="font-medium text-gray-900">{contact.name}</p>
-                                    <p className="text-sm text-gray-500">{contact.position}</p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-sm text-gray-600">{contact.email}</p>
-                                  <p className="text-sm text-gray-600">{contact.phone}</p>
-                                  {contact.is_primary && (
-                                    <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                      Principal
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-4 text-gray-400">
-                            <i className="fas fa-user-slash mb-2"></i>
-                            <p className="text-sm">No hay contactos registrados para este cliente</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                    {/* Pagination for contacts */}
+                    <Pagination
+                      currentPage={contactsPage}
+                      totalItems={clients.length}
+                      itemsPerPage={contactsPerPage}
+                      onPageChange={setContactsPage}
+                      onItemsPerPageChange={setContactsPerPage}
+                      className="mt-4"
+                    />
+                  </>
                 )}
               </div>
             )}

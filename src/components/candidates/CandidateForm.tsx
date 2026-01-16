@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from "@/lib/api";
 
 interface CandidateFormProps {
@@ -123,7 +124,7 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
       });
     } catch (error) {
       console.error("Error loading candidate:", error);
-      alert("Error al cargar el candidato");
+      await showAlert("Error al cargar el candidato");
     } finally {
       setLoadingData(false);
     }
@@ -220,10 +221,10 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
 
       if (candidateId) {
         await apiClient.updateCandidate(candidateId, submitData);
-        alert("Candidato actualizado exitosamente");
+        await showAlert("Candidato actualizado exitosamente");
       } else {
         await apiClient.createCandidate(submitData);
-        alert("Candidato creado exitosamente");
+        await showAlert("Candidato creado exitosamente");
       }
       
       if (onSuccess) onSuccess();
@@ -251,7 +252,7 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         errorMsg = error.message;
       }
       
-      alert(`Error al guardar candidato:\n\n${errorMsg}`);
+      await showAlert(`Error al guardar candidato:\n\n${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -279,13 +280,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Información Personal */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-user text-blue-600 mr-2"></i>
-            Información Personal
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-blue-500/10 border-b-2 border-blue-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-blue-800 flex items-center">
+              <i className="fas fa-user text-blue-600 mr-2"></i>
+              Información Personal
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre *
@@ -363,13 +366,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         </div>
 
         {/* Ubicación */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-map-marker-alt text-blue-600 mr-2"></i>
-            Ubicación
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-purple-500/10 border-b-2 border-purple-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-purple-800 flex items-center">
+              <i className="fas fa-map-marker-alt text-purple-600 mr-2"></i>
+              Ubicación
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Ciudad
@@ -429,13 +434,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         </div>
 
         {/* Información Laboral */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-briefcase text-blue-600 mr-2"></i>
-            Información Laboral Actual
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-emerald-500/10 border-b-2 border-emerald-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-emerald-800 flex items-center">
+              <i className="fas fa-briefcase text-emerald-600 mr-2"></i>
+              Información Laboral Actual
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Posición Actual
@@ -482,13 +489,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         </div>
 
         {/* Educación */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-graduation-cap text-blue-600 mr-2"></i>
-            Educación
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-amber-500/10 border-b-2 border-amber-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-amber-800 flex items-center">
+              <i className="fas fa-graduation-cap text-amber-600 mr-2"></i>
+              Educación
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nivel Educativo
@@ -541,13 +550,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         </div>
 
         {/* Habilidades y Competencias */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-cogs text-blue-600 mr-2"></i>
-            Habilidades y Competencias
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-indigo-500/10 border-b-2 border-indigo-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-indigo-800 flex items-center">
+              <i className="fas fa-cogs text-indigo-600 mr-2"></i>
+              Habilidades y Competencias
+            </h4>
+          </div>
           
-          <div className="space-y-4">
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Habilidades
@@ -596,13 +607,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         </div>
 
         {/* Expectativas Salariales */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-dollar-sign text-blue-600 mr-2"></i>
-            Expectativas Salariales
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-green-500/10 border-b-2 border-green-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-green-800 flex items-center">
+              <i className="fas fa-dollar-sign text-green-600 mr-2"></i>
+              Expectativas Salariales
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Salario Mínimo
@@ -654,13 +667,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         </div>
 
         {/* Estado y Origen */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-info-circle text-blue-600 mr-2"></i>
-            Estado y Origen
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-teal-500/10 border-b-2 border-teal-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-teal-800 flex items-center">
+              <i className="fas fa-info-circle text-teal-600 mr-2"></i>
+              Estado y Origen
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Estado
@@ -699,13 +714,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         </div>
 
         {/* Disponibilidad */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-calendar-check text-blue-600 mr-2"></i>
-            Disponibilidad
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-orange-500/10 border-b-2 border-orange-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-orange-800 flex items-center">
+              <i className="fas fa-calendar-check text-orange-600 mr-2"></i>
+              Disponibilidad
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Disponible Desde
@@ -737,13 +754,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         </div>
 
         {/* Enlaces */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-link text-blue-600 mr-2"></i>
-            Enlaces
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-sky-500/10 border-b-2 border-sky-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-sky-800 flex items-center">
+              <i className="fas fa-link text-sky-600 mr-2"></i>
+              Enlaces
+            </h4>
+          </div>
           
-          <div className="space-y-4">
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 LinkedIn
@@ -789,13 +808,15 @@ export default function CandidateForm({ candidateId, onSuccess }: CandidateFormP
         </div>
 
         {/* Notas Internas */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-sticky-note text-blue-600 mr-2"></i>
-            Notas Internas
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-gray-500/10 border-b-2 border-gray-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-gray-800 flex items-center">
+              <i className="fas fa-sticky-note text-gray-600 mr-2"></i>
+              Notas Internas
+            </h4>
+          </div>
           
-          <div>
+          <div className="p-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Notas
             </label>

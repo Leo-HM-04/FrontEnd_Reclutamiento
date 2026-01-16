@@ -119,7 +119,7 @@ export default function EvaluationTemplates() {
     console.log("Template encontrado:", template);
     
     if (!template) {
-      alert("❌ Error: No se encontró la plantilla en la lista local");
+      await showAlert("❌ Error: No se encontró la plantilla en la lista local");
       return;
     }
     
@@ -141,27 +141,28 @@ export default function EvaluationTemplates() {
       
       if (response.ok) {
         setTemplates(templates.filter((t) => t.id !== id));
-        alert("✅ Plantilla eliminada exitosamente");
+        await showAlert("✅ Plantilla eliminada exitosamente");
       } else if (response.status === 404) {
         const error = await response.json();
         console.error("❌ Error 404:", error);
-        alert(`❌ No se encontró la plantilla. Puede que no tengas permisos para eliminarla o ya fue eliminada.`);
+        await showAlert(`❌ No se encontró la plantilla. Puede que no tengas permisos para eliminarla o ya fue eliminada.`);
         // Recargar plantillas para sincronizar
         await fetchTemplates();
       } else {
         const error = await response.json();
         console.error("❌ Error:", error);
-        alert(`❌ Error al eliminar: ${error.detail || 'Error desconocido'}`);
+        await showAlert(`❌ Error al eliminar: ${error.detail || 'Error desconocido'}`);
       }
     } catch (error) {
       console.error("❌ Error completo:", error);
-      alert("❌ Error al eliminar la plantilla");
+      await showAlert("❌ Error al eliminar la plantilla");
     }
   };
 
   const handleDuplicate = async (id: number) => {
     const template = templates.find(t => t.id === id);
-    if (!confirm(`¿Duplicar la plantilla "${template?.title}"?`)) return;
+    const confirmed = await showConfirm(`¿Duplicar la plantilla "${template?.title}"?`);
+    if (!confirmed) return;
     
     try {
       const token = localStorage.getItem("authToken");
@@ -175,14 +176,14 @@ export default function EvaluationTemplates() {
       
       if (response.ok) {
         await fetchTemplates();
-        alert("✅ Plantilla duplicada exitosamente (inactiva por defecto, actívala con el toggle)");
+        await showAlert("✅ Plantilla duplicada exitosamente (inactiva por defecto, actívala con el toggle)");
       } else {
         const error = await response.json();
-        alert(`❌ Error al duplicar: ${error.detail || 'Error desconocido'}`);
+        await showAlert(`❌ Error al duplicar: ${error.detail || 'Error desconocido'}`);
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("❌ Error al duplicar la plantilla");
+      await showAlert("❌ Error al duplicar la plantilla");
     }
   };
 
@@ -203,20 +204,21 @@ export default function EvaluationTemplates() {
         setTemplates(templates.map(t => 
           t.id === id ? { ...t, is_active: !currentStatus } : t
         ));
-        alert(`✅ Plantilla ${!currentStatus ? 'activada' : 'desactivada'} exitosamente`);
+        await showAlert(`✅ Plantilla ${!currentStatus ? 'activada' : 'desactivada'} exitosamente`);
       } else {
         const error = await response.json();
-        alert(`❌ Error: ${error.detail || 'No se pudo cambiar el estado'}`);
+        await showAlert(`❌ Error: ${error.detail || 'No se pudo cambiar el estado'}`);
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("❌ Error al cambiar el estado");
+      await showAlert("❌ Error al cambiar el estado");
     }
   };
 
 
   const handleDeleteQuestion = async (questionId: number) => {
-    if (!confirm("¿Eliminar esta pregunta?")) return;
+    const confirmed = await showConfirm("¿Eliminar esta pregunta?");
+    if (!confirmed) return;
     try {
       const token = localStorage.getItem("authToken");
       const response = await fetch(`http://localhost:8000/api/evaluations/questions/${questionId}/`, {
@@ -225,7 +227,7 @@ export default function EvaluationTemplates() {
       });
       if (response.ok) {
         setExistingQuestions(existingQuestions.filter((q) => q.id !== questionId));
-        alert("Pregunta eliminada exitosamente");
+        await showAlert("Pregunta eliminada exitosamente");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -244,14 +246,14 @@ export default function EvaluationTemplates() {
         body: JSON.stringify(data),
       });
       if (response.ok) {
-        alert("Pregunta actualizada exitosamente");
+        await showAlert("Pregunta actualizada exitosamente");
         if (selectedTemplate) {
           fetchTemplateQuestions(selectedTemplate.id);
         }
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Error al actualizar la pregunta");
+      await showAlert("Error al actualizar la pregunta");
     }
   };
 
@@ -270,19 +272,17 @@ export default function EvaluationTemplates() {
         setShareLink(publicLink);
         setShowShareModal(true);
       } else {
-        alert("Error al generar link de compartir");
+        await showAlert("Error al generar link de compartir");
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Error al generar link de compartir");
+      await showAlert("Error al generar link de compartir");
     } finally {
       setShareLoading(false);
     }
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(shareLink);
-    alert("✅ Link copiado al portapapeles!");
+  const copyToClipboard = async () => {("✅ Link copiado al portapapeles!");
   };
 
   const addQuestion = () => {
@@ -404,13 +404,13 @@ export default function EvaluationTemplates() {
           await fetchTemplateQuestions(selectedTemplate.id);
         }
         setEditingQuestions({ ...editingQuestions, [questionId]: false });
-        alert("✅ Pregunta actualizada");
+        await showAlert("✅ Pregunta actualizada");
       } else {
-        alert("❌ Error al actualizar pregunta");
+        await showAlert("❌ Error al actualizar pregunta");
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("❌ Error al actualizar pregunta");
+      await showAlert("❌ Error al actualizar pregunta");
     }
   };
 
@@ -564,7 +564,10 @@ export default function EvaluationTemplates() {
       )}
 
       {showModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div 
+          className="fixed top-16 left-0 right-0 bottom-0 flex items-center justify-center z-50 p-4"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+        >
           <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
@@ -687,12 +690,12 @@ export default function EvaluationTemplates() {
                     await fetchTemplates();
                     setShowModal(false);
                     setSelectedTemplate(null);
-                    alert("✅ " + (selectedTemplate ? "Actualizada" : `Creada con ${questionCount} preguntas`));
+                    await showAlert("✅ " + (selectedTemplate ? "Actualizada" : `Creada con ${questionCount} preguntas`));
                   } else {
-                    alert("❌ Error: " + JSON.stringify(await response.json()));
+                    await showAlert("❌ Error: " + JSON.stringify(await response.json()));
                   }
                 } catch (error) {
-                  alert("❌ Error al guardar");
+                  await showAlert("❌ Error al guardar");
                 }
               }}>
                 <div className="grid grid-cols-2 gap-4 mb-6">
@@ -980,7 +983,7 @@ export default function EvaluationTemplates() {
 
       {/* Modal de Compartir */}
       {showShareModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 /**
  * ============================================================
@@ -16,6 +16,7 @@ import EmailManagement from '@/components/EmailManagement';
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { showAlert, showSuccess, showError, showConfirm } = useModal();
   
   // ============================================================
   // STATE MANAGEMENT
@@ -143,10 +144,6 @@ const [profileForm, setProfileForm] = useState({
     phone: '',
   });
 
-
-  // Notificactiosn Modal
-  const { showConfirm, showSuccess, showError } = useModal();
-
   // ============================================================
   // LIFECYCLE - Initial Load
   // ============================================================
@@ -201,7 +198,7 @@ const [profileForm, setProfileForm] = useState({
         router.push('/auth');
       } else {
         // Mostrar error pero permitir usar la interfaz
-        alert('Error al cargar datos del sistema. Algunos datos pueden no estar disponibles.');
+        showError(' al cargar datos del sistema. Algunos datos pueden no estar disponibles.');
       }
     } finally {
       setLoading(false);
@@ -338,18 +335,18 @@ const [profileForm, setProfileForm] = useState({
       if (modalMode === 'create') {
         // Validar passwords
         if (userForm.password !== userForm.password_confirm) {
-          alert('Las contraseñas no coinciden');
+          showError('Las contraseñas no coinciden');
           return;
         }
         
         if (userForm.password.length < 8) {
-          alert('La contraseña debe tener al menos 8 caracteres');
+          showError('La contraseña debe tener al menos 8 caracteres');
           return;
         }
         
         // Crear usuario
         await apiClient.createUser(userForm);
-        alert('Usuario creado exitosamente');
+        showSuccess('Usuario creado exitosamente');
       } else {
         // Actualizar usuario
         const updateData: any = {
@@ -361,7 +358,7 @@ const [profileForm, setProfileForm] = useState({
         };
         
         await apiClient.updateUser(selectedUser!.id, updateData);
-        alert('Usuario actualizado exitosamente');
+        showSuccess('Usuario actualizado exitosamente');
       }
       
       closeUserModal();
@@ -369,43 +366,45 @@ const [profileForm, setProfileForm] = useState({
       
     } catch (error: any) {
       console.error('Error saving user:', error);
-      alert(error?.details?.message || 'Error al guardar usuario');
+      await showAlert(error?.details?.message || 'Error al guardar usuario');
     } finally {
       setLoading(false);
     }
   };
 
   const toggleUserStatus = async (user: User) => {
-    if (!confirm(`¿${user.is_active ? 'Desactivar' : 'Activar'} usuario ${user.full_name}?`)) {
+    const confirmed = await showConfirm(`¿${user.is_active ? 'Desactivar' : 'Activar'} usuario ${user.full_name}?`);
+    if (!confirmed) {
       return;
     }
     
     try {
       setLoading(true);
       await apiClient.toggleUserStatus(user.id, !user.is_active);
-      alert(`Usuario ${user.is_active ? 'desactivado' : 'activado'} exitosamente`);
+      await showSuccess(`Usuario ${user.is_active ? 'desactivado' : 'activado'} exitosamente`);
       await refreshData();
     } catch (error) {
       console.error('Error toggling user status:', error);
-      alert('Error al cambiar estado del usuario');
+      showError(' al cambiar estado del usuario');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteUser = async (user: User) => {
-    if (!confirm(`¿Eliminar usuario ${user.full_name}? Esta acción no se puede deshacer.`)) {
+    const confirmed = await showConfirm(`¿Eliminar usuario ${user.full_name}? Esta acción no se puede deshacer.`);
+    if (!confirmed) {
       return;
     }
     
     try {
       setLoading(true);
       await apiClient.deleteUser(user.id);
-      alert('Usuario eliminado exitosamente');
+      showSuccess('Usuario eliminado exitosamente');
       await refreshData();
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Error al eliminar usuario');
+      showError(' al eliminar usuario');
     } finally {
       setLoading(false);
     }
@@ -479,10 +478,10 @@ const [profileForm, setProfileForm] = useState({
       
       if (modalMode === 'create') {
         await apiClient.createCandidate(candidateForm);
-        alert('Candidato creado exitosamente');
+        showSuccess('Candidato creado exitosamente');
       } else {
         await apiClient.updateCandidate(selectedCandidate!.id, candidateForm);
-        alert('Candidato actualizado exitosamente');
+        showSuccess('Candidato actualizado exitosamente');
       }
       
       closeCandidateModal();
@@ -490,25 +489,26 @@ const [profileForm, setProfileForm] = useState({
       
     } catch (error: any) {
       console.error('Error saving candidate:', error);
-      alert(error?.details?.message || 'Error al guardar candidato');
+      await showAlert(error?.details?.message || 'Error al guardar candidato');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteCandidate = async (candidate: any) => {
-    if (!confirm(`¿Eliminar candidato ${candidate.full_name}? Esta acción no se puede deshacer.`)) {
+    const confirmed = await showConfirm(`¿Eliminar candidato ${candidate.full_name}? Esta acción no se puede deshacer.`);
+    if (!confirmed) {
       return;
     }
     
     try {
       setLoading(true);
       await apiClient.deleteCandidate(candidate.id);
-      alert('Candidato eliminado exitosamente');
+      showSuccess('Candidato eliminado exitosamente');
       await refreshData();
     } catch (error) {
       console.error('Error deleting candidate:', error);
-      alert('Error al eliminar candidato');
+      showError(' al eliminar candidato');
     } finally {
       setLoading(false);
     }
@@ -605,10 +605,10 @@ const [profileForm, setProfileForm] = useState({
       
       if (modalMode === 'create') {
         await apiClient.createClient(clientForm);
-        alert('Cliente creado exitosamente');
+        showSuccess('Cliente creado exitosamente');
       } else {
         await apiClient.updateClient(selectedClient!.id, clientForm);
-        alert('Cliente actualizado exitosamente');
+        showSuccess('Cliente actualizado exitosamente');
       }
       
       closeClientModal();
@@ -616,25 +616,26 @@ const [profileForm, setProfileForm] = useState({
       
     } catch (error: any) {
       console.error('Error saving client:', error);
-      alert(error?.details?.message || 'Error al guardar cliente');
+      await showAlert(error?.details?.message || 'Error al guardar cliente');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteClient = async (client: any) => {
-    if (!confirm(`¿Eliminar cliente ${client.company_name}? Esta acción no se puede deshacer.`)) {
+    const confirmed = await showConfirm(`¿Eliminar cliente ${client.company_name}? Esta acción no se puede deshacer.`);
+    if (!confirmed) {
       return;
     }
     
     try {
       setLoading(true);
       await apiClient.deleteClient(client.id);
-      alert('Cliente eliminado exitosamente');
+      showSuccess('Cliente eliminado exitosamente');
       await refreshData();
     } catch (error) {
       console.error('Error deleting client:', error);
-      alert('Error al eliminar cliente');
+      showError(' al eliminar cliente');
     } finally {
       setLoading(false);
     }
@@ -748,10 +749,10 @@ const [profileForm, setProfileForm] = useState({
       
       if (modalMode === 'create') {
         await apiClient.createProfile(profileForm);
-        alert('Perfil creado exitosamente');
+        showSuccess('Perfil creado exitosamente');
       } else {
         await apiClient.updateProfile(selectedProfile!.id, profileForm);
-        alert('Perfil actualizado exitosamente');
+        showSuccess('Perfil actualizado exitosamente');
       }
       
       closeProfileModal();
@@ -759,25 +760,26 @@ const [profileForm, setProfileForm] = useState({
       
     } catch (error: any) {
       console.error('Error saving profile:', error);
-      alert(error?.details?.message || 'Error al guardar perfil');
+      await showAlert(error?.details?.message || 'Error al guardar perfil');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteProfile = async (profile: any) => {
-    if (!confirm(`¿Eliminar perfil "${profile.position_title}"? Esta acción no se puede deshacer.`)) {
+    const confirmed = await showConfirm(`¿Eliminar perfil "${profile.position_title}"? Esta acción no se puede deshacer.`);
+    if (!confirmed) {
       return;
     }
     
     try {
       setLoading(true);
       await apiClient.deleteProfile(profile.id);
-      alert('Perfil eliminado exitosamente');
+      showSuccess('Perfil eliminado exitosamente');
       await refreshData();
     } catch (error) {
       console.error('Error deleting profile:', error);
-      alert('Error al eliminar perfil');
+      showError(' al eliminar perfil');
     } finally {
       setLoading(false);
     }
@@ -2207,7 +2209,7 @@ const getPriorityDisplay = (priority: string) => {
         {/* USER MODAL */}
         {/* ============================================================ */}
         {showUserModal && (
-          <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
             <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
@@ -2374,7 +2376,7 @@ const getPriorityDisplay = (priority: string) => {
         {/* CANDIDATE MODAL */}
         {/* ============================================================ */}
         {showCandidateModal && (
-          <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
             <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
@@ -2593,7 +2595,7 @@ const getPriorityDisplay = (priority: string) => {
         {/* CLIENT MODAL */}
         {/* ============================================================ */}
         {showClientModal && (
-          <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
             <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex items-center justify-between rounded-t-xl">
@@ -2811,7 +2813,7 @@ const getPriorityDisplay = (priority: string) => {
         {/* PROFILE MODAL */}
         {/* ============================================================ */}
         {showProfileModal && (
-          <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
             <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex items-center justify-between rounded-t-xl sticky top-0 z-10">

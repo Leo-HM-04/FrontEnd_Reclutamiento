@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from "@/lib/api";
 
 interface ApplicationFormData {
@@ -189,7 +190,7 @@ export default function ApplicationFormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
         {/* Header mejorado - Degradado azul suave con texto oscuro */}
         <div className="bg-gradient-to-r from-blue-50 via-blue-100 to-indigo-50 px-6 py-5 shadow-lg border-b-4 border-blue-500">
@@ -222,8 +223,11 @@ export default function ApplicationFormModal({
             
             {/* Sección 1: Aplicación */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-blue-600 px-5 py-3.5 border-b-2 border-blue-700">
-                <h3 className="text-lg font-bold text-white tracking-wide">APLICACIÓN</h3>
+              <div className="bg-blue-500/10 border-b-2 border-blue-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-blue-800 tracking-wide flex items-center">
+                  <i className="fas fa-file-alt mr-2" />
+                  APLICACIÓN
+                </h3>
               </div>
               
               <div className="p-5">
@@ -255,7 +259,7 @@ export default function ApplicationFormModal({
                         type="button"
                         className="px-3 bg-green-500 text-white hover:bg-green-600 transition-colors"
                         title="Agregar nuevo candidato"
-                        onClick={() => alert('Función de agregar candidato próximamente')}
+                        onClick={async () => await showAlert('Función de agregar candidato próximamente')}
                       >
                         <i className="fas fa-plus" />
                       </button>
@@ -290,7 +294,7 @@ export default function ApplicationFormModal({
                         type="button"
                         className="px-3 bg-green-500 text-white hover:bg-green-600 transition-colors"
                         title="Agregar nuevo perfil"
-                        onClick={() => alert('Función de agregar perfil próximamente')}
+                        onClick={async () => await showAlert('Función de agregar perfil próximamente')}
                       >
                         <i className="fas fa-plus" />
                       </button>
@@ -341,8 +345,11 @@ export default function ApplicationFormModal({
 
             {/* Sección 2: Evaluación */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-purple-600 px-5 py-3.5 border-b-2 border-purple-700">
-                <h3 className="text-lg font-bold text-white tracking-wide">EVALUACIÓN</h3>
+              <div className="bg-purple-500/10 border-b-2 border-purple-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-purple-800 tracking-wide flex items-center">
+                  <i className="fas fa-star mr-2" />
+                  EVALUACIÓN
+                </h3>
               </div>
 
               <div className="p-5">
@@ -420,8 +427,11 @@ export default function ApplicationFormModal({
 
             {/* Sección 3: Fechas */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-emerald-600 px-5 py-3.5 border-b-2 border-emerald-700">
-                <h3 className="text-lg font-bold text-white tracking-wide">FECHAS</h3>
+              <div className="bg-emerald-500/10 border-b-2 border-emerald-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-emerald-800 tracking-wide flex items-center">
+                  <i className="fas fa-calendar-alt mr-2" />
+                  FECHAS
+                </h3>
               </div>
 
               <div className="p-5">
@@ -561,14 +571,14 @@ export default function ApplicationFormModal({
 
             {/* Sección Razón de Rechazo - Más intuitiva */}
             {(formData.estadoAplicacion === 'Rechazado' || showRejectReason) && (
-              <div className="bg-red-50 rounded-xl shadow-md border-2 border-red-300 overflow-hidden animate-fade-in">
-                <div className="bg-red-600 px-5 py-3.5 border-b-2 border-red-700">
+              <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden animate-fade-in">
+                <div className="bg-red-500/10 border-b-2 border-red-500 px-5 py-3.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="bg-white/20 p-2 rounded-lg">
+                      <div className="bg-red-500 p-2 rounded-lg">
                         <i className="fas fa-exclamation-triangle text-white text-lg" />
                       </div>
-                      <h3 className="text-lg font-bold text-white tracking-wide">RAZÓN DE RECHAZO</h3>
+                      <h3 className="text-lg font-bold text-red-800 tracking-wide">RAZÓN DE RECHAZO</h3>
                     </div>
                     {formData.estadoAplicacion !== 'Rechazado' && (
                       <button

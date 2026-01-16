@@ -9,10 +9,19 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { getProfileReport, formatDate, formatCurrency, getStatusColor, type ProfileReportData } from '@/lib/api-reports';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
+import {
+  generatePDF,
+  generateHeader,
+  generateKPIRow,
+  generateSection,
+  generateInfoGrid,
+  generateParagraph,
+  generateTimeline,
+  wrapInPage,
+} from '@/lib/pdf-generator';
 
 interface Props {
   profileId: number;
@@ -20,6 +29,7 @@ interface Props {
 }
 
 export default function ProfileReport({ profileId, onBack }: Props) {
+  const { showAlert } = useModal();
   const [data, setData] = useState<ProfileReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,317 +53,101 @@ export default function ProfileReport({ profileId, onBack }: Props) {
     }
   };
 
+  // Destructure data safely for later use
+  const { profile, client, supervisor, candidates_stats, progress, status_history } = data || {} as ProfileReportData;
+
   // ═══════════════════════════════════════════════
   // EXPORTAR A PDF
   // ═══════════════════════════════════════════════
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    if (!data) return;
+    
     setExporting(true);
     try {
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
+      // ═══════════════════════════════════════════════
+      // CONSTRUIR HTML DEL REPORTE
+      // ═══════════════════════════════════════════════
+      let htmlContent = '';
 
-      let yPos = 20;
-      const leftMargin = 20;
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      // Header institucional
+      htmlContent += generateHeader('REPORTE DE PERFIL', profile.position_title);
 
-      // ============================================
-      // HELPER: Verificar nueva página
-      // ============================================
-      const checkNewPage = (height: number) => {
-        if (yPos + height > pageHeight - 20) {
-          pdf.addPage();
-          yPos = 20;
-        }
-      };
+      // KPIs principales
+      htmlContent += generateKPIRow([
+        { label: 'Días Abierto', value: progress.days_open, type: 'primary' },
+        { label: 'Candidatos', value: candidates_stats.total, type: 'accent' },
+        { label: 'Preseleccionados', value: candidates_stats.shortlisted, type: 'success' },
+        { label: 'Entrevistas', value: candidates_stats.interviewed, type: 'warning' },
+      ]);
 
-      // ============================================
-      // HEADER
-      // ============================================
-      pdf.setFillColor(37, 99, 235); // Azul
-      pdf.rect(0, 0, pageWidth, 50, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(24);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('REPORTE DE PERFIL', leftMargin, 25);
-      
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(profile.position_title, leftMargin, 35);
-      pdf.text(client.company_name, leftMargin, 42);
+      // Información general
+      htmlContent += generateSection('Información General',
+        generateInfoGrid([
+          { label: 'Estado', value: profile.status_display },
+          { label: 'Prioridad', value: profile.priority },
+          { label: 'Servicio', value: profile.service_type },
+          { label: 'Supervisor', value: supervisor?.name || 'No asignado' },
+        ])
+      );
 
-      yPos = 60;
-      pdf.setTextColor(0, 0, 0);
+      // Información del cliente
+      htmlContent += generateSection('Información del Cliente',
+        generateInfoGrid([
+          { label: 'Empresa', value: client.company_name },
+          { label: 'Industria', value: client.industry },
+          { label: 'Contacto', value: client.contact_name },
+          { label: 'Email', value: client.contact_email },
+        ])
+      );
 
-      // ============================================
-      // INFORMACIÓN GENERAL
-      // ============================================
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Información General', leftMargin, yPos);
-      yPos += 10;
+      // Ubicación y compensación
+      htmlContent += generateSection('Ubicación y Compensación',
+        generateInfoGrid([
+          { label: 'Ciudad', value: `${profile.location.city}, ${profile.location.state}` },
+          { label: 'Modalidad', value: profile.location.work_mode },
+          { label: 'Salario', value: `${formatCurrency(profile.salary.min)} - ${formatCurrency(profile.salary.max)} ${profile.salary.currency}/${profile.salary.period}` },
+        ])
+      );
 
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      
-      const infoGeneral = [
-        ['Estado:', profile.status_display],
-        ['Prioridad:', profile.priority],
-        ['Tipo de Servicio:', profile.service_type],
-        ['Días Abierto:', `${progress.days_open} días`],
-        ['Supervisor:', supervisor?.name || 'No asignado'],
-      ];
-
-      infoGeneral.forEach(([label, value]) => {
-        checkNewPage(8);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(label, leftMargin, yPos);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(value, leftMargin + 50, yPos);
-        yPos += 7;
-      });
-
-      yPos += 5;
-      checkNewPage(25);
-
-      // ============================================
-      // UBICACIÓN Y SALARIO
-      // ============================================
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Ubicación y Salario', leftMargin, yPos);
-      yPos += 10;
-
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-
-      const ubicacionSalario = [
-        ['Ciudad:', profile.location.city],
-        ['Estado:', profile.location.state],
-        ['Modalidad:', profile.location.work_mode],
-        ['Salario:', `$${profile.salary.min} - $${profile.salary.max} ${profile.salary.currency}/${profile.salary.period}`],
-      ];
-
-      ubicacionSalario.forEach(([label, value]) => {
-        checkNewPage(8);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(label, leftMargin, yPos);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(value, leftMargin + 50, yPos);
-        yPos += 7;
-      });
-
-      yPos += 5;
-      checkNewPage(25);
-
-      // ============================================
-      // CLIENTE
-      // ============================================
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Información del Cliente', leftMargin, yPos);
-      yPos += 10;
-
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-
-      const clienteInfo = [
-        ['Empresa:', client.company_name],
-        ['Industria:', client.industry],
-        ['Contacto:', client.contact_name],
-        ['Email:', client.contact_email],
-        ['Teléfono:', client.contact_phone || 'No disponible'],
-      ];
-
-      clienteInfo.forEach(([label, value]) => {
-        checkNewPage(8);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(label, leftMargin, yPos);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(value, leftMargin + 50, yPos);
-        yPos += 7;
-      });
-
-      yPos += 10;
-      checkNewPage(40);
-
-      // ============================================
-      // DESCRIPCIÓN DEL PUESTO
-      // ============================================
+      // Descripción del puesto
       if (profile.description) {
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Descripción del Puesto', leftMargin, yPos);
-        yPos += 10;
-
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        
-        // Dividir texto largo en líneas
-        const descriptionLines = pdf.splitTextToSize(
-          profile.description, 
-          pageWidth - (leftMargin * 2)
+        htmlContent += generateSection('Descripción del Puesto',
+          generateParagraph(profile.description)
         );
-        
-        descriptionLines.forEach((line: string) => {
-          checkNewPage(6);
-          pdf.text(line, leftMargin, yPos);
-          yPos += 5;
-        });
-
-        yPos += 5;
       }
 
-      checkNewPage(50);
-
-      // ============================================
-      // REQUISITOS
-      // ============================================
+      // Requisitos
       if (profile.requirements) {
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Requisitos', leftMargin, yPos);
-        yPos += 10;
-
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        
-        const requirementsLines = pdf.splitTextToSize(
-          profile.requirements, 
-          pageWidth - (leftMargin * 2)
+        htmlContent += generateSection('Requisitos',
+          generateParagraph(profile.requirements)
         );
-        
-        requirementsLines.forEach((line: string) => {
-          checkNewPage(6);
-          pdf.text(line, leftMargin, yPos);
-          yPos += 5;
-        });
-
-        yPos += 5;
       }
 
-      checkNewPage(50);
-
-      // ============================================
-      // BENEFICIOS
-      // ============================================
-      if (profile.benefits) {
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Beneficios', leftMargin, yPos);
-        yPos += 10;
-
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        
-        const benefitsLines = pdf.splitTextToSize(
-          profile.benefits, 
-          pageWidth - (leftMargin * 2)
+      // Historial de estados
+      if (status_history && status_history.length > 0) {
+        htmlContent += generateSection('Historial Reciente',
+          generateTimeline(
+            status_history.slice(0, 5).map(h => ({
+              date: formatDate(h.timestamp),
+              title: `${h.from_status_display} → ${h.to_status_display}`,
+              description: h.changed_by || '',
+            }))
+          )
         );
-        
-        benefitsLines.forEach((line: string) => {
-          checkNewPage(6);
-          pdf.text(line, leftMargin, yPos);
-          yPos += 5;
-        });
-
-        yPos += 5;
       }
 
-      checkNewPage(40);
+      // Envolver en página completa con estilos
+      const fullHtml = wrapInPage(htmlContent, { title: 'REPORTE DE PERFIL', subtitle: profile.position_title });
 
-      // ============================================
-      // ESTADÍSTICAS DE CANDIDATOS
-      // ============================================
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Estadísticas de Candidatos', leftMargin, yPos);
-      yPos += 10;
-
-      // Cuadros de estadísticas
-      const stats = [
-        { label: 'Total', value: candidates_stats.total, color: [37, 99, 235] },
-        { label: 'Preseleccionados', value: candidates_stats.shortlisted, color: [147, 51, 234] },
-        { label: 'Entrevistados', value: candidates_stats.interviewed, color: [34, 197, 94] },
-      ];
-
-      let xPos = leftMargin;
-      stats.forEach((stat) => {
-        pdf.setFillColor(stat.color[0], stat.color[1], stat.color[2]);
-        pdf.roundedRect(xPos, yPos, 50, 25, 3, 3, 'F');
-        
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(20);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(stat.value.toString(), xPos + 25, yPos + 12, { align: 'center' });
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(stat.label, xPos + 25, yPos + 20, { align: 'center' });
-        
-        xPos += 60;
+      // Generar PDF
+      await generatePDF(fullHtml, {
+        filename: `Reporte_Perfil_${profile.position_title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
       });
-
-      pdf.setTextColor(0, 0, 0);
-      yPos += 35;
-
-      // ============================================
-      // HISTORIAL DE ESTADOS (últimos 5)
-      // ============================================
-      checkNewPage(40);
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Historial Reciente', leftMargin, yPos);
-      yPos += 10;
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-
-      status_history.slice(0, 5).forEach((history) => {
-        checkNewPage(15);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(formatDate(history.timestamp), leftMargin, yPos);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`${history.from_status_display} → ${history.to_status_display}`, leftMargin + 50, yPos);
-        yPos += 6;
-        if (history.notes) {
-          pdf.setFontSize(9);
-          pdf.setTextColor(100, 100, 100);
-          pdf.text(history.notes, leftMargin + 50, yPos);
-          pdf.setTextColor(0, 0, 0);
-          pdf.setFontSize(10);
-          yPos += 6;
-        }
-        yPos += 2;
-      });
-
-      // ============================================
-      // FOOTER
-      // ============================================
-      const pageCount = pdf.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text(
-          `Generado el ${new Date().toLocaleDateString('es-MX')} - Página ${i} de ${pageCount}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: 'center' }
-        );
-      }
-
-      // Guardar
-      pdf.save(`Reporte_Perfil_${profile.position_title}_${new Date().toISOString().split('T')[0]}.pdf`);
       
-      alert('✅ PDF generado exitosamente');
+      await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
-      alert('❌ Error al generar PDF');
+      await showAlert('❌ Error al generar PDF');
     } finally {
       setExporting(false);
     }
@@ -362,7 +156,7 @@ export default function ProfileReport({ profileId, onBack }: Props) {
   // ═══════════════════════════════════════════════
   // EXPORTAR A EXCEL
   // ═══════════════════════════════════════════════
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     setExporting(true);
     try {
       // Crear workbook
@@ -446,10 +240,10 @@ export default function ProfileReport({ profileId, onBack }: Props) {
       // Guardar archivo
       XLSX.writeFile(wb, `Reporte_Perfil_${profile.position_title}_${new Date().toISOString().split('T')[0]}.xlsx`);
       
-      alert('✅ Excel generado exitosamente');
+      await showAlert('✅ Excel generado exitosamente');
     } catch (error) {
       console.error('Error al exportar Excel:', error);
-      alert('❌ Error al generar Excel');
+      await showAlert('❌ Error al generar Excel');
     } finally {
       setExporting(false);
     }
@@ -483,8 +277,6 @@ export default function ProfileReport({ profileId, onBack }: Props) {
       </div>
     );
   }
-
-  const { profile, client, supervisor, candidates_stats, progress, status_history } = data;
 
   return (
     <div id="report-content" className="space-y-6">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { bulkUploadCVs, getBulkUploadStatus, getProfiles } from "@/lib/api";
 
 interface Profile {
@@ -110,34 +111,35 @@ export default function BulkCVUploadModal({
     setIsAsyncProcessing(false);
   };
 
-  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
+  const handleFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const filesArray = Array.from(files);
       
-      // Validar cantidad
-      if (files.length > 50) {
-        alert('Máximo 50 archivos por carga');
+      if (filesArray.length > 50) {
+        await showAlert('Máximo 50 archivos por carga');
         e.target.value = '';
         return;
       }
       
       // Validar tipos y tamaños
-      const validFiles = files.filter(file => {
-        const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-        const maxSize = 10 * 1024 * 1024; // 10MB
-        
+      const validFiles: File[] = [];
+      const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      
+      for (const file of filesArray) {
         if (!validTypes.includes(file.type)) {
-          alert(`${file.name}: Tipo de archivo no válido. Solo PDF o DOCX`);
-          return false;
+          await showAlert(`${file.name}: Tipo de archivo no válido. Solo PDF o DOCX`);
+          continue;
         }
         
         if (file.size > maxSize) {
-          alert(`${file.name}: Archivo muy grande. Máximo 10MB`);
-          return false;
+          await showAlert(`${file.name}: Archivo muy grande. Máximo 10MB`);
+          continue;
         }
         
-        return true;
-      });
+        validFiles.push(file);
+      }
       
       setCvFiles(validFiles);
     }
@@ -147,7 +149,7 @@ export default function BulkCVUploadModal({
     e.preventDefault();
     
     if (cvFiles.length === 0) {
-      alert('Por favor selecciona al menos un archivo CV');
+      await showAlert('Por favor selecciona al menos un archivo CV');
       return;
     }
 
@@ -210,7 +212,7 @@ export default function BulkCVUploadModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-35 p-4 overflow-y-auto">
+    <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-35 p-4 overflow-y-auto" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full my-8">
         <div className="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-6 flex justify-between items-center rounded-t-2xl">
           <div>

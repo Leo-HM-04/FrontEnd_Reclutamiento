@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useModal } from '@/context/ModalContext';
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/api";
 import ApplicationFormModal from "@/components/ApplicationFormModal";
@@ -239,6 +240,7 @@ function useToasts() {
 
 export default function Page() {
   const router = useRouter();
+  const { showAlert, showConfirm } = useModal();
   const { toasts, info, success, warning, error } = useToasts();
 
   // ====== State principal (equivalente a directorApp) ======
@@ -902,7 +904,7 @@ useEffect(() => {
       setShareModalOpen(true);
     } catch (error) {
       console.error('Error:', error);
-      alert('Error al generar enlace para compartir');
+      await showAlert('Error al generar enlace para compartir');
     }
   };
 
@@ -1572,7 +1574,7 @@ const loadApplicationsData = async () => {
       {/* Overlay cuando sidebar está abierta */}
       {sidebarOpen && (
         <div
-          className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 z-20 transition-opacity duration-300"
+          className="fixed top-16 left-0 right-0 bottom-0  z-20 transition-opacity duration-300" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -1696,11 +1698,7 @@ const loadApplicationsData = async () => {
                             setSidebarOpen(false);
                           }
                         }}
-                        className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${
-                          currentView === "client-progress"
-                            ? "bg-primary-600 text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
+                        className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("client-progress")}`}
                       >
                         <i className="fas fa-chart-area mr-3 w-5" />
                         Avance de Cliente
@@ -1710,12 +1708,13 @@ const loadApplicationsData = async () => {
                   {/* REPORTES */}
                   <li>
                     <button 
-                      onClick={() => setCurrentView("reports")}
-                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all w-full ${
-                        currentView === "reports"
-                          ? "bg-primary-600 text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
+                      onClick={() => {
+                        setCurrentView("reports");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("reports")}`}
                     >
                       <i className="fas fa-chart-bar mr-3 w-5" />
                       Reportes
@@ -3259,67 +3258,67 @@ const loadApplicationsData = async () => {
           {currentView === "reports" && <DirectorReportsHub />}
 
           {currentView === "client-progress" && (
-            <div className="space-y-6">
+            <div className="p-6 space-y-6">
               {/* Header */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-                      <i className="fas fa-chart-line mr-3 text-blue-600"></i>
-                      Avance de Cliente
-                    </h2>
-                    <p className="text-gray-600 mt-1">
-                      Comparte el progreso de los procesos de reclutamiento con tus clientes
-                    </p>
-                  </div>
-                </div>
-
-                {/* Información educativa */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center">
-                    <i className="fas fa-info-circle mr-2"></i>
-                    ¿Cómo funciona?
-                  </h3>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• Genera un enlace único para cada perfil de reclutamiento</li>
-                    <li>• Comparte el enlace con tu cliente por email o mensaje</li>
-                    <li>• El cliente puede ver el avance en tiempo real sin iniciar sesión</li>
-                    <li>• El enlace se actualiza automáticamente conforme avanza el proceso</li>
-                  </ul>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900 flex items-center">
+                    <i className="fas fa-chart-line mr-3 text-blue-600"></i>
+                    Avance de Cliente
+                  </h2>
+                  <p className="text-gray-600 mt-1">
+                    Comparte el progreso de los procesos de reclutamiento con tus clientes
+                  </p>
                 </div>
               </div>
 
+              {/* Información educativa */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2 flex items-center">
+                  <i className="fas fa-info-circle mr-2"></i>
+                  ¿Cómo funciona?
+                </h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Genera un enlace único para cada perfil de reclutamiento</li>
+                  <li>• Comparte el enlace con tu cliente por email o mensaje</li>
+                  <li>• El cliente puede ver el avance en tiempo real sin iniciar sesión</li>
+                  <li>• El enlace se actualiza automáticamente conforme avanza el proceso</li>
+                </ul>
+              </div>
+
               {/* Estadísticas rápidas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-100 text-sm font-medium">Perfiles Activos</p>
-                      <p className="text-4xl font-bold mt-2">
-                        {clientProgressProfiles.filter((p: any) => 
-                          p.status !== 'cancelled' && p.status !== 'completed'
-                        ).length}
-                      </p>
-                    </div>
-                    <div className="bg-white bg-opacity-20 rounded-full p-4">
-                      <i className="fas fa-briefcase text-3xl"></i>
-                    </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-blue-600 text-sm font-medium">Perfiles Activos</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {clientProgressProfiles.filter((p: any) => 
+                      p.status !== 'cancelled' && p.status !== 'completed'
+                    ).length}
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-100 text-sm font-medium">Perfiles Completados</p>
-                      <p className="text-4xl font-bold mt-2">
-                        {clientProgressProfiles.filter((p: any) => p.status === 'completed').length}
-                      </p>
-                    </div>
-                    <div className="bg-white bg-opacity-20 rounded-full p-4">
-                      <i className="fas fa-check-circle text-3xl"></i>
-                    </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-green-600 text-sm font-medium">Perfiles Completados</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {clientProgressProfiles.filter((p: any) => p.status === 'completed').length}
                   </div>
                 </div>
+                
+                <div className="bg-yellow-50 p-4 rounded-lg">
+                  <div className="text-yellow-600 text-sm font-medium">Pendientes Aprobación</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {clientProgressProfiles.filter((p: any) => p.status === 'pending').length}
+                  </div>
+                </div>
+                
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-purple-600 text-sm font-medium">Total Perfiles</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {clientProgressProfiles.length}
+                  </div>
+                </div>
+              </div>
               </div>
 
               {/* Lista de perfiles */}
@@ -3388,7 +3387,7 @@ const loadApplicationsData = async () => {
                                   profile.position_title,
                                   profile.client_name
                                 )}
-                                className="ml-4 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-medium flex items-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                                className="ml-4 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 transition-colors"
                               >
                                 <i className="fas fa-share-alt"></i>
                                 Compartir Avance
@@ -3599,8 +3598,9 @@ const loadApplicationsData = async () => {
                                 <i className="fas fa-download"></i>
                               </button>
                               <button
-                                onClick={() => {
-                                  if (confirm('¿Estás seguro de que deseas eliminar este documento?')) {
+                                onClick={async () => {
+                                  const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar este documento?');
+                                  if (confirmed) {
                                     console.log('Eliminar documento:', doc.id);
                                     // Aquí puedes agregar la lógica de eliminación
                                   }

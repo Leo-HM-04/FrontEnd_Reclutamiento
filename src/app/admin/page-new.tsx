@@ -9,12 +9,14 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { useRouter } from 'next/navigation';
 import { apiClient, type User, type AdminDashboardStats, type UserActivity } from '@/lib/api';
 import EmailManagement from '@/components/EmailManagement'; 
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { showAlert, showSuccess, showConfirm } = useModal();
   
   // ============================================================
   // STATE MANAGEMENT
@@ -107,7 +109,7 @@ export default function AdminDashboard() {
         router.push('/auth');
       } else {
         // Mostrar error pero permitir usar la interfaz
-        alert('Error al cargar datos del sistema. Algunos datos pueden no estar disponibles.');
+        await showAlert('Error al cargar datos del sistema. Algunos datos pueden no estar disponibles.');
       }
     } finally {
       setLoading(false);
@@ -201,18 +203,18 @@ export default function AdminDashboard() {
       if (modalMode === 'create') {
         // Validar passwords
         if (userForm.password !== userForm.password_confirm) {
-          alert('Las contraseñas no coinciden');
+          await showAlert('Las contraseñas no coinciden');
           return;
         }
         
         if (userForm.password.length < 8) {
-          alert('La contraseña debe tener al menos 8 caracteres');
+          await showAlert('La contraseña debe tener al menos 8 caracteres');
           return;
         }
         
         // Crear usuario
         await apiClient.createUser(userForm);
-        alert('Usuario creado exitosamente');
+        await showSuccess('Usuario creado exitosamente');
       } else {
         // Actualizar usuario
         const updateData: any = {
@@ -224,7 +226,7 @@ export default function AdminDashboard() {
         };
         
         await apiClient.updateUser(selectedUser!.id, updateData);
-        alert('Usuario actualizado exitosamente');
+        await showSuccess('Usuario actualizado exitosamente');
       }
       
       closeUserModal();
@@ -232,43 +234,45 @@ export default function AdminDashboard() {
       
     } catch (error: any) {
       console.error('Error saving user:', error);
-      alert(error?.details?.message || 'Error al guardar usuario');
+      await showAlert(error?.details?.message || 'Error al guardar usuario');
     } finally {
       setLoading(false);
     }
   };
 
   const toggleUserStatus = async (user: User) => {
-    if (!confirm(`¿${user.is_active ? 'Desactivar' : 'Activar'} usuario ${user.full_name}?`)) {
+    const confirmed = await showConfirm(`¿${user.is_active ? 'Desactivar' : 'Activar'} usuario ${user.full_name}?`);
+    if (!confirmed) {
       return;
     }
     
     try {
       setLoading(true);
       await apiClient.toggleUserStatus(user.id, !user.is_active);
-      alert(`Usuario ${user.is_active ? 'desactivado' : 'activado'} exitosamente`);
+      await showSuccess(`Usuario ${user.is_active ? 'desactivado' : 'activado'} exitosamente`);
       await refreshData();
     } catch (error) {
       console.error('Error toggling user status:', error);
-      alert('Error al cambiar estado del usuario');
+      await showAlert('Error al cambiar estado del usuario');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteUser = async (user: User) => {
-    if (!confirm(`¿Eliminar usuario ${user.full_name}? Esta acción no se puede deshacer.`)) {
+    const confirmed = await showConfirm(`¿Eliminar usuario ${user.full_name}? Esta acción no se puede deshacer.`);
+    if (!confirmed) {
       return;
     }
     
     try {
       setLoading(true);
       await apiClient.deleteUser(user.id);
-      alert('Usuario eliminado exitosamente');
+      await showSuccess('Usuario eliminado exitosamente');
       await refreshData();
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Error al eliminar usuario');
+      await showAlert('Error al eliminar usuario');
     } finally {
       setLoading(false);
     }
@@ -943,7 +947,7 @@ export default function AdminDashboard() {
         {/* USER MODAL */}
         {/* ============================================================ */}
         {showUserModal && (
-          <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
             <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               {/* Modal Header */}
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl">

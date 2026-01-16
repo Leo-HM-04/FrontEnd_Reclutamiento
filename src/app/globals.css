@@ -89,6 +89,13 @@ body {
 
 /* ====== Estilos del Sistema de Reclutamiento ====== */
 
+/* Modal Overlay con Difuminado */
+.modal-overlay {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
 /* Gradientes */
 .gradient-primary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
 .gradient-success { background: linear-gradient(135deg, #10b981, #059669); }

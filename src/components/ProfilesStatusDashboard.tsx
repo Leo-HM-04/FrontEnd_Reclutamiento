@@ -12,6 +12,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
+import Pagination from './ui/Pagination';
 
 // ============================================================
 // INTERFACES
@@ -103,6 +105,10 @@ export default function ProfilesStatusDashboard() {
     platform: '',
     url: '',
   });
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // ============================================================
   // LIFECYCLE
@@ -449,10 +455,10 @@ export default function ProfilesStatusDashboard() {
   // HELPERS
   // ============================================================
   
-  const showNotification = (message: string, type: 'success' | 'error') => {
+  const showNotification = async (message: string, type: 'success' | 'error') => {
     // Implementar tu sistema de notificaciones aquí
     console.log(`[${type}] ${message}`);
-    alert(message);
+    await showAlert(message);
   };
   
   const getStatusColor = (status: string) => {
@@ -504,56 +510,28 @@ export default function ProfilesStatusDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{profiles.length}</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <i className="fas fa-briefcase text-blue-600 text-xl" />
-            </div>
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="text-blue-600 text-sm font-medium">Total Perfiles</div>
+          <div className="text-2xl font-bold text-gray-900">{profiles.length}</div>
+        </div>
+        
+        <div className="bg-green-50 p-4 rounded-lg">
+          <div className="text-green-600 text-sm font-medium">En Proceso</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {profiles.filter(p => p.status === 'in_progress').length}
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">En Proceso</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {profiles.filter(p => p.status === 'in_progress').length}
-              </p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <i className="fas fa-tasks text-green-600 text-xl" />
-            </div>
+        <div className="bg-purple-50 p-4 rounded-lg">
+          <div className="text-purple-600 text-sm font-medium">Aprobados por Cliente</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {profiles.filter(p => p.client_approved).length}
           </div>
         </div>
         
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Aprobados</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {profiles.filter(p => p.client_approved).length}
-              </p>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <i className="fas fa-check-circle text-purple-600 text-xl" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Seleccionados</p>
-              <p className="text-2xl font-bold text-gray-900">{selectedProfiles.size}</p>
-            </div>
-            <div className="p-3 bg-orange-100 rounded-lg">
-              <i className="fas fa-check-square text-orange-600 text-xl" />
-            </div>
-          </div>
+        <div className="bg-orange-50 p-4 rounded-lg">
+          <div className="text-orange-600 text-sm font-medium">Seleccionados</div>
+          <div className="text-2xl font-bold text-gray-900">{selectedProfiles.size}</div>
         </div>
       </div>
 
@@ -707,7 +685,9 @@ export default function ProfilesStatusDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProfiles.map((profile) => (
+                {filteredProfiles
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((profile) => (
                   <React.Fragment key={profile.id}>
                     <tr className="hover:bg-gray-50">
                       <td className="px-6 py-4">
@@ -874,13 +854,22 @@ export default function ProfilesStatusDashboard() {
                 ))}
               </tbody>
             </table>
+            {/* Pagination for profiles */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredProfiles.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+              className="border-t border-gray-200 px-4"
+            />
           </div>
         )}
       </div>
 
       {/* Modal: Cambiar Estado */}
       {showStatusModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -985,7 +974,7 @@ export default function ProfilesStatusDashboard() {
 
       {/* Modal: Aprobar/Rechazar */}
       {showApprovalModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -1057,7 +1046,7 @@ export default function ProfilesStatusDashboard() {
 
       {/* Modal: Agregar Plataforma */}
       {showPlatformModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">

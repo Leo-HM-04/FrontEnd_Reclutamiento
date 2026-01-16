@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { getCombinedMetrics, calculateTrend, formatPercentage } from '@/lib/api-reports';
 import KPICard from './KPICard';
 import FunnelChart from './FunnelChart';
@@ -44,7 +45,7 @@ export default function DirectorReportsHub() {
   const handleGenerateReport = async (type: string, format: string) => {
     console.log(`Generando reporte: ${type} en formato ${format}`);
     // TODO: Implementar generación de reportes
-    alert(`Generando reporte ${type} en ${format}...`);
+    await showAlert(`Generando reporte ${type} en ${format}...`);
   };
 
   if (loading) {

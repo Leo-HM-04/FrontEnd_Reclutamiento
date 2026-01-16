@@ -9,9 +9,18 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { getClientFullReport, formatDate, getStatusColor, type ClientFullReportData } from '@/lib/api-reports';
-import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
+import {
+  generatePDF,
+  generateHeader,
+  generateKPIRow,
+  generateSection,
+  generateInfoGrid,
+  generateTable,
+  wrapInPage,
+} from '@/lib/pdf-generator';
 
 interface Props {
   clientId: number;
@@ -20,6 +29,7 @@ interface Props {
 }
 
 export default function ClientFullReport({ clientId, onBack, onViewProfile }: Props) {
+  const { showAlert } = useModal();
   const [data, setData] = useState<ClientFullReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,245 +91,79 @@ export default function ClientFullReport({ clientId, onBack, onViewProfile }: Pr
   // ═══════════════════════════════════════════════
   // EXPORTAR A PDF
   // ═══════════════════════════════════════════════
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!data) return;
     
     setExporting(true);
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      let htmlContent = '';
 
-      let yPos = 20;
-      const leftMargin = 15;
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const contentWidth = pageWidth - (leftMargin * 2);
+      // Header institucional
+      htmlContent += generateHeader('REPORTE DE CLIENTE', data.client.company_name);
 
-      const checkNewPage = (height: number) => {
-        if (yPos + height > pageHeight - 20) {
-          pdf.addPage();
-          yPos = 20;
-        }
-      };
+      // KPIs principales
+      htmlContent += generateKPIRow([
+        { label: 'Perfiles', value: data.statistics.total_profiles, type: 'primary' },
+        { label: 'Activos', value: data.statistics.active_profiles, type: 'success' },
+        { label: 'Completados', value: data.statistics.completed_profiles, type: 'accent' },
+        { label: 'Tasa de Éxito', value: `${data.statistics.success_rate}%`, type: 'warning' },
+      ]);
 
-      // ============================================
-      // HEADER
-      // ============================================
-      pdf.setFillColor(220, 38, 38); // Red
-      pdf.rect(0, 0, pageWidth, 60, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(28);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text(data.client.company_name, leftMargin, 30);
-      
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(data.client.industry || 'Sin especificar', leftMargin, 40);
-      
-      if (data.client.website) {
-        pdf.setFontSize(10);
-        pdf.text(`🌐 ${data.client.website}`, leftMargin, 50);
-      }
+      // Información del cliente
+      htmlContent += generateSection('Información General',
+        generateInfoGrid([
+          { label: 'Industria', value: data.client.industry || 'N/A' },
+          { label: 'Sitio Web', value: data.client.website || 'N/A' },
+        ])
+      );
 
-      yPos = 70;
-      pdf.setTextColor(0, 0, 0);
+      // Contacto principal
+      htmlContent += generateSection('Contacto Principal',
+        generateInfoGrid([
+          { label: 'Nombre', value: data.client.contact_name },
+          { label: 'Email', value: data.client.contact_email },
+          { label: 'Teléfono', value: data.client.contact_phone || 'N/A' },
+        ])
+      );
 
-      // ============================================
-      // ESTADÍSTICAS
-      // ============================================
-      const stats = [
-        { label: 'Perfiles Totales', value: data.statistics.total_profiles, color: [220, 38, 38] },
-        { label: 'Activos', value: data.statistics.active_profiles, color: [34, 197, 94] },
-        { label: 'Completados', value: data.statistics.completed_profiles, color: [59, 130, 246] },
-        { label: 'Candidatos', value: data.statistics.total_candidates_managed, color: [168, 85, 247] },
-      ];
+      // Ubicación
+      htmlContent += generateSection('Ubicación',
+        generateInfoGrid([
+          { label: 'Dirección', value: data.client.address || 'N/A' },
+          { label: 'Ciudad', value: `${data.client.city || 'N/A'}, ${data.client.state || 'N/A'}` },
+        ])
+      );
 
-      let xPos = leftMargin;
-      const statWidth = (contentWidth - 15) / 4;
-      stats.forEach((stat) => {
-        pdf.setFillColor(stat.color[0], stat.color[1], stat.color[2]);
-        pdf.roundedRect(xPos, yPos, statWidth, 20, 3, 3, 'F');
-        
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(stat.value.toString(), xPos + statWidth / 2, yPos + 10, { align: 'center' });
-        
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(stat.label, xPos + statWidth / 2, yPos + 16, { align: 'center' });
-        
-        xPos += statWidth + 5;
-      });
-
-      pdf.setTextColor(0, 0, 0);
-      yPos += 28;
-
-      // ============================================
-      // CONTACTO PRINCIPAL
-      // ============================================
-      checkNewPage(15);
-      pdf.setFillColor(249, 250, 251);
-      pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(220, 38, 38);
-      pdf.text('CONTACTO PRINCIPAL', leftMargin + 3, yPos + 7);
-      pdf.setTextColor(0, 0, 0);
-      yPos += 15;
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      
-      const contactData = [
-        ['Nombre:', data.client.contact_name],
-        ['Email:', data.client.contact_email],
-        ['Teléfono:', data.client.contact_phone],
-      ];
-
-      contactData.forEach(([label, value]) => {
-        checkNewPage(6);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(label, leftMargin, yPos);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(value || 'N/A', leftMargin + 30, yPos);
-        yPos += 6;
-      });
-
-      yPos += 3;
-
-      // ============================================
-      // DIRECCIÓN
-      // ============================================
-      checkNewPage(15);
-      pdf.setFillColor(249, 250, 251);
-      pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(220, 38, 38);
-      pdf.text('DIRECCIÓN', leftMargin + 3, yPos + 7);
-      pdf.setTextColor(0, 0, 0);
-      yPos += 15;
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      
-      const addressData = [
-        ['Dirección:', data.client.address],
-        ['Ciudad:', data.client.city],
-        ['Estado:', data.client.state],
-        ['CP:', data.client.postal_code],
-      ];
-
-      addressData.forEach(([label, value]) => {
-        checkNewPage(6);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(label, leftMargin, yPos);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(value || 'N/A', leftMargin + 25, yPos);
-        yPos += 6;
-      });
-
-      yPos += 5;
-
-      // ============================================
-      // MÉTRICAS CLAVE
-      // ============================================
-      checkNewPage(15);
-      pdf.setFillColor(249, 250, 251);
-      pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(220, 38, 38);
-      pdf.text('MÉTRICAS DE RENDIMIENTO', leftMargin + 3, yPos + 7);
-      pdf.setTextColor(0, 0, 0);
-      yPos += 15;
-
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'normal');
-      
-      const metricsData = [
-        ['Tasa de Éxito:', `${data.statistics.success_rate}%`],
-        ['Tiempo Promedio:', `${data.statistics.avg_days_to_complete || 'N/A'} días`],
-        ['Total de Candidatos:', data.statistics.total_candidates_managed.toString()],
-      ];
-
-      metricsData.forEach(([label, value]) => {
-        checkNewPage(6);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(label, leftMargin, yPos);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(value, leftMargin + 50, yPos);
-        yPos += 6;
-      });
-
-      yPos += 5;
-
-      // ============================================
-      // PERFILES/VACANTES
-      // ============================================
+      // Tabla de perfiles
       if (data.profiles.length > 0) {
-        checkNewPage(15);
-        pdf.setFillColor(249, 250, 251);
-        pdf.roundedRect(leftMargin, yPos, contentWidth, 10, 2, 2, 'F');
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(220, 38, 38);
-        pdf.text('PERFILES / VACANTES', leftMargin + 3, yPos + 7);
-        pdf.setTextColor(0, 0, 0);
-        yPos += 15;
-
-        pdf.setFontSize(9);
-        data.profiles.forEach((profile: any, idx: number) => {
-          checkNewPage(25);
-          
-          pdf.setFillColor(255, 255, 255);
-          pdf.roundedRect(leftMargin, yPos, contentWidth, 22, 2, 2, 'D');
-          
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(`${idx + 1}. ${profile.position_title}`, leftMargin + 3, yPos + 6);
-          
-          pdf.setFont('helvetica', 'normal');
-          pdf.setFontSize(8);
-          pdf.text(`Estado: ${profile.status_display}`, leftMargin + 3, yPos + 11);
-          pdf.text(`Prioridad: ${profile.priority}`, leftMargin + 3, yPos + 15);
-          pdf.text(`Candidatos: ${profile.candidates_count}`, leftMargin + 3, yPos + 19);
-          
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(34, 197, 94);
-          pdf.text(`Creado: ${new Date(profile.created_at).toLocaleDateString('es-MX')}`, leftMargin + contentWidth - 40, yPos + 11);
-          pdf.setTextColor(0, 0, 0);
-          
-          yPos += 26;
-        });
-      }
-
-      // ============================================
-      // CONTACTOS ADICIONALES
-      // ============================================
-      
-
-      // ============================================
-      // FOOTER
-      // ============================================
-      const pageCount = pdf.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text(
-          `Generado el ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })} - Página ${i} de ${pageCount}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: 'center' }
+        htmlContent += generateSection('Perfiles / Vacantes',
+          generateTable(
+            [
+              { key: 'position', header: 'Posición' },
+              { key: 'status', header: 'Estado' },
+              { key: 'candidates', header: 'Candidatos' },
+            ],
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            data.profiles.slice(0, 15).map((profile: any) => ({
+              position: profile.position_title.substring(0, 35),
+              status: profile.status_display,
+              candidates: String(profile.candidates_count),
+            }))
+          )
         );
       }
 
-      pdf.save(`Reporte_Cliente_${data.client.company_name}_${new Date().toISOString().split('T')[0]}.pdf`);
-      alert('✅ PDF generado exitosamente');
+      // Envolver en página completa con estilos
+      const fullHtml = wrapInPage(htmlContent, { title: 'REPORTE DE CLIENTE', subtitle: data.client.company_name });
+
+      // Generar PDF
+      await generatePDF(fullHtml, {
+        filename: `Cliente_${data.client.company_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+      });
+
+      await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
-      alert('❌ Error al generar PDF');
     } finally {
       setExporting(false);
     }
@@ -328,7 +172,7 @@ export default function ClientFullReport({ clientId, onBack, onViewProfile }: Pr
   // ═══════════════════════════════════════════════
   // EXPORTAR A EXCEL
   // ═══════════════════════════════════════════════
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!data) return;
     
     setExporting(true);
@@ -403,10 +247,10 @@ export default function ClientFullReport({ clientId, onBack, onViewProfile }: Pr
       
 
       XLSX.writeFile(wb, `Reporte_Cliente_${data.client.company_name}_${new Date().toISOString().split('T')[0]}.xlsx`);
-      alert('✅ Excel generado exitosamente');
+      await showAlert('✅ Excel generado exitosamente');
     } catch (error) {
       console.error('Error al exportar Excel:', error);
-      alert('❌ Error al generar Excel');
+      await showAlert('❌ Error al generar Excel');
     } finally {
       setExporting(false);
     }

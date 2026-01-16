@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useModal } from '@/context/ModalContext';
 
 interface Note {
   id: number;
@@ -27,6 +28,7 @@ export default function NotesPostItView({
   onDelete, 
   onToggleImportant 
 }: NotesPostItViewProps) {
+  const { showConfirm } = useModal();
   
   const [groupBy, setGroupBy] = useState<'profile' | 'candidate' | 'all'>('profile');
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -254,9 +256,10 @@ export default function NotesPostItView({
 
                   {onDelete && (
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        if (confirm('¿Eliminar esta nota?')) {
+                        const confirmed = await showConfirm('¿Eliminar esta nota?');
+                        if (confirmed) {
                           onDelete(note.id);
                         }
                       }}

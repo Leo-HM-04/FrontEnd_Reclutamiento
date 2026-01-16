@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from '@/lib/api';
 
 interface CandidateNoteFormModalProps {
@@ -44,7 +45,7 @@ export default function CandidateNoteFormModal({ isOpen, onClose, onSuccess }: C
       console.log('📋 Candidatos cargados:', data.results || data);
     } catch (error) {
       console.error('❌ Error al cargar candidatos:', error);
-      alert('Error al cargar la lista de candidatos');
+      await showAlert('Error al cargar la lista de candidatos');
     } finally {
       setLoadingCandidates(false);
     }
@@ -63,12 +64,12 @@ export default function CandidateNoteFormModal({ isOpen, onClose, onSuccess }: C
 
     // Validaciones
     if (!noteForm.candidato) {
-      alert('Por favor selecciona un candidato');
+      await showAlert('Por favor selecciona un candidato');
       return;
     }
 
     if (!noteForm.nota.trim()) {
-      alert('Por favor escribe una nota');
+      await showAlert('Por favor escribe una nota');
       return;
     }
 
@@ -96,7 +97,7 @@ export default function CandidateNoteFormModal({ isOpen, onClose, onSuccess }: C
       onClose();
     } catch (error: any) {
       console.error('❌ Error al crear nota:', error);
-      alert(`Error al crear nota: ${error.message || 'Error desconocido'}`);
+      await showAlert(`Error al crear nota: ${error.message || 'Error desconocido'}`);
     } finally {
       setSubmitting(false);
     }
@@ -105,7 +106,7 @@ export default function CandidateNoteFormModal({ isOpen, onClose, onSuccess }: C
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
         {/* Header - Degradado azul */}
         <div className="bg-linear-to-r from-blue-50 via-blue-100 to-indigo-50 px-6 py-5 shadow-lg border-b-4 border-blue-500">
@@ -135,13 +136,13 @@ export default function CandidateNoteFormModal({ isOpen, onClose, onSuccess }: C
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Selección de Candidato */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-blue-600 px-5 py-3.5 border-b-2 border-blue-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-blue-500/10 border-b-2 border-blue-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-blue-800 tracking-wide flex items-center">
                   <i className="fas fa-user mr-2.5 text-xl" />
                   INFORMACIÓN DEL CANDIDATO
                 </h3>
               </div>
-              <div className="p-6 space-y-4 bg-gray-50">
+              <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Candidato <span className="text-red-500">*</span>
@@ -189,13 +190,13 @@ export default function CandidateNoteFormModal({ isOpen, onClose, onSuccess }: C
 
             {/* Nota */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-purple-600 px-5 py-3.5 border-b-2 border-purple-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-purple-500/10 border-b-2 border-purple-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-purple-800 tracking-wide flex items-center">
                   <i className="fas fa-comment-dots mr-2.5 text-xl" />
                   CONTENIDO DE LA NOTA
                 </h3>
               </div>
-              <div className="p-6 space-y-4 bg-gray-50">
+              <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     Nota <span className="text-red-500">*</span>
@@ -232,13 +233,13 @@ export default function CandidateNoteFormModal({ isOpen, onClose, onSuccess }: C
 
             {/* Información de metadata */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-gray-600 px-5 py-3.5 border-b-2 border-gray-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-gray-500/10 border-b-2 border-gray-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-gray-800 tracking-wide flex items-center">
                   <i className="fas fa-info-circle mr-2.5 text-xl" />
                   INFORMACIÓN DE AUDITORÍA
                 </h3>
               </div>
-              <div className="p-6 bg-gray-50">
+              <div className="p-6">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-600 font-medium">Creado por:</span>

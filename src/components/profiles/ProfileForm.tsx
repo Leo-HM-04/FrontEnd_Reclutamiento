@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { createProfile, updateProfile, getProfile, getClients, apiClient } from "@/lib/api";
 interface ProfileFormProps {
   profileId?: number;
@@ -132,7 +133,7 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
       console.log('✅ Usuarios cargados:', usersList.length);
     } catch (error) {
       console.error("Error loading initial data:", error);
-      alert("Error al cargar datos iniciales");
+      await showAlert("Error al cargar datos iniciales");
     } finally {
       setLoadingData(false);
     }
@@ -219,7 +220,7 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
       });
     } catch (error) {
       console.error("Error loading profile:", error);
-      alert("Error al cargar el perfil");
+      await showAlert("Error al cargar el perfil");
     } finally {
       setLoading(false);
     }
@@ -298,17 +299,17 @@ ${formData.benefits || 'No especificados'}
 
     if (profileId) {
       await updateProfile(profileId, submitData);
-      alert("Perfil actualizado exitosamente");
+      await showAlert("Perfil actualizado exitosamente");
     } else {
       await createProfile(submitData);
-      alert("Perfil creado exitosamente");
+      await showAlert("Perfil creado exitosamente");
     }
     
     if (onSuccess) onSuccess();
   } catch (error: any) {
     console.error("❌ Error saving profile:", error);
     console.error("📋 Detalles del error:", error.response?.data);
-    alert(`Error al guardar: ${error.response?.data?.detail || error.message}`);
+    await showAlert(`Error al guardar: ${error.response?.data?.detail || error.message}`);
   } finally {
     setLoading(false);
   }
@@ -338,13 +339,15 @@ ${formData.benefits || 'No especificados'}
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Información Básica */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-info-circle text-orange-600 mr-2"></i>
-            Información Básica
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-orange-500/10 border-b-2 border-orange-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-orange-800 flex items-center">
+              <i className="fas fa-info-circle text-orange-600 mr-2"></i>
+              Información Básica
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Título de la Posición *
@@ -525,13 +528,15 @@ ${formData.benefits || 'No especificados'}
         </div>
 
         {/* Descripción del Puesto */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-file-alt text-orange-600 mr-2"></i>
-            Descripción del Puesto
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-blue-500/10 border-b-2 border-blue-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-blue-800 flex items-center">
+              <i className="fas fa-file-alt text-blue-600 mr-2"></i>
+              Descripción del Puesto
+            </h4>
+          </div>
           
-          <div className="space-y-4">
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Responsabilidades *
@@ -579,13 +584,15 @@ ${formData.benefits || 'No especificados'}
         </div>
 
         {/* Requisitos del Candidato */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-user-check text-orange-600 mr-2"></i>
-            Requisitos del Candidato
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-purple-500/10 border-b-2 border-purple-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-purple-800 flex items-center">
+              <i className="fas fa-user-check text-purple-600 mr-2"></i>
+              Requisitos del Candidato
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Edad Mínima
@@ -647,13 +654,15 @@ ${formData.benefits || 'No especificados'}
         </div>
 
         {/* Salario y Compensación */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-dollar-sign text-orange-600 mr-2"></i>
-            Salario y Compensación
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-emerald-500/10 border-b-2 border-emerald-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-emerald-800 flex items-center">
+              <i className="fas fa-dollar-sign text-emerald-600 mr-2"></i>
+              Salario y Compensación
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Salario Mínimo
@@ -719,13 +728,15 @@ ${formData.benefits || 'No especificados'}
         </div>
 
         {/* Ubicación y Modalidad */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-map-marker-alt text-orange-600 mr-2"></i>
-            Ubicación y Modalidad
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-teal-500/10 border-b-2 border-teal-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-teal-800 flex items-center">
+              <i className="fas fa-map-marker-alt text-teal-600 mr-2"></i>
+              Ubicación y Modalidad
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Ubicación *
@@ -775,13 +786,15 @@ ${formData.benefits || 'No especificados'}
         </div>
 
         {/* Habilidades y Competencias */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-cogs text-orange-600 mr-2"></i>
-            Habilidades y Competencias
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-indigo-500/10 border-b-2 border-indigo-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-indigo-800 flex items-center">
+              <i className="fas fa-cogs text-indigo-600 mr-2"></i>
+              Habilidades y Competencias
+            </h4>
+          </div>
           
-          <div className="space-y-4">
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Habilidades Técnicas
@@ -845,13 +858,15 @@ ${formData.benefits || 'No especificados'}
         </div>
 
         {/* Fechas Importantes */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-calendar text-orange-600 mr-2"></i>
-            Fechas Importantes
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-amber-500/10 border-b-2 border-amber-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-amber-800 flex items-center">
+              <i className="fas fa-calendar text-amber-600 mr-2"></i>
+              Fechas Importantes
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Fecha Límite
@@ -881,13 +896,15 @@ ${formData.benefits || 'No especificados'}
         </div>
 
         {/* Notas Internas */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-sticky-note text-orange-600 mr-2"></i>
-            Notas Internas
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-gray-500/10 border-b-2 border-gray-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-gray-800 flex items-center">
+              <i className="fas fa-sticky-note text-gray-600 mr-2"></i>
+              Notas Internas
+            </h4>
+          </div>
           
-          <div>
+          <div className="p-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Notas
             </label>

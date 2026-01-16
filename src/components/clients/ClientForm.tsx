@@ -89,7 +89,7 @@ export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
       });
     } catch (error) {
       console.error("Error loading client:", error);
-      alert("Error al cargar el cliente");
+      await showAlert("Error al cargar el cliente");
     } finally {
       setLoadingData(false);
     }
@@ -193,13 +193,15 @@ export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Información de la Empresa */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-building text-green-600 mr-2"></i>
-            Información de la Empresa
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-green-500/10 border-b-2 border-green-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-green-800 flex items-center">
+              <i className="fas fa-building text-green-600 mr-2"></i>
+              Información de la Empresa
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre de la Empresa *
@@ -278,13 +280,15 @@ export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
         </div>
 
         {/* Información de Contacto */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-user text-green-600 mr-2"></i>
-            Información de Contacto
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-teal-500/10 border-b-2 border-teal-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-teal-800 flex items-center">
+              <i className="fas fa-user text-teal-600 mr-2"></i>
+              Información de Contacto
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nombre del Contacto
@@ -344,13 +348,15 @@ export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
         </div>
 
         {/* Dirección */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-map-marker-alt text-green-600 mr-2"></i>
-            Dirección
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-purple-500/10 border-b-2 border-purple-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-purple-800 flex items-center">
+              <i className="fas fa-map-marker-alt text-purple-600 mr-2"></i>
+              Dirección
+            </h4>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Calle y Número
@@ -424,13 +430,15 @@ export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
         </div>
 
         {/* Asignación */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-user-tie text-green-600 mr-2"></i>
-            Asignación
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-indigo-500/10 border-b-2 border-indigo-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-indigo-800 flex items-center">
+              <i className="fas fa-user-tie text-indigo-600 mr-2"></i>
+              Asignación
+            </h4>
+          </div>
           
-          <div>
+          <div className="p-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Asignar a
             </label>
@@ -451,13 +459,15 @@ export default function ClientForm({ clientId, onSuccess }: ClientFormProps) {
         </div>
 
         {/* Notas Internas */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <i className="fas fa-sticky-note text-green-600 mr-2"></i>
-            Notas Internas
-          </h4>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-gray-500/10 border-b-2 border-gray-500 px-5 py-3.5">
+            <h4 className="text-lg font-bold text-gray-800 flex items-center">
+              <i className="fas fa-sticky-note text-gray-600 mr-2"></i>
+              Notas Internas
+            </h4>
+          </div>
           
-          <div>
+          <div className="p-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Notas
             </label>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { getCombinedMetrics } from '@/lib/api-reports';
 import { 
   generateMonthlyReportPDF, 
@@ -100,7 +101,7 @@ export default function ReportGenerator({ onGenerate }: ReportGeneratorProps) {
       
     } catch (error) {
       console.error('❌ Error generando reporte:', error);
-      alert('Error al generar el reporte. Por favor intenta de nuevo.');
+      await showAlert('Error al generar el reporte. Por favor intenta de nuevo.');
     } finally {
       setLoading(false);
     }

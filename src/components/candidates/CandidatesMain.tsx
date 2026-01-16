@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from "@/lib/api";
 import CandidateDetail from "./CandidateDetail";
 import CandidateForm from "./CandidateForm";
@@ -10,6 +11,7 @@ import ProfileDetail from "../profiles/ProfileDetail";
 import ProfileForm from "../profiles/ProfileForm";
 import ApplicationDetailView from "./ApplicationDetailView";
 import UploadDocumentModal from "./UploadDocumentModal";
+import Pagination from "../ui/Pagination";
 
 type CandidateView = 
   | "candidates-list" 
@@ -34,6 +36,7 @@ interface CandidatesMainProps {
 }
 
 export default function CandidatesMain({ onClose }: CandidatesMainProps) {
+  const { showAlert, showSuccess, showError, showConfirm } = useModal();
   const [currentView, setCurrentView] = useState<CandidateView>("candidates-list");
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
@@ -53,6 +56,16 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [applicationFilter, setApplicationFilter] = useState("all");
+  
+  // Pagination states
+  const [candidatesPage, setCandidatesPage] = useState(1);
+  const [candidatesPerPage, setCandidatesPerPage] = useState(10);
+  const [applicationsPage, setApplicationsPage] = useState(1);
+  const [applicationsPerPage, setApplicationsPerPage] = useState(10);
+  const [documentsPage, setDocumentsPage] = useState(1);
+  const [documentsPerPage, setDocumentsPerPage] = useState(10);
+  const [notesPage, setNotesPage] = useState(1);
+  const [notesPerPage, setNotesPerPage] = useState(12);
   
   // Lista de perfiles para el filtro
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -114,14 +127,15 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
   };
 
   const handleDeleteCandidate = async (candidateId: number) => {
-    if (confirm('¿Estás seguro de que deseas eliminar este candidato?')) {
+    const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar este candidato?');
+    if (confirmed) {
       try {
         await apiClient.deleteCandidate(candidateId);
-        alert('Candidato eliminado exitosamente');
+        await showSuccess('Candidato eliminado exitosamente');
         loadData();
       } catch (error) {
         console.error('Error deleting candidate:', error);
-        alert('Error al eliminar el candidato');
+        await showError('Error al eliminar el candidato');
       }
     }
   };
@@ -160,14 +174,16 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
   };
 
   const handleDeleteDocument = async (documentId: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) return;
+    const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar este documento?');
+    if (!confirmed) return;
     
     try {
       await apiClient.deleteCandidateDocument(documentId);
       await loadData();
+      await showSuccess('Documento eliminado exitosamente');
     } catch (error) {
       console.error('Error deleting document:', error);
-      alert('Error al eliminar el documento');
+      await showError('Error al eliminar el documento');
     }
   };
 
@@ -457,8 +473,8 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {candidates
-                            .filter(candidate => {
+                          {(() => {
+                            const filteredCandidates = candidates.filter(candidate => {
                               const matchesSearch = searchTerm === "" || 
                                 `${candidate.first_name} ${candidate.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                 candidate.email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -466,8 +482,10 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                               const matchesApplication = applicationFilter === "all" || 
                                 (candidate.candidate_profiles && candidate.candidate_profiles.some((app: any) => app.profile === parseInt(applicationFilter)));
                               return matchesSearch && matchesStatus && matchesApplication;
-                            })
-                            .map((candidate) => (
+                            });
+                            const startIndex = (candidatesPage - 1) * candidatesPerPage;
+                            const paginatedCandidates = filteredCandidates.slice(startIndex, startIndex + candidatesPerPage);
+                            return paginatedCandidates.map((candidate) => (
                             <tr key={candidate.id} className="hover:bg-gray-50 cursor-pointer">
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center">
@@ -542,10 +560,33 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                                 </div>
                               </td>
                             </tr>
-                          ))}
+                          ));
+                          })()}
                         </tbody>
                       </table>
                     </div>
+                    {/* Pagination for candidates */}
+                    {(() => {
+                      const filteredCandidates = candidates.filter(candidate => {
+                        const matchesSearch = searchTerm === "" || 
+                          `${candidate.first_name} ${candidate.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          candidate.email?.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesStatus = statusFilter === "all" || candidate.latest_application_status === statusFilter;
+                        const matchesApplication = applicationFilter === "all" || 
+                          (candidate.candidate_profiles && candidate.candidate_profiles.some((app: any) => app.profile === parseInt(applicationFilter)));
+                        return matchesSearch && matchesStatus && matchesApplication;
+                      });
+                      return (
+                        <Pagination
+                          currentPage={candidatesPage}
+                          totalItems={filteredCandidates.length}
+                          itemsPerPage={candidatesPerPage}
+                          onPageChange={setCandidatesPage}
+                          onItemsPerPageChange={setCandidatesPerPage}
+                          className="border-t border-gray-200 px-4"
+                        />
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -576,54 +617,67 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                     <p className="text-lg">No hay aplicaciones registradas</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidato</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Perfil</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {applications.map((app) => (
-                          <tr key={app.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm text-gray-900">{app.candidate_name || `Candidato #${app.candidate}`}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{app.profile_title || `Perfil #${app.profile}`}</td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                app.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                                app.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                app.status === 'shortlisted' ? 'bg-blue-100 text-blue-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {app.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-500">
-                              {new Date(app.applied_at || app.created_at).toLocaleDateString('es-MX')}
-                            </td>
-                            <td className="px-4 py-3 text-right text-sm">
-                              <button 
-                                onClick={() => handleViewProfile(app.profile, app.candidate)}
-                                className="text-blue-600 hover:text-blue-800 mr-3"
-                                title="Ver detalles"
-                              >
-                                <i className="fas fa-eye"></i>
-                              </button>
-                              <button 
-                                className="text-green-600 hover:text-green-800"
-                                title="Editar"
-                              >
-                                <i className="fas fa-edit"></i>
-                              </button>
-                            </td>
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidato</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Perfil</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {applications
+                            .slice((applicationsPage - 1) * applicationsPerPage, applicationsPage * applicationsPerPage)
+                            .map((app) => (
+                            <tr key={app.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm text-gray-900">{app.candidate_name || `Candidato #${app.candidate}`}</td>
+                              <td className="px-4 py-3 text-sm text-gray-900">{app.profile_title || `Perfil #${app.profile}`}</td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  app.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                                  app.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  app.status === 'shortlisted' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {app.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500">
+                                {new Date(app.applied_at || app.created_at).toLocaleDateString('es-MX')}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm">
+                                <button 
+                                  onClick={() => handleViewProfile(app.profile, app.candidate)}
+                                  className="text-blue-600 hover:text-blue-800 mr-3"
+                                  title="Ver detalles"
+                                >
+                                  <i className="fas fa-eye"></i>
+                                </button>
+                                <button 
+                                  className="text-green-600 hover:text-green-800"
+                                  title="Editar"
+                                >
+                                  <i className="fas fa-edit"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Pagination for applications */}
+                    <Pagination
+                      currentPage={applicationsPage}
+                      totalItems={applications.length}
+                      itemsPerPage={applicationsPerPage}
+                      onPageChange={setApplicationsPage}
+                      onItemsPerPageChange={setApplicationsPerPage}
+                      className="border-t border-gray-200 px-4"
+                    />
                   </div>
                 )}
               </div>
@@ -663,98 +717,111 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                     <p className="text-lg">No hay documentos registrados</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidato</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {documents.map((doc: any) => (
-                          <tr key={doc.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3">
-                              <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
-                                  {doc.candidate_name ? doc.candidate_name.charAt(0).toUpperCase() : 'C'}
-                                </div>
-                                <div className="ml-3">
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {doc.candidate_name || `Candidato #${doc.candidate}`}
-                                  </div>
-                                  {doc.candidate_current_position && (
-                                    <div className="text-xs text-gray-500">{doc.candidate_current_position}</div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                <i className={`fas ${getDocumentIcon(doc.original_filename || '')} ${getDocumentColor(doc.original_filename || '')} text-2xl`}></i>
-                                <div>
-                                  <div className="text-sm font-semibold text-gray-900">
-                                    {doc.original_filename || 'Documento sin nombre'}
-                                  </div>
-                                  {doc.description && (
-                                    <div className="text-xs text-gray-500">{doc.description}</div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                                {doc.document_type || 'Otro'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-500">
-                              {new Date(doc.uploaded_at).toLocaleDateString('es-MX', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {doc.file_url && (
-                                  <button
-                                    onClick={() => window.open(doc.file_url, '_blank')}
-                                    className="text-blue-600 hover:text-blue-800"
-                                    title="Ver documento"
-                                  >
-                                    <i className="fas fa-eye"></i>
-                                  </button>
-                                )}
-                                {doc.file_url && (
-                                  <button
-                                    onClick={() => {
-                                      const link = document.createElement('a');
-                                      link.href = doc.file_url;
-                                      link.download = doc.original_filename || 'documento';
-                                      link.click();
-                                    }}
-                                    className="text-green-600 hover:text-green-800"
-                                    title="Descargar"
-                                  >
-                                    <i className="fas fa-download"></i>
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleDeleteDocument(doc.id)}
-                                  className="text-red-600 hover:text-red-800"
-                                  title="Eliminar"
-                                >
-                                  <i className="fas fa-trash"></i>
-                                </button>
-                              </div>
-                            </td>
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidato</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Documento</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {documents
+                            .slice((documentsPage - 1) * documentsPerPage, documentsPage * documentsPerPage)
+                            .map((doc: any) => (
+                            <tr key={doc.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3">
+                                <div className="flex items-center">
+                                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                                    {doc.candidate_name ? doc.candidate_name.charAt(0).toUpperCase() : 'C'}
+                                  </div>
+                                  <div className="ml-3">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {doc.candidate_name || `Candidato #${doc.candidate}`}
+                                    </div>
+                                    {doc.candidate_current_position && (
+                                      <div className="text-xs text-gray-500">{doc.candidate_current_position}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <i className={`fas ${getDocumentIcon(doc.original_filename || '')} ${getDocumentColor(doc.original_filename || '')} text-2xl`}></i>
+                                  <div>
+                                    <div className="text-sm font-semibold text-gray-900">
+                                      {doc.original_filename || 'Documento sin nombre'}
+                                    </div>
+                                    {doc.description && (
+                                      <div className="text-xs text-gray-500">{doc.description}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                                  {doc.document_type || 'Otro'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500">
+                                {new Date(doc.uploaded_at).toLocaleDateString('es-MX', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  {doc.file_url && (
+                                    <button
+                                      onClick={() => window.open(doc.file_url, '_blank')}
+                                      className="text-blue-600 hover:text-blue-800"
+                                      title="Ver documento"
+                                    >
+                                      <i className="fas fa-eye"></i>
+                                    </button>
+                                  )}
+                                  {doc.file_url && (
+                                    <button
+                                      onClick={() => {
+                                        const link = document.createElement('a');
+                                        link.href = doc.file_url;
+                                        link.download = doc.original_filename || 'documento';
+                                        link.click();
+                                      }}
+                                      className="text-green-600 hover:text-green-800"
+                                      title="Descargar"
+                                    >
+                                      <i className="fas fa-download"></i>
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleDeleteDocument(doc.id)}
+                                    className="text-red-600 hover:text-red-800"
+                                    title="Eliminar"
+                                  >
+                                    <i className="fas fa-trash"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Pagination for documents */}
+                    <Pagination
+                      currentPage={documentsPage}
+                      totalItems={documents.length}
+                      itemsPerPage={documentsPerPage}
+                      onPageChange={setDocumentsPage}
+                      onItemsPerPageChange={setDocumentsPerPage}
+                      className="border-t border-gray-200 px-4"
+                    />
                   </div>
                 )}
               </div>
@@ -789,38 +856,56 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                   <div className="flex justify-center items-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                   </div>
+                ) : notes.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <i className="fas fa-sticky-note text-5xl mb-4 text-gray-300"></i>
+                    <p className="text-lg">No hay notas registradas</p>
+                  </div>
                 ) : (
-                  <NotesPostItView
-                    notes={notes}
-                    onEdit={(note: any) => {
-                      console.log('Editar nota:', note);
-                      alert('Función de edición en construcción');
-                    }}
-                    onDelete={async (noteId: number) => {
-                      try {
-                        if (!confirm('¿Eliminar esta nota?')) return;
-                        await apiClient.deleteCandidateNote(noteId);
-                        await loadData();
-                        alert('Nota eliminada exitosamente');
-                      } catch (error: any) {
-                        console.error('Error:', error);
-                        alert('Error al eliminar la nota');
-                      }
-                    }}
-                    onToggleImportant={async (note: any) => {
-                      try {
-                        await apiClient.updateCandidateNote(note.id, {
-                          candidate: note.candidate,
-                          note: note.note,
-                          is_important: !note.is_important
-                        });
-                        await loadData();
-                      } catch (error: any) {
-                        console.error('Error:', error);
-                        alert('Error al actualizar la nota');
-                      }
-                    }}
-                  />
+                  <>
+                    <NotesPostItView
+                      notes={notes.slice((notesPage - 1) * notesPerPage, notesPage * notesPerPage)}
+                      onEdit={async (note: any) => {
+                        console.log('Editar nota:', note);
+                        await showAlert('Función de edición en construcción');
+                      }}
+                      onDelete={async (noteId: number) => {
+                        try {
+                          const confirmed = await showConfirm('¿Eliminar esta nota?');
+                          if (!confirmed) return;
+                          await apiClient.deleteCandidateNote(noteId);
+                          await loadData();
+                          await showSuccess('Nota eliminada exitosamente');
+                        } catch (error: any) {
+                          console.error('Error:', error);
+                          await showAlert('Error al eliminar la nota');
+                        }
+                      }}
+                      onToggleImportant={async (note: any) => {
+                        try {
+                          await apiClient.updateCandidateNote(note.id, {
+                            candidate: note.candidate,
+                            note: note.note,
+                            is_important: !note.is_important
+                          });
+                          await loadData();
+                        } catch (error: any) {
+                          console.error('Error:', error);
+                          await showAlert('Error al actualizar la nota');
+                        }
+                      }}
+                    />
+                    {/* Pagination for notes */}
+                    <Pagination
+                      currentPage={notesPage}
+                      totalItems={notes.length}
+                      itemsPerPage={notesPerPage}
+                      onPageChange={setNotesPage}
+                      onItemsPerPageChange={setNotesPerPage}
+                      itemsPerPageOptions={[6, 12, 24, 48]}
+                      className="mt-4"
+                    />
+                  </>
                 )}
               </div>
             )}
@@ -867,8 +952,8 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
         <CandidateNoteFormModal
           isOpen={showNoteModal}
           onClose={() => setShowNoteModal(false)}
-          onSuccess={(message) => {
-            alert(message);
+          onSuccess={async (message) => {
+            await showAlert(message);
             loadData(); // Recargar notas
           }}
         />

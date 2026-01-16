@@ -581,6 +581,55 @@ class ApiClient {
   }
 
   /**
+   * Get automatic candidate recommendations for a profile
+   * Uses AI matching optimized to minimize token usage
+   * @param profileId - The profile ID to get recommendations for
+   * @param limit - Number of recommendations (default: 5, max: 10)
+   * @param useAI - Whether to use AI analysis (default: true)
+   */
+  async getAutoRecommendations(
+    profileId: number,
+    limit: number = 5,
+    useAI: boolean = true
+  ): Promise<{
+    profile_id: number;
+    profile_title: string;
+    candidates_analyzed: number;
+    recommendations: Array<{
+      candidate_id: number;
+      candidate_name: string;
+      candidate_email: string;
+      current_position: string;
+      current_company: string;
+      years_of_experience: number;
+      education_level: string;
+      city: string;
+      state: string;
+      skills: string[];
+      local_score: number;
+      ai_score: number | null;
+      analysis: string;
+      strengths: string[];
+      gaps: string[];
+      recommendations: string;
+      cached: boolean;
+    }>;
+    total_candidates_in_db: number;
+    tokens_used: number;
+    execution_time_seconds: number;
+    used_ai: boolean;
+  }> {
+    const params = new URLSearchParams();
+    params.append('limit', limit.toString());
+    params.append('use_ai', useAI.toString());
+    
+    return this.makeRequest<any>(
+      `/api/profiles/profiles/${profileId}/auto_recommend/?${params.toString()}`,
+      { method: 'POST' }
+    );
+  }
+
+  /**
    * Get profile status history for a given profile
    */
   async getProfileHistory(profileId: number): Promise<any> {
@@ -1062,6 +1111,12 @@ export const deleteProfile = (id: number) =>
 
 export const getProfileStats = () =>
   apiClient.getProfileStats();
+
+export const getAutoRecommendations = (
+  profileId: number,
+  limit: number = 5,
+  useAI: boolean = true
+) => apiClient.getAutoRecommendations(profileId, limit, useAI);
 
 export const getProfileDocuments = (profileId?: number) =>
   apiClient.getProfileDocuments(profileId);

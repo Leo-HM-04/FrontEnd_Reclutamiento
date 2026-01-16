@@ -12,6 +12,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
+import Pagination from './ui/Pagination';
 
 // ============================================================
 // INTERFACES
@@ -133,6 +135,12 @@ export default function ShortlistedCandidatesDashboard() {
     description: '',
     file: null as File | null,
   });
+  
+  // Pagination
+  const [profilesPage, setProfilesPage] = useState(1);
+  const [profilesPerPage, setProfilesPerPage] = useState(10);
+  const [candidatesPage, setCandidatesPage] = useState(1);
+  const [candidatesPerPage, setCandidatesPerPage] = useState(10);
 
   // ============================================================
   // LIFECYCLE
@@ -474,9 +482,9 @@ export default function ShortlistedCandidatesDashboard() {
   // HELPERS
   // ============================================================
   
-  const showNotification = (message: string, type: 'success' | 'error') => {
+  const showNotification = async (message: string, type: 'success' | 'error') => {
     console.log(`[${type}] ${message}`);
-    alert(message);
+    await showAlert(message);
   };
   
   const getDocumentIcon = (docType: string) => {
@@ -511,10 +519,10 @@ export default function ShortlistedCandidatesDashboard() {
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Candidatos Preseleccionados</h1>
-            <p className="text-sm text-gray-600 mt-1">Gestiona los candidatos en etapa de preselección</p>
+            <h1 className="text-3xl font-bold text-gray-900">Candidatos Preseleccionados</h1>
+            <p className="text-gray-600 mt-1">Gestiona los candidatos en etapa de preselección</p>
           </div>
           <button
             onClick={loadProfiles}
@@ -523,6 +531,26 @@ export default function ShortlistedCandidatesDashboard() {
             <i className="fas fa-sync mr-2" />
             Actualizar
           </button>
+        </div>
+        
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-purple-50 p-3 rounded-lg">
+            <div className="text-purple-600 text-sm font-medium">Perfiles Activos</div>
+            <div className="text-xl font-bold text-gray-900">{profiles.length}</div>
+          </div>
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="text-blue-600 text-sm font-medium">Preseleccionados</div>
+            <div className="text-xl font-bold text-gray-900">{candidatesData.length}</div>
+          </div>
+          <div className="bg-green-50 p-3 rounded-lg">
+            <div className="text-green-600 text-sm font-medium">Entrevistados</div>
+            <div className="text-xl font-bold text-gray-900">{candidatesData.filter(c => c.application.status === 'interview_scheduled').length}</div>
+          </div>
+          <div className="bg-orange-50 p-3 rounded-lg">
+            <div className="text-orange-600 text-sm font-medium">Seleccionados</div>
+            <div className="text-xl font-bold text-gray-900">{selectedCandidates.size}</div>
+          </div>
         </div>
       </div>
 
@@ -558,7 +586,9 @@ export default function ShortlistedCandidatesDashboard() {
               </div>
             ) : (
               <div className="p-2">
-                {filteredProfiles.map((profile) => (
+                {filteredProfiles
+                  .slice((profilesPage - 1) * profilesPerPage, profilesPage * profilesPerPage)
+                  .map((profile) => (
                   <button
                     key={profile.id}
                     onClick={() => setSelectedProfile(profile)}
@@ -582,6 +612,17 @@ export default function ShortlistedCandidatesDashboard() {
                     </p>
                   </button>
                 ))}
+                {/* Pagination for profiles sidebar */}
+                {filteredProfiles.length > profilesPerPage && (
+                  <Pagination
+                    currentPage={profilesPage}
+                    totalItems={filteredProfiles.length}
+                    itemsPerPage={profilesPerPage}
+                    onPageChange={setProfilesPage}
+                    showItemsPerPage={false}
+                    className="mt-2 text-xs"
+                  />
+                )}
               </div>
             )}
           </div>
@@ -668,7 +709,9 @@ export default function ShortlistedCandidatesDashboard() {
 
                     {/* Candidates Detailed Cards */}
                     <div className="space-y-4">
-                      {filteredCandidates.map((candidateData) => (
+                      {filteredCandidates
+                        .slice((candidatesPage - 1) * candidatesPerPage, candidatesPage * candidatesPerPage)
+                        .map((candidateData) => (
                         <div
                           key={candidateData.application.id}
                           className={`bg-white rounded-xl border-2 overflow-hidden transition-all ${
@@ -955,6 +998,15 @@ export default function ShortlistedCandidatesDashboard() {
                         </div>
                       ))}
                     </div>
+                    {/* Pagination for candidates */}
+                    <Pagination
+                      currentPage={candidatesPage}
+                      totalItems={filteredCandidates.length}
+                      itemsPerPage={candidatesPerPage}
+                      onPageChange={setCandidatesPage}
+                      onItemsPerPageChange={setCandidatesPerPage}
+                      className="mt-6"
+                    />
                   </>
                 )}
               </div>
@@ -972,7 +1024,7 @@ export default function ShortlistedCandidatesDashboard() {
 
       {/* Modal: Cambiar Estado de Candidatos */}
       {showStatusModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -1076,7 +1128,7 @@ export default function ShortlistedCandidatesDashboard() {
 
       {/* Modal: Subir Documento */}
       {showUploadModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -1194,7 +1246,7 @@ export default function ShortlistedCandidatesDashboard() {
 
       {/* Modal: Vista Previa de Documento */}
       {showDocumentPreview && previewDocument && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">

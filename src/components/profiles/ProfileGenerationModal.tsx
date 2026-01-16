@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { generateProfileFromTranscription, getClients } from "@/lib/api";
 
 interface Client {
@@ -53,7 +54,7 @@ export default function ProfileGenerationModal({
     e.preventDefault();
     
     if (!transcription.trim()) {
-      alert('Por favor ingresa la transcripción de la reunión');
+      await showAlert('Por favor ingresa la transcripción de la reunión');
       return;
     }
 
@@ -93,7 +94,7 @@ export default function ProfileGenerationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-35 p-4">
+    <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-35 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-8 py-6 flex justify-between items-center rounded-t-2xl">
           <div>

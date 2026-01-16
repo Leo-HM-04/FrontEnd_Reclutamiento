@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { useParams } from "next/navigation";
 
 interface Question {
@@ -72,7 +73,7 @@ export default function PublicEvaluationPage() {
     
     // Validar campos requeridos del candidato
     if (!candidateInfo.name || !candidateInfo.email) {
-      alert("Por favor complete su nombre y email");
+      await showAlert("Por favor complete su nombre y email");
       return;
     }
 
@@ -82,7 +83,7 @@ export default function PublicEvaluationPage() {
       .map(q => q.question_text);
 
     if (missingRequired.length > 0) {
-      alert(`Por favor responda las siguientes preguntas obligatorias:\n\n${missingRequired.join('\n')}`);
+      await showAlert(`Por favor responda las siguientes preguntas obligatorias:\n\n${missingRequired.join('\n')}`);
       return;
     }
 
@@ -104,11 +105,11 @@ export default function PublicEvaluationPage() {
         setSubmitted(true);
       } else {
         const errorData = await response.json();
-        alert(`Error al enviar evaluación: ${JSON.stringify(errorData)}`);
+        await showAlert(`Error al enviar evaluación: ${JSON.stringify(errorData)}`);
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Error al enviar la evaluación");
+      await showAlert("Error al enviar la evaluación");
     } finally {
       setSubmitting(false);
     }

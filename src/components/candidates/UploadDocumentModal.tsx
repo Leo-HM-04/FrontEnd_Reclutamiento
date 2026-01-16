@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from "@/lib/api";
 
 interface UploadDocumentModalProps {
@@ -55,7 +56,7 @@ export default function UploadDocumentModal({ onClose, onSuccess }: UploadDocume
     e.preventDefault();
 
     if (!formData.candidate || !formData.file) {
-      alert('Por favor completa todos los campos obligatorios');
+      await showAlert('Por favor completa todos los campos obligatorios');
       return;
     }
 
@@ -70,18 +71,18 @@ export default function UploadDocumentModal({ onClose, onSuccess }: UploadDocume
 
       await apiClient.uploadCandidateDocument(uploadFormData);
       
-      alert('Documento subido exitosamente');
+      await showAlert('Documento subido exitosamente');
       onSuccess();
     } catch (error: any) {
       console.error('Error al subir:', error);
-      alert(`Error al subir documento: ${error.message || 'Error desconocido'}`);
+      await showAlert(`Error al subir documento: ${error.message || 'Error desconocido'}`);
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
         {/* Header */}
         <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 rounded-t-2xl">

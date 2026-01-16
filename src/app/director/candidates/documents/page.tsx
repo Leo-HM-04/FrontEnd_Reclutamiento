@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faFolderOpen,
@@ -58,6 +59,7 @@ interface Candidate {
 }
 
 export default function DocumentsPage() {
+  const { showConfirm } = useModal();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +124,8 @@ export default function DocumentsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este documento?')) {
+    const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar este documento?');
+    if (!confirmed) {
       return;
     }
 
@@ -573,7 +576,7 @@ function UploadDocumentModal({ candidates, onClose, onSuccess }: UploadDocumentM
     e.preventDefault();
 
     if (!formData.candidate || !formData.file) {
-      alert('Por favor completa todos los campos obligatorios');
+      await showAlert('Por favor completa todos los campos obligatorios');
       return;
     }
 
@@ -594,14 +597,14 @@ function UploadDocumentModal({ candidates, onClose, onSuccess }: UploadDocumentM
       onClose();
     } catch (error: any) {
       console.error('❌ Error al subir:', error);
-      alert(`Error al subir documento: ${error.message || 'Error desconocido'}`);
+      await showAlert(`Error al subir documento: ${error.message || 'Error desconocido'}`);
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4 rounded-t-2xl">
@@ -748,7 +751,7 @@ function DocumentDetailModal({ document, candidateName, onClose }: DocumentDetai
   const typeConfig = DOCUMENT_TYPES.find(t => t.value === document.document_type) || DOCUMENT_TYPES[4];
 
   return (
-    <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4 rounded-t-2xl">

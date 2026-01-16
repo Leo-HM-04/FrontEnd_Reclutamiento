@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { getProfile, approveProfile, changeProfileStatus } from "@/lib/api";
+import AutoRecommendModal from "./AutoRecommendModal";
 
 interface ProfileDetailProps {
   profileId: number;
@@ -52,10 +54,12 @@ interface Profile {
 }
 
 export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps) {
+  const { showAlert } = useModal();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showAutoRecommendModal, setShowAutoRecommendModal] = useState(false);
   const [approvalFeedback, setApprovalFeedback] = useState("");
   const [newStatus, setNewStatus] = useState("");
   const [statusNotes, setStatusNotes] = useState("");
@@ -71,7 +75,7 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
     setProfile(profile);
   } catch (error) {
       console.error("Error loading profile:", error);
-      alert("Error al cargar el perfil");
+      await showAlert("Error al cargar el perfil");
     } finally {
       setLoading(false);
     }
@@ -83,18 +87,18 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
         approved,
         feedback: approvalFeedback
       });
-      alert(approved ? "Perfil aprobado exitosamente" : "Perfil rechazado");
+      await showAlert(approved ? "Perfil aprobado exitosamente" : "Perfil rechazado");
       setShowApprovalModal(false);
       loadProfile();
     } catch (error) {
       console.error("Error approving profile:", error);
-      alert("Error al procesar la aprobación");
+      await showAlert("Error al procesar la aprobación");
     }
   };
 
   const handleChangeStatus = async () => {
     if (!newStatus) {
-      alert("Por favor seleccione un estado");
+      await showAlert("Por favor seleccione un estado");
       return;
     }
 
@@ -103,14 +107,14 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
         status: newStatus,
         notes: statusNotes
       });
-      alert("Estado actualizado exitosamente");
+      await showAlert("Estado actualizado exitosamente");
       setShowStatusModal(false);
       setNewStatus("");
       setStatusNotes("");
       loadProfile();
     } catch (error) {
       console.error("Error changing status:", error);
-      alert("Error al cambiar el estado");
+      await showAlert("Error al cambiar el estado");
     }
   };
 
@@ -204,6 +208,14 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
               Aprobar/Rechazar
             </button>
           )}
+          
+          <button
+            onClick={() => setShowAutoRecommendModal(true)}
+            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 shadow-md"
+          >
+            <i className="fas fa-magic mr-2"></i>
+            Recomendación Automática
+          </button>
           
           <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
             <i className="fas fa-users mr-2"></i>
@@ -468,7 +480,7 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
 
       {/* Approval Modal */}
       {showApprovalModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-xl font-semibold mb-4">Aprobar/Rechazar Perfil</h3>
             <div className="mb-4">
@@ -509,7 +521,7 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
 
       {/* Status Change Modal */}
       {showStatusModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-xl font-semibold mb-4">Cambiar Estado</h3>
             <div className="mb-4">
@@ -563,6 +575,14 @@ export default function ProfileDetail({ profileId, onBack }: ProfileDetailProps)
           </div>
         </div>
       )}
+
+      {/* Auto Recommend Modal */}
+      <AutoRecommendModal
+        profileId={profileId}
+        profileTitle={profile?.position_title || ""}
+        isOpen={showAutoRecommendModal}
+        onClose={() => setShowAutoRecommendModal(false)}
+      />
     </div>
   );
 }

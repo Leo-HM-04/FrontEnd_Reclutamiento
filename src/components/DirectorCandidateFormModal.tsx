@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useModal } from '@/context/ModalContext';
 import { apiClient } from '@/lib/api';
 
 interface DirectorCandidateFormModalProps {
@@ -49,15 +50,15 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
     try {
       // Validaciones básicas
       if (!candidateForm.nombres.trim()) {
-        alert('El nombre es requerido');
+        await showAlert('El nombre es requerido');
         return;
       }
       if (!candidateForm.apellidos.trim()) {
-        alert('Los apellidos son requeridos');
+        await showAlert('Los apellidos son requeridos');
         return;
       }
       if (!candidateForm.correoElectronico.trim()) {
-        alert('El correo electrónico es requerido');
+        await showAlert('El correo electrónico es requerido');
         return;
       }
 
@@ -269,7 +270,7 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
         errorMessage = `Error: ${error.message}`;
       }
       
-      alert(errorMessage);
+      await showAlert(errorMessage);
       
       if (onSuccess) {
         onSuccess(`❌ ${errorMessage}`);
@@ -280,7 +281,7 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0  flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
         {/* Header mejorado - Degradado azul suave */}
         <div className="bg-linear-to-r from-blue-50 via-blue-100 to-indigo-50 px-6 py-5 shadow-lg border-b-4 border-blue-500">
@@ -310,8 +311,8 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
 
             {/* 1. INFORMACIÓN PERSONAL */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-blue-600 px-5 py-3.5 border-b-2 border-blue-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-blue-500/10 border-b-2 border-blue-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-blue-800 tracking-wide flex items-center">
                   <i className="fas fa-user mr-2" />
                   INFORMACIÓN PERSONAL
                 </h3>
@@ -387,8 +388,8 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
 
             {/* 2. UBICACIÓN */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-purple-600 px-5 py-3.5 border-b-2 border-purple-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-purple-500/10 border-b-2 border-purple-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-purple-800 tracking-wide flex items-center">
                   <i className="fas fa-map-marker-alt mr-2" />
                   UBICACIÓN
                 </h3>
@@ -449,8 +450,8 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
 
             {/* 3. INFORMACIÓN PROFESIONAL */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-emerald-600 px-5 py-3.5 border-b-2 border-emerald-700">
-                <h3 className="text-lg font-bold text-white tracking-wide flex items-center">
+              <div className="bg-emerald-500/10 border-b-2 border-emerald-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-emerald-800 tracking-wide flex items-center">
                   <i className="fas fa-briefcase mr-2" />
                   INFORMACIÓN PROFESIONAL
                 </h3>
@@ -549,12 +550,14 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
             </div>
 
             {/* 4. EXPECTATIVAS SALARIALES */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-                <i className="fas fa-dollar-sign text-emerald-600"></i>
-                <h3 className="font-semibold text-gray-900">Expectativas Salariales</h3>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-emerald-500/10 border-b-2 border-emerald-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-emerald-800 tracking-wide flex items-center">
+                  <i className="fas fa-dollar-sign mr-2" />
+                  EXPECTATIVAS SALARIALES
+                </h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Expectativa Salarial Mínima</label>
                   <input
@@ -589,12 +592,14 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
             </div>
 
             {/* 5. DISPONIBILIDAD */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-                <i className="fas fa-calendar-check text-orange-600"></i>
-                <h3 className="font-semibold text-gray-900">Disponibilidad</h3>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-amber-500/10 border-b-2 border-amber-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-amber-800 tracking-wide flex items-center">
+                  <i className="fas fa-calendar-check mr-2" />
+                  DISPONIBILIDAD
+                </h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Disponible desde</label>
                   <div className="flex gap-2">
@@ -629,21 +634,21 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
             </div>
 
             {/* 6. REDES SOCIALES */}
-            <div className={`bg-white rounded-lg border border-gray-200 p-5 ${showSocialNetworks ? 'block' : 'hidden'}`}>
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-                <div className="flex items-center gap-2">
-                  <i className="fas fa-share-alt text-indigo-600"></i>
-                  <h3 className="font-semibold text-gray-900">Redes Sociales</h3>
-                </div>
+            <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${showSocialNetworks ? 'block' : 'hidden'}`}>
+              <div className="bg-indigo-500/10 border-b-2 border-indigo-500 px-5 py-3.5 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-indigo-800 tracking-wide flex items-center">
+                  <i className="fas fa-share-alt mr-2" />
+                  REDES SOCIALES
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowSocialNetworks(false)}
-                  className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  className="text-sm text-indigo-600 hover:text-indigo-800 transition-colors font-medium"
                 >
                   (Ocultar)
                 </button>
               </div>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="p-5 grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">LinkedIn</label>
                   <input
@@ -678,21 +683,21 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
             </div>
 
             {/* 7. ANÁLISIS DE IA */}
-            <div className={`bg-white rounded-lg border border-gray-200 p-5 ${showAIAnalysis ? 'block' : 'hidden'}`}>
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-                <div className="flex items-center gap-2">
-                  <i className="fas fa-brain text-violet-600"></i>
-                  <h3 className="font-semibold text-gray-900">Análisis de IA</h3>
-                </div>
+            <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${showAIAnalysis ? 'block' : 'hidden'}`}>
+              <div className="bg-violet-500/10 border-b-2 border-violet-500 px-5 py-3.5 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-violet-800 tracking-wide flex items-center">
+                  <i className="fas fa-brain mr-2" />
+                  ANÁLISIS DE IA
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowAIAnalysis(false)}
-                  className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  className="text-sm text-violet-600 hover:text-violet-800 transition-colors font-medium"
                 >
                   (Ocultar)
                 </button>
               </div>
-              <div className="space-y-4">
+              <div className="p-5 space-y-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Resumen generado por IA</label>
                   <textarea
@@ -738,21 +743,21 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
             </div>
 
             {/* 8. METADATOS */}
-            <div className={`bg-white rounded-lg border border-gray-200 p-5 ${showMetadata ? 'block' : 'hidden'}`}>
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-                <div className="flex items-center gap-2">
-                  <i className="fas fa-info-circle text-gray-600"></i>
-                  <h3 className="font-semibold text-gray-900">Metadatos</h3>
-                </div>
+            <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${showMetadata ? 'block' : 'hidden'}`}>
+              <div className="bg-gray-500/10 border-b-2 border-gray-500 px-5 py-3.5 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-800 tracking-wide flex items-center">
+                  <i className="fas fa-info-circle mr-2" />
+                  METADATOS
+                </h3>
                 <button
                   type="button"
                   onClick={() => setShowMetadata(false)}
-                  className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  className="text-sm text-gray-600 hover:text-gray-800 transition-colors font-medium"
                 >
                   (Ocultar)
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Creado por</label>
                   <div className="flex">
@@ -813,12 +818,14 @@ export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess 
             </div>
 
             {/* 9. GESTIÓN */}
-            <div className="bg-white rounded-lg border border-gray-200 p-5">
-              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
-                <i className="fas fa-cogs text-red-600"></i>
-                <h3 className="font-semibold text-gray-900">Gestión</h3>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-rose-500/10 border-b-2 border-rose-500 px-5 py-3.5">
+                <h3 className="text-lg font-bold text-rose-800 tracking-wide flex items-center">
+                  <i className="fas fa-cogs mr-2" />
+                  GESTIÓN
+                </h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Estado</label>
                   <select

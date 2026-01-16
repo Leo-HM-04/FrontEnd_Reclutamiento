@@ -84,7 +84,7 @@ export default function ShareLinkModal({
     <>
       {/* Overlay */}
       <div 
-        className="fixed inset-0 z-50 bg-black bg-opacity-50 transition-opacity"
+        className="fixed inset-0 z-50  transition-opacity" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
         onClick={onClose}
       />
 

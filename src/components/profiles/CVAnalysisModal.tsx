@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useModal } from '@/context/ModalContext';
 import { analyzeCVWithAI, getCandidates } from "@/lib/api";
 
 interface Candidate {
@@ -46,21 +47,20 @@ export default function CVAnalysisModal({ isOpen, onClose, onSuccess }: CVAnalys
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
       // Validate file type
-      const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+      const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       if (!validTypes.includes(file.type)) {
-        alert('Por favor selecciona un archivo PDF o DOCX');
+        await showAlert('Por favor selecciona un archivo PDF o DOCX');
         e.target.value = '';
         return;
       }
       
       // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
-        alert('El archivo es demasiado grande. Máximo 10MB');
+        await showAlert('El archivo es demasiado grande. Máximo 10MB');
         e.target.value = '';
         return;
       }
@@ -73,12 +73,12 @@ export default function CVAnalysisModal({ isOpen, onClose, onSuccess }: CVAnalys
     e.preventDefault();
     
     if (!selectedCandidate) {
-      alert('Por favor selecciona un candidato');
+      await showAlert('Por favor selecciona un candidato');
       return;
     }
     
     if (!cvFile) {
-      alert('Por favor selecciona un archivo CV');
+      await showAlert('Por favor selecciona un archivo CV');
       return;
     }
 
@@ -112,7 +112,7 @@ export default function CVAnalysisModal({ isOpen, onClose, onSuccess }: CVAnalys
   if (!isOpen) return null;
 
   return (
-      <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-35 p-4">
+      <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-35 p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-6 flex justify-between items-center rounded-t-2xl">
           <div>

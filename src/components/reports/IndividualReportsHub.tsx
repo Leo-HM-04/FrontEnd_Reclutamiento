@@ -21,6 +21,7 @@ import ProfileCandidatesReport from './ProfileCandidatesReport';
 import ProfileTimelineReport from './ProfileTimelineReport';
 import CandidateFullReport from './CandidateFullReport';
 import ClientFullReport from './ClientFullReport';
+import FullConsolidatedReport from './FullConsolidatedReport';
 
 interface Profile {
   id: number;
@@ -43,7 +44,7 @@ interface Client {
 
 export default function IndividualReportsHub() {
   // Estado
-  const [view, setView] = useState<'selector' | 'profile' | 'candidates' | 'timeline' | 'candidate' | 'client'>('selector');
+  const [view, setView] = useState<'selector' | 'profile' | 'candidates' | 'timeline' | 'candidate' | 'client' | 'consolidated'>('selector');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   
   // Listas para los selectores
@@ -153,6 +154,10 @@ export default function IndividualReportsHub() {
   const handleViewClient = (id: number) => {
     setSelectedId(id);
     setView('client');
+  };
+
+  const handleViewConsolidated = () => {
+    setView('consolidated');
   };
 
   const handleBack = () => {
@@ -305,6 +310,52 @@ export default function IndividualReportsHub() {
             </select>
           </div>
 
+          {/* Reporte Final Consolidado */}
+          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-105 lg:col-span-3 md:col-span-2">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                    <i className="fas fa-file-contract text-white text-xl"></i>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">
+                      Reporte Final Consolidado
+                    </h3>
+                    <p className="text-white/80 text-sm">
+                      Toda la información en un solo documento
+                    </p>
+                  </div>
+                </div>
+                <p className="text-white/70 text-sm mb-4">
+                  Genera un reporte ejecutivo completo con todas las métricas, perfiles, candidatos y clientes. 
+                  Ideal para presentaciones y análisis gerencial.
+                </p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="px-2 py-1 bg-white/20 rounded text-white text-xs">
+                    <i className="fas fa-chart-pie mr-1"></i> Resumen Ejecutivo
+                  </span>
+                  <span className="px-2 py-1 bg-white/20 rounded text-white text-xs">
+                    <i className="fas fa-briefcase mr-1"></i> Todos los Perfiles
+                  </span>
+                  <span className="px-2 py-1 bg-white/20 rounded text-white text-xs">
+                    <i className="fas fa-users mr-1"></i> Todos los Candidatos
+                  </span>
+                  <span className="px-2 py-1 bg-white/20 rounded text-white text-xs">
+                    <i className="fas fa-building mr-1"></i> Todos los Clientes
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={handleViewConsolidated}
+                className="ml-4 px-6 py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition-colors shadow-md"
+              >
+                <i className="fas fa-arrow-right mr-2"></i>
+                Generar Reporte
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     );
@@ -342,6 +393,10 @@ export default function IndividualReportsHub() {
           onBack={handleBack}
           onViewProfile={handleViewProfile}
         />
+      )}
+
+      {view === 'consolidated' && (
+        <FullConsolidatedReport onBack={handleBack} />
       )}
     </div>
   );

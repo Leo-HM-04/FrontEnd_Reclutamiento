@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useModal } from '@/context/ModalContext';
 
 // ============================================================
 // INTERFACES
@@ -476,9 +477,9 @@ export default function CandidatesStatusDashboard() {
   // HELPERS
   // ============================================================
   
-  const showNotification = (message: string, type: 'success' | 'error') => {
+  const showNotification = async (message: string, type: 'success' | 'error') => {
     console.log(`[${type}] ${message}`);
-    alert(message);
+    await showAlert(message);
   };
   
   const getStatusColor = (status: string) => {
@@ -526,10 +527,10 @@ export default function CandidatesStatusDashboard() {
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Estado de Candidatos</h1>
-            <p className="text-sm text-gray-600 mt-1">Gestiona los candidatos aplicando a los perfiles</p>
+            <h1 className="text-3xl font-bold text-gray-900">Estado de Candidatos</h1>
+            <p className="text-gray-600 mt-1">Gestiona los candidatos aplicando a los perfiles</p>
           </div>
           <button
             onClick={loadProfiles}
@@ -538,6 +539,26 @@ export default function CandidatesStatusDashboard() {
             <i className="fas fa-sync mr-2" />
             Actualizar
           </button>
+        </div>
+        
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <div className="text-blue-600 text-sm font-medium">Perfiles Activos</div>
+            <div className="text-xl font-bold text-gray-900">{profiles.length}</div>
+          </div>
+          <div className="bg-orange-50 p-3 rounded-lg">
+            <div className="text-orange-600 text-sm font-medium">Aplicaciones</div>
+            <div className="text-xl font-bold text-gray-900">{applications.length}</div>
+          </div>
+          <div className="bg-green-50 p-3 rounded-lg">
+            <div className="text-green-600 text-sm font-medium">Contratados</div>
+            <div className="text-xl font-bold text-gray-900">{applications.filter(a => a.status === 'hired').length}</div>
+          </div>
+          <div className="bg-yellow-50 p-3 rounded-lg">
+            <div className="text-yellow-600 text-sm font-medium">En Evaluación</div>
+            <div className="text-xl font-bold text-gray-900">{applications.filter(a => a.status === 'in_evaluation').length}</div>
+          </div>
         </div>
       </div>
 
@@ -790,7 +811,7 @@ export default function CandidatesStatusDashboard() {
 
       {/* Modal: Cambiar Estado del Perfil */}
       {showProfileStatusModal && selectedProfile && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -876,7 +897,7 @@ export default function CandidatesStatusDashboard() {
 
       {/* Modal: Cambiar Estado de Candidatos */}
       {showCandidateStatusModal && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -980,7 +1001,7 @@ export default function CandidatesStatusDashboard() {
 
       {/* Modal: Perfil de Candidato */}
       {showCandidateModal && selectedCandidate && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50 overflow-y-auto" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 my-8 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               {/* Header */}
@@ -1119,7 +1140,7 @@ export default function CandidatesStatusDashboard() {
 
       {/* Modal: Vista Previa de Documento */}
       {showDocumentPreview && previewDocument && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed top-16 left-0 right-0 bottom-0  flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
