@@ -1,9 +1,24 @@
 /**
  * API client utilities for the recruitment system
  * Actualizado con funciones completas de Candidatos, Aplicaciones, Documentos y Notas
+ * 
+ * @module api
+ * @description Cliente API centralizado para todas las operaciones del sistema de reclutamiento
  */
 
+/** URL base de la API del backend */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+/** Tiempo máximo de espera para peticiones en milisegundos */
+const REQUEST_TIMEOUT = 30000;
+
+/** Claves de almacenamiento local para tokens */
+export const STORAGE_KEYS = {
+  AUTH_TOKEN: 'authToken',
+  REFRESH_TOKEN: 'refreshToken',
+  USER: 'user',
+  USER_ROLE: 'userRole',
+} as const;
 
 interface LoginCredentials {
   email: string;

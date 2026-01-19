@@ -69,15 +69,16 @@ export function Navigation({ userRole = 'admin' }: NavigationProps) {
   return (
     <>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
+      <header className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-50" role="banner">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="lg:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              aria-label={isSidebarOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}
+              aria-expanded={isSidebarOpen}
             >
-              <FontAwesomeIcon icon={isSidebarOpen ? faTimes : faBars} />
-            </button>
+              <FontAwesomeIcon icon={isSidebarOpen ? faTimes : faBars} aria-hidden="true" />
             <Link href="/dashboard" className="ml-4 lg:ml-0">
               <h1 className="text-xl font-bold text-blue-600">RecruitPro</h1>
             </Link>
@@ -87,8 +88,12 @@ export function Navigation({ userRole = 'admin' }: NavigationProps) {
             <div className="text-sm text-gray-700">
               <span className="font-medium">Admin User</span>
             </div>
-            <button className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100">
-              <FontAwesomeIcon icon={faSignOutAlt} />
+            <button 
+              className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+            >
+              <FontAwesomeIcon icon={faSignOutAlt} aria-hidden="true" />
             </button>
           </div>
         </div>

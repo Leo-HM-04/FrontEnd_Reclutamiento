@@ -1,9 +1,15 @@
+/** Roles disponibles en el sistema */
+export type UserRole = 'admin' | 'recruiter' | 'candidate' | 'director';
+
+/** Información del usuario autenticado */
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'recruiter' | 'candidate';
+  role: UserRole;
   avatar?: string;
+  createdAt?: Date;
+  lastLogin?: Date;
 }
 
 export interface Job {
@@ -31,11 +37,25 @@ export interface Candidate {
   status: 'active' | 'hired' | 'rejected';
 }
 
+/** Estados posibles de una aplicación */
+export type ApplicationStatus = 'pending' | 'reviewed' | 'interviewing' | 'hired' | 'rejected';
+
+/** Aplicación de un candidato a un empleo */
 export interface Application {
   id: string;
   jobId: string;
   candidateId: string;
   appliedAt: Date;
-  status: 'pending' | 'reviewed' | 'interviewing' | 'hired' | 'rejected';
+  status: ApplicationStatus;
   notes?: string;
+  updatedAt?: Date;
+  reviewedBy?: string;
+}
+
+/** Respuesta paginada de la API */
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
