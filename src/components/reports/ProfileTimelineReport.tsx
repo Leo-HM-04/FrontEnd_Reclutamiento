@@ -19,6 +19,11 @@ import {
   generateSection,
   generateTimeline,
   wrapInPage,
+  generateHeroKPIs,
+  generateGanttChart,
+  generateComparisonBar,
+  generateCandidateCards,
+  generateCommercialBox, 
 } from '@/lib/pdf-generator';
 
 interface Props {
@@ -127,34 +132,98 @@ export default function ProfileTimelineReport({ profileId, onBack }: Props) {
       let htmlContent = '';
 
       // Header institucional
-      htmlContent += generateHeader('TIMELINE DEL PERFIL', data.profile.title);
+      htmlContent += generateHeader('TIMELINE DEL PROCESO', data.profile.title);
 
-      // KPIs principales
-      htmlContent += generateKPIRow([
-        { label: 'Total Eventos', value: data.total_events, type: 'primary' },
-        { label: 'Cliente', value: data.profile.client.substring(0, 20), type: 'accent' },
-      ]);
+      // NUEVO: Hero KPIs con métricas de eficiencia
+      if (data.metrics) {
+        htmlContent += generateHeroKPIs([
+          { 
+            label: 'Tiempo Total', 
+            value: `${data.metrics.total_duration_hours} hrs`,
+            subtext: data.metrics.savings_percent > 0 ? `↓${data.metrics.savings_percent}% más rápido` : undefined,
+            type: 'primary' 
+          },
+          { 
+            label: 'Candidatos', 
+            value: data.metrics.candidates_count,
+            subtext: `Match prom: ${data.metrics.avg_match_score}%`,
+            type: 'success' 
+          },
+          { 
+            label: 'Fases', 
+            value: data.metrics.phases_completed,
+            subtext: 'Proceso automatizado',
+            type: 'accent' 
+          },
+          { 
+            label: 'Eficiencia', 
+            value: `${data.metrics.efficiency_score}%`,
+            subtext: 'Score del proceso',
+            type: 'warning' 
+          },
+        ]);
+      }
 
-      // Filtrar eventos
+      // NUEVO: Diagrama de Gantt
+      if (data.phases && data.phases.length > 0) {
+        htmlContent += generateGanttChart(data.phases);
+      }
+
+      // NUEVO: Candidatos con match visual
+      if (data.candidates && data.candidates.length > 0) {
+        htmlContent += generateCandidateCards(
+          data.candidates.map(c => ({
+            name: c.name,
+            applied_at: c.applied_at_formatted || new Date(c.applied_at).toLocaleDateString('es-MX'),
+            match: c.match,
+          }))
+        );
+      }
+
+      // NUEVO: Comparativa vs industria
+      if (data.metrics) {
+        htmlContent += generateComparisonBar({
+          yourValue: data.metrics.total_duration_hours,
+          yourLabel: 'Este Proceso',
+          industryValue: data.metrics.industry_avg_days * 24,
+          industryLabel: 'Promedio Industria',
+          unit: 'hrs',
+          savingsText: `Ahorro estimado: ${data.metrics.savings_days} días de tiempo`,
+        });
+      }
+
+      // NUEVO: Caja comercial
+      if (data.metrics && data.metrics.savings_percent > 0) {
+        htmlContent += generateCommercialBox({
+          title: '🎯 Resultados que hablan por sí solos',
+          description: `PReclutamiento reduce el tiempo de contratación en un ${data.metrics.savings_percent}% comparado con métodos tradicionales, mientras mantiene un score de match superior al ${Math.round(data.metrics.avg_match_score)}%.`,
+          highlightValue: `${data.metrics.savings_percent}%`,
+          highlightLabel: 'más rápido',
+        });
+      }
+
+      // Timeline tradicional (reducido)
       const events = filterType 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ? data.timeline.filter((e: any) => e.type === filterType)
         : data.timeline;
 
-      // Timeline de eventos
-      htmlContent += generateSection('Cronología de Eventos',
-        generateTimeline(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          events.map((event: any) => ({
-            date: formatDateTime(event.timestamp),
-            title: event.title,
-            description: event.description,
-          }))
-        )
-      );
+      if (events.length > 0) {
+        htmlContent += generateSection('Detalle de Eventos',
+          generateTimeline(
+            events.slice(0, 10).map((event: any) => ({
+              date: formatDateTime(event.timestamp),
+              title: event.title,
+              description: event.description,
+            }))
+          )
+        );
+      }
 
       // Envolver en página completa con estilos
-      const fullHtml = wrapInPage(htmlContent, { title: 'TIMELINE DEL PERFIL', subtitle: data.profile.title });
+      const fullHtml = wrapInPage(htmlContent, { 
+        title: 'TIMELINE DEL PROCESO', 
+        subtitle: data.profile.title 
+      });
 
       // Generar PDF
       await generatePDF(fullHtml, {
@@ -164,6 +233,7 @@ export default function ProfileTimelineReport({ profileId, onBack }: Props) {
       await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
+      await showAlert('❌ Error al generar PDF');
     } finally {
       setExporting(false);
     }

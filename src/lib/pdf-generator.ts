@@ -10,6 +10,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+
 // ═══════════════════════════════════════════════════════════════════════════
 // COLORES CORPORATIVOS BAUSEN
 // ═══════════════════════════════════════════════════════════════════════════
@@ -70,9 +71,11 @@ interface PDFOptions {
   filename?: string;
 }
 
+// Agregar a ContentItem type
 interface ContentItem {
-  type: 'header' | 'kpis' | 'sectionTitle' | 'section' | 'infoGrid' | 'table' | 'paragraph' | 'timeline' | 'space';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type: 'header' | 'kpis' | 'heroKpis' | 'sectionTitle' | 'section' | 'infoGrid' | 
+        'table' | 'paragraph' | 'timeline' | 'gantt' | 'comparison' | 
+        'candidateCards' | 'commercialBox' | 'space';
   data: any;
 }
 
@@ -453,6 +456,391 @@ export class PDFReport {
     this.yPos += 5;
   }
 
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // MÉTODOS CORREGIDOS PARA LA CLASE PDFReport
+  // ════════════════════════════════════════════════════════════════════════════
+ 
+    // ═══════════════════════════════════════════════════════════════════════
+    // HERO KPIs - 4 métricas grandes con subtexto comparativo
+    // ═══════════════════════════════════════════════════════════════════════
+    drawHeroKPIs(kpis: Array<{ 
+      label: string; 
+      value: string | number; 
+      subtext?: string;
+      type?: 'primary' | 'success' | 'warning' | 'accent' | 'error' 
+    }>): void {
+      this.checkNewPage(45);
+      
+      const availableWidth = this.pageWidth - (this.margin * 2);
+      const gap = 4;
+      const kpiWidth = (availableWidth - (gap * (kpis.length - 1))) / kpis.length;
+      const kpiHeight = 32;
+      
+      kpis.forEach((kpi, idx) => {
+        const xPos = this.margin + (idx * (kpiWidth + gap));
+        
+        // Fondo blanco con sombra sutil
+        this.pdf.setFillColor(255, 255, 255);
+        this.pdf.roundedRect(xPos, this.yPos, kpiWidth, kpiHeight, 2, 2, 'F');
+        
+        // Borde sutil
+        this.pdf.setDrawColor(RGB.grayLighter.r, RGB.grayLighter.g, RGB.grayLighter.b);
+        this.pdf.setLineWidth(0.3);
+        this.pdf.roundedRect(xPos, this.yPos, kpiWidth, kpiHeight, 2, 2, 'S');
+        
+        // Barra superior de color
+        const color = this.getKPIColor(kpi.type || 'primary');
+        this.pdf.setFillColor(color.r, color.g, color.b);
+        this.pdf.roundedRect(xPos, this.yPos, kpiWidth, 3, 2, 2, 'F');
+        this.pdf.rect(xPos, this.yPos + 1.5, kpiWidth, 1.5, 'F');
+        
+        // Valor grande centrado
+        this.pdf.setFont('helvetica', 'bold');
+        this.pdf.setFontSize(14);
+        this.pdf.setTextColor(color.r, color.g, color.b);
+        const valueStr = String(kpi.value);
+        this.pdf.text(valueStr, xPos + kpiWidth / 2, this.yPos + 14, { align: 'center' });
+        
+        // Label
+        this.pdf.setFont('helvetica', 'normal');
+        this.pdf.setFontSize(6);
+        this.pdf.setTextColor(RGB.gray.r, RGB.gray.g, RGB.gray.b);
+        this.pdf.text(kpi.label.toUpperCase(), xPos + kpiWidth / 2, this.yPos + 20, { align: 'center' });
+        
+        // Subtext (comparativa)
+        if (kpi.subtext) {
+          this.pdf.setFontSize(5);
+          this.pdf.setTextColor(RGB.success.r, RGB.success.g, RGB.success.b);
+          const subtextTruncated = kpi.subtext.length > 20 ? kpi.subtext.substring(0, 18) + '...' : kpi.subtext;
+          this.pdf.text(subtextTruncated, xPos + kpiWidth / 2, this.yPos + 26, { align: 'center' });
+        }
+      });
+      
+      this.yPos += kpiHeight + 8;
+    }
+
+    // Helper para colores de KPI
+    private getKPIColor(type: string): { r: number; g: number; b: number } {
+      const colors: Record<string, { r: number; g: number; b: number }> = {
+        primary: RGB.primary,
+        success: RGB.success,
+        warning: RGB.warning,
+        accent: { r: 99, g: 102, b: 241 },
+        error: RGB.error,
+      };
+      return colors[type] || RGB.primary;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DIAGRAMA DE GANTT - CORREGIDO
+    // ═══════════════════════════════════════════════════════════════════════
+    drawGanttChart(phases: Array<{
+      name: string;
+      duration_minutes: number;
+      color: string;
+      start_percent: number;
+      width_percent: number;
+    }>, title: string = 'Diagrama del Proceso'): void {
+      this.checkNewPage(20 + phases.length * 10);
+      
+      // Título de sección
+      this.drawSectionTitle(title);
+      
+      const availableWidth = this.pageWidth - (this.margin * 2);
+      const labelWidth = 35; // Ancho fijo para nombres de fase
+      const durationWidth = 20; // Ancho para duración
+      const chartStartX = this.margin + labelWidth + 2;
+      const chartWidth = availableWidth - labelWidth - durationWidth - 4;
+      const barHeight = 6;
+      const rowHeight = 10;
+      
+      // Escala de tiempo
+      this.pdf.setFont('helvetica', 'normal');
+      this.pdf.setFontSize(5);
+      this.pdf.setTextColor(RGB.grayLight.r, RGB.grayLight.g, RGB.grayLight.b);
+      this.pdf.text('Inicio', chartStartX, this.yPos);
+      this.pdf.text('50%', chartStartX + chartWidth / 2, this.yPos, { align: 'center' });
+      this.pdf.text('Fin', chartStartX + chartWidth, this.yPos, { align: 'right' });
+      
+      this.yPos += 4;
+      
+      // Dibujar cada fase
+      phases.forEach((phase) => {
+        // Nombre de la fase (truncado)
+        this.pdf.setFont('helvetica', 'normal');
+        this.pdf.setFontSize(6);
+        this.pdf.setTextColor(RGB.dark.r, RGB.dark.g, RGB.dark.b);
+        let phaseName = phase.name;
+        // Truncar si es necesario
+        while (this.pdf.getTextWidth(phaseName) > labelWidth - 2 && phaseName.length > 3) {
+          phaseName = phaseName.substring(0, phaseName.length - 1);
+        }
+        if (phaseName !== phase.name) {
+          phaseName = phaseName.substring(0, phaseName.length - 2) + '...';
+        }
+        this.pdf.text(phaseName, this.margin, this.yPos + 4);
+        
+        // Fondo de la barra
+        this.pdf.setFillColor(RGB.grayLighter.r, RGB.grayLighter.g, RGB.grayLighter.b);
+        this.pdf.roundedRect(chartStartX, this.yPos, chartWidth, barHeight, 1, 1, 'F');
+        
+        // Líneas de cuadrícula sutiles
+        this.pdf.setDrawColor(245, 245, 245);
+        this.pdf.setLineWidth(0.1);
+        for (let i = 1; i < 10; i++) {
+          const lineX = chartStartX + (chartWidth * i / 10);
+          this.pdf.line(lineX, this.yPos, lineX, this.yPos + barHeight);
+        }
+        
+        // Barra de la fase
+        if (phase.width_percent > 0) {
+          const barLeft = chartStartX + (phase.start_percent / 100) * chartWidth;
+          const barWidth = Math.max((phase.width_percent / 100) * chartWidth, 2);
+          
+          const rgb = this.hexToRgb(phase.color);
+          this.pdf.setFillColor(rgb.r, rgb.g, rgb.b);
+          this.pdf.roundedRect(barLeft, this.yPos + 0.5, barWidth, barHeight - 1, 1, 1, 'F');
+        }
+        
+        // Duración (alineada a la derecha)
+        this.pdf.setFont('helvetica', 'bold');
+        this.pdf.setFontSize(6);
+        const rgb = this.hexToRgb(phase.color);
+        this.pdf.setTextColor(rgb.r, rgb.g, rgb.b);
+        const durationText = phase.duration_minutes > 0 ? `${phase.duration_minutes} min` : '-';
+        this.pdf.text(durationText, this.pageWidth - this.margin, this.yPos + 4, { align: 'right' });
+        
+        this.yPos += rowHeight;
+      });
+      
+      this.yPos += 5;
+    }
+
+    // Helper para convertir hex a RGB
+    private hexToRgb(hex: string): { r: number; g: number; b: number } {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 128, g: 128, b: 128 };
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // BARRA DE COMPARATIVA - CORREGIDA
+    // ═══════════════════════════════════════════════════════════════════════
+    drawComparisonBar(data: {
+      yourValue: number;
+      yourLabel: string;
+      industryValue: number;
+      industryLabel: string;
+      unit: string;
+      savingsText: string;
+    }): void {
+      this.checkNewPage(50);
+      
+      this.drawSectionTitle('Comparativa de Eficiencia');
+      
+      const availableWidth = this.pageWidth - (this.margin * 2);
+      const labelWidth = 40;
+      const valueWidth = 25;
+      const barWidth = availableWidth - labelWidth - valueWidth - 6;
+      const barHeight = 8;
+      const maxValue = Math.max(data.yourValue, data.industryValue);
+      
+      // Tu proceso
+      this.pdf.setFont('helvetica', 'normal');
+      this.pdf.setFontSize(7);
+      this.pdf.setTextColor(RGB.primary.r, RGB.primary.g, RGB.primary.b);
+      this.pdf.text(data.yourLabel, this.margin, this.yPos + 5);
+      
+      // Fondo barra
+      const barStartX = this.margin + labelWidth;
+      this.pdf.setFillColor(RGB.grayLighter.r, RGB.grayLighter.g, RGB.grayLighter.b);
+      this.pdf.roundedRect(barStartX, this.yPos, barWidth, barHeight, 2, 2, 'F');
+      
+      // Barra tu proceso
+      const yourWidth = maxValue > 0 ? (data.yourValue / maxValue) * barWidth : 0;
+      this.pdf.setFillColor(RGB.primary.r, RGB.primary.g, RGB.primary.b);
+      this.pdf.roundedRect(barStartX, this.yPos, Math.max(yourWidth, 3), barHeight, 2, 2, 'F');
+      
+      // Valor
+      this.pdf.setFont('helvetica', 'bold');
+      this.pdf.setFontSize(8);
+      this.pdf.setTextColor(RGB.dark.r, RGB.dark.g, RGB.dark.b);
+      this.pdf.text(`${data.yourValue} ${data.unit}`, this.pageWidth - this.margin, this.yPos + 5, { align: 'right' });
+      
+      this.yPos += 12;
+      
+      // Promedio industria
+      this.pdf.setFont('helvetica', 'normal');
+      this.pdf.setFontSize(7);
+      this.pdf.setTextColor(RGB.gray.r, RGB.gray.g, RGB.gray.b);
+      this.pdf.text(data.industryLabel, this.margin, this.yPos + 5);
+      
+      // Fondo barra
+      this.pdf.setFillColor(RGB.grayLighter.r, RGB.grayLighter.g, RGB.grayLighter.b);
+      this.pdf.roundedRect(barStartX, this.yPos, barWidth, barHeight, 2, 2, 'F');
+      
+      // Barra industria (completa)
+      this.pdf.setFillColor(RGB.gray.r, RGB.gray.g, RGB.gray.b);
+      this.pdf.roundedRect(barStartX, this.yPos, barWidth, barHeight, 2, 2, 'F');
+      
+      // Valor
+      this.pdf.setFont('helvetica', 'bold');
+      this.pdf.setFontSize(8);
+      this.pdf.text(`${data.industryValue} ${data.unit}`, this.pageWidth - this.margin, this.yPos + 5, { align: 'right' });
+      
+      this.yPos += 15;
+      
+      // Caja de ahorro
+      this.pdf.setFillColor(230, 255, 237); // Verde muy claro
+      this.pdf.roundedRect(this.margin, this.yPos, availableWidth, 14, 2, 2, 'F');
+      
+      // Borde verde
+      this.pdf.setDrawColor(RGB.success.r, RGB.success.g, RGB.success.b);
+      this.pdf.setLineWidth(0.5);
+      this.pdf.roundedRect(this.margin, this.yPos, availableWidth, 14, 2, 2, 'S');
+      
+      // Texto de ahorro
+      this.pdf.setFont('helvetica', 'bold');
+      this.pdf.setFontSize(9);
+      this.pdf.setTextColor(RGB.success.r, RGB.success.g, RGB.success.b);
+      this.pdf.text('✓ ' + data.savingsText, this.pageWidth / 2, this.yPos + 9, { align: 'center' });
+      
+      this.yPos += 20;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TARJETAS DE CANDIDATOS - CORREGIDAS
+    // ═══════════════════════════════════════════════════════════════════════
+    drawCandidateCards(candidates: Array<{
+      name: string;
+      applied_at: string;
+      match: number;
+    }>): void {
+      this.checkNewPage(20 + candidates.length * 14);
+      
+      this.drawSectionTitle('Candidatos del Proceso');
+      
+      const availableWidth = this.pageWidth - (this.margin * 2);
+      const cardHeight = 12;
+      
+      candidates.forEach((candidate) => {
+        this.checkNewPage(14);
+        
+        // Fondo de la tarjeta
+        this.pdf.setFillColor(RGB.bgLight.r, RGB.bgLight.g, RGB.bgLight.b);
+        this.pdf.roundedRect(this.margin, this.yPos, availableWidth, cardHeight, 2, 2, 'F');
+        
+        // Avatar (iniciales)
+        const initials = candidate.name.split(' ').map(n => n[0]).slice(0, 2).join('');
+        this.pdf.setFillColor(RGB.primary.r, RGB.primary.g, RGB.primary.b);
+        this.pdf.circle(this.margin + 6, this.yPos + cardHeight / 2, 4, 'F');
+        this.pdf.setFont('helvetica', 'bold');
+        this.pdf.setFontSize(5);
+        this.pdf.setTextColor(255, 255, 255);
+        this.pdf.text(initials, this.margin + 6, this.yPos + cardHeight / 2 + 1.5, { align: 'center' });
+        
+        // Nombre (truncado si es necesario)
+        this.pdf.setFont('helvetica', 'bold');
+        this.pdf.setFontSize(8);
+        this.pdf.setTextColor(RGB.dark.r, RGB.dark.g, RGB.dark.b);
+        let displayName = candidate.name;
+        const maxNameWidth = availableWidth * 0.4;
+        while (this.pdf.getTextWidth(displayName) > maxNameWidth && displayName.length > 3) {
+          displayName = displayName.substring(0, displayName.length - 1);
+        }
+        if (displayName !== candidate.name) {
+          displayName = displayName.substring(0, displayName.length - 2) + '...';
+        }
+        this.pdf.text(displayName, this.margin + 14, this.yPos + 5);
+        
+        // Fecha
+        this.pdf.setFont('helvetica', 'normal');
+        this.pdf.setFontSize(6);
+        this.pdf.setTextColor(RGB.gray.r, RGB.gray.g, RGB.gray.b);
+        this.pdf.text(`Aplicó: ${candidate.applied_at}`, this.margin + 14, this.yPos + 10);
+        
+        // Match score
+        const matchColor = candidate.match >= 80 ? RGB.success : candidate.match >= 60 ? RGB.primary : RGB.warning;
+        
+        // Valor del match
+        this.pdf.setFont('helvetica', 'bold');
+        this.pdf.setFontSize(10);
+        this.pdf.setTextColor(matchColor.r, matchColor.g, matchColor.b);
+        this.pdf.text(`${candidate.match}%`, this.pageWidth - this.margin - 28, this.yPos + 7, { align: 'right' });
+        
+        // Barra de progreso pequeña
+        const barX = this.pageWidth - this.margin - 25;
+        const progressBarWidth = 22;
+        this.pdf.setFillColor(RGB.grayLighter.r, RGB.grayLighter.g, RGB.grayLighter.b);
+        this.pdf.roundedRect(barX, this.yPos + 4, progressBarWidth, 3, 1, 1, 'F');
+        
+        this.pdf.setFillColor(matchColor.r, matchColor.g, matchColor.b);
+        this.pdf.roundedRect(barX, this.yPos + 4, (candidate.match / 100) * progressBarWidth, 3, 1, 1, 'F');
+        
+        this.yPos += cardHeight + 2;
+      });
+      
+      this.yPos += 3;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CAJA DE MENSAJE COMERCIAL - CORREGIDA
+    // ═══════════════════════════════════════════════════════════════════════
+    drawCommercialBox(data: {
+      title: string;
+      description: string;
+      highlightValue: string;
+      highlightLabel: string;
+    }): void {
+      this.checkNewPage(35);
+      
+      const availableWidth = this.pageWidth - (this.margin * 2);
+      const boxHeight = 25;
+      
+      // Fondo azul
+      this.pdf.setFillColor(RGB.primary.r, RGB.primary.g, RGB.primary.b);
+      this.pdf.roundedRect(this.margin, this.yPos, availableWidth, boxHeight, 3, 3, 'F');
+      
+      // Contenido izquierdo (70%)
+      const leftWidth = availableWidth * 0.7;
+      
+      // Título
+      this.pdf.setFont('helvetica', 'bold');
+      this.pdf.setFontSize(9);
+      this.pdf.setTextColor(255, 255, 255);
+      this.pdf.text(data.title, this.margin + 6, this.yPos + 8);
+      
+      // Descripción (truncada y en múltiples líneas si es necesario)
+      this.pdf.setFont('helvetica', 'normal');
+      this.pdf.setFontSize(7);
+      this.pdf.setTextColor(220, 230, 255);
+      const lines = this.pdf.splitTextToSize(data.description, leftWidth - 10);
+      this.pdf.text(lines.slice(0, 2).join('\n'), this.margin + 6, this.yPos + 14);
+      
+      // Highlight value (derecha)
+      const rightX = this.margin + leftWidth + 5;
+      this.pdf.setFont('helvetica', 'bold');
+      this.pdf.setFontSize(14);
+      this.pdf.setTextColor(255, 255, 255);
+      this.pdf.text(data.highlightValue, rightX + (availableWidth * 0.3) / 2 - 5, this.yPos + 12, { align: 'center' });
+      
+      // Highlight label
+      this.pdf.setFont('helvetica', 'normal');
+      this.pdf.setFontSize(6);
+      this.pdf.setTextColor(200, 210, 230);
+      this.pdf.text(data.highlightLabel, rightX + (availableWidth * 0.3) / 2 - 5, this.yPos + 18, { align: 'center' });
+      
+      this.yPos += boxHeight + 8;
+    }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // FIN DE LOS MÉTODOS CORREGIDOS
+  // ════════════════════════════════════════════════════════════════════════════
+
   // ═══════════════════════════════════════════════════════════════════════
   // UTILIDADES
   // ═══════════════════════════════════════════════════════════════════════
@@ -537,6 +925,62 @@ export function generateTimeline(items: Array<{ date: string; title: string; des
   return '';
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// NUEVAS FUNCIONES PARA REPORTES VISUALES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export function generateHeroKPIs(kpis: Array<{ 
+  label: string; 
+  value: string | number; 
+  subtext?: string;
+  type?: 'primary' | 'success' | 'warning' | 'accent' | 'error' 
+}>): string {
+  contentItems.push({ type: 'heroKpis', data: kpis });
+  return '';
+}
+
+export function generateGanttChart(phases: Array<{
+  name: string;
+  duration_minutes: number;
+  color: string;
+  start_percent: number;
+  width_percent: number;
+}>): string {
+  contentItems.push({ type: 'gantt', data: phases });
+  return '';
+}
+
+export function generateComparisonBar(data: {
+  yourValue: number;
+  yourLabel: string;
+  industryValue: number;
+  industryLabel: string;
+  unit: string;
+  savingsText: string;
+}): string {
+  contentItems.push({ type: 'comparison', data });
+  return '';
+}
+
+export function generateCandidateCards(candidates: Array<{
+  name: string;
+  applied_at: string;
+  match: number;
+}>): string {
+  contentItems.push({ type: 'candidateCards', data: candidates });
+  return '';
+}
+
+export function generateCommercialBox(data: {
+  title: string;
+  description: string;
+  highlightValue: string;
+  highlightLabel: string;
+}): string {
+  contentItems.push({ type: 'commercialBox', data });
+  return '';
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function wrapInPage(content: string, config: ReportConfig): string {
   reportConfig = config;
@@ -581,6 +1025,22 @@ export async function generatePDF(wrappedContent: string, options?: PDFOptions):
         case 'space':
           report.addSpace(item.data.height || 10);
           break;
+        case 'heroKpis':
+          report.drawHeroKPIs(item.data);
+          break;
+        case 'gantt':
+          report.drawGanttChart(item.data);
+          break;
+        case 'comparison':
+          report.drawComparisonBar(item.data);
+          break;
+        case 'candidateCards':
+          report.drawCandidateCards(item.data);
+          break;
+        case 'commercialBox':
+          report.drawCommercialBox(item.data);
+          break;
+        
       }
     });
 

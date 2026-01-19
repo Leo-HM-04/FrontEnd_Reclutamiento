@@ -348,8 +348,39 @@ export interface ProfileTimelineData {
     title: string;
     client: string;
     status: string;
+    created_at: string;
+    completed_at: string | null;
   };
   timeline: TimelineEvent[];
+  phases: Array<{  // NUEVO
+    name: string;
+    status: string;
+    start: string;
+    end: string | null;
+    duration_minutes: number;
+    color: string;
+    start_percent: number;
+    width_percent: number;
+  }>;
+  candidates: Array<{  // NUEVO
+    id: number;
+    name: string;
+    applied_at: string;
+    applied_at_formatted: string;
+    match: number;
+    status: string;
+  }>;
+  metrics: {  // NUEVO
+    total_duration_hours: number;
+    total_duration_days: number;
+    candidates_count: number;
+    avg_match_score: number;
+    phases_completed: number;
+    efficiency_score: number;
+    industry_avg_days: number;
+    savings_days: number;
+    savings_percent: number;
+  };
   total_events: number;
   generated_at: string;
 }
