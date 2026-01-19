@@ -882,7 +882,7 @@ useEffect(() => {
     try {
       const token = localStorage.getItem('authToken');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/profiles/profiles/${profileId}/generate_share_link/`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/profiles/profiles/${profileId}/generate_share_link/`,
         {
           method: 'POST',
           headers: {
@@ -905,6 +905,31 @@ useEffect(() => {
     } catch (error) {
       console.error('Error:', error);
       await showAlert('Error al generar enlace para compartir');
+    }
+  };
+
+  const handlePreviewProfile = async (profileId: number) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/profiles/profiles/${profileId}/generate_share_link/`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error('Error al generar enlace de previsualización');
+
+      const data = await response.json();
+      // Abrir en una nueva pestaña
+      window.open(data.share_url, '_blank');
+    } catch (error) {
+      console.error('Error:', error);
+      await showAlert('Error al abrir previsualización');
     }
   };
 
@@ -3380,18 +3405,31 @@ const loadApplicationsData = async () => {
                                 </div>
                               </div>
 
-                              {/* Botón de compartir */}
-                              <button
-                                onClick={() => handleGenerateShareLink(
-                                  profile.id,
-                                  profile.position_title,
-                                  profile.client_name
-                                )}
-                                className="ml-4 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 transition-colors"
-                              >
-                                <i className="fas fa-share-alt"></i>
-                                Compartir Avance
-                              </button>
+                              {/* Botones de acción */}
+                              <div className="flex gap-3 ml-4">
+                                {/* Botón de previsualización */}
+                                <button
+                                  onClick={() => handlePreviewProfile(profile.id)}
+                                  className="px-5 py-2.5 bg-gray-400 text-white rounded-lg hover:bg-gray-700 font-medium flex items-center gap-2 transition-colors"
+                                  title="Vista previa del avance"
+                                >
+                                  <i className="fas fa-eye"></i>
+                                  Previsualizar
+                                </button>
+
+                                {/* Botón de compartir */}
+                                <button
+                                  onClick={() => handleGenerateShareLink(
+                                    profile.id,
+                                    profile.position_title,
+                                    profile.client_name
+                                  )}
+                                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 transition-colors"
+                                >
+                                  <i className="fas fa-share-alt"></i>
+                                  Compartir Avance
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
