@@ -12,16 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { useModal } from '@/context/ModalContext';
 import { getCandidateFullReport, formatDate, formatCurrency, getStatusColor, type CandidateFullReportData } from '@/lib/api-reports';
 import * as XLSX from 'xlsx';
-import {
-  generatePDF,
-  generateHeader,
-  generateKPIRow,
-  generateSection,
-  generateInfoGrid,
-  generateTable,
-  generateBadge,
-  wrapInPage,
-} from '@/lib/pdf-generator';
+import { downloadCandidateReportPDF } from '@/lib/pdf-candidate-report';
 
 interface Props {
   candidateId: number;
@@ -91,84 +82,51 @@ export default function CandidateFullReport({ candidateId, onBack }: Props) {
     
     setExporting(true);
     try {
-      let htmlContent = '';
+      // Preparar datos para el nuevo generador
+      const reportData = {
+        nombre: data.personal_info.full_name,
+        fecha_reporte: new Date().toLocaleDateString('es-MX', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        contacto: {
+          email: data.personal_info.email || '',
+          telefono: data.personal_info.phone || '',
+          ciudad: data.personal_info.location?.city || '',
+          estado: data.personal_info.location?.state || '',
+        },
+        profesional: {
+          empresa_actual: data.personal_info.current_company || undefined,
+          posicion_actual: data.personal_info.current_position || undefined,
+          educacion: data.personal_info.education_level || '',
+          universidad: data.personal_info.university || undefined,
+          experiencia_anios: data.personal_info.years_of_experience || 0,
+        },
+        estadisticas: {
+          aplicaciones: data.statistics.total_applications || 0,
+          documentos: data.statistics.total_documents || 0,
+          evaluaciones: data.statistics.total_evaluations || 0,
+        },
+        habilidades: data.personal_info.skills || [],
+        aplicaciones: data.applications.map(app => ({
+          perfil: app.profile.title || '',
+          cliente: app.profile.client || '',
+          estado: app.status_display || '',
+          fecha: formatDate(app.applied_at),
+        })),
+      };
 
-      // Header institucional
-      htmlContent += generateHeader('REPORTE DE CANDIDATO', data.personal_info.full_name);
-
-      // KPIs principales
-      htmlContent += generateKPIRow([
-        { label: 'Aplicaciones', value: data.statistics.total_applications, type: 'primary' },
-        { label: 'Documentos', value: data.statistics.total_documents, type: 'success' },
-        { label: 'Evaluaciones', value: data.statistics.total_evaluations, type: 'accent' },
-        { label: 'Experiencia', value: `${data.personal_info.years_of_experience} años`, type: 'warning' },
-      ]);
-
-      // Información de contacto
-      htmlContent += generateSection('Información de Contacto',
-        generateInfoGrid([
-          { label: 'Email', value: data.personal_info.email },
-          { label: 'Teléfono', value: data.personal_info.phone },
-          { label: 'Ciudad', value: data.personal_info.location.city },
-          { label: 'Estado', value: data.personal_info.location.state },
-        ])
-      );
-
-      // Información profesional
-      const professionalInfo = [
-        { label: 'Educación', value: data.personal_info.education_level },
-      ];
-      if (data.personal_info.current_position) {
-        professionalInfo.unshift({ label: 'Posición Actual', value: data.personal_info.current_position });
-      }
-      if (data.personal_info.current_company) {
-        professionalInfo.unshift({ label: 'Empresa Actual', value: data.personal_info.current_company });
-      }
-      if (data.personal_info.university) {
-        professionalInfo.push({ label: 'Universidad', value: data.personal_info.university });
-      }
+      // Generar nombre de archivo
+      const filename = `Candidato_${data.personal_info.full_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       
-      htmlContent += generateSection('Información Profesional',
-        generateInfoGrid(professionalInfo)
-      );
-
-      // Habilidades
-      if (data.personal_info.skills && data.personal_info.skills.length > 0) {
-        const skillBadges = data.personal_info.skills.map(skill => generateBadge(skill, 'primary')).join(' ');
-        htmlContent += generateSection('Habilidades', `<div style="display: flex; flex-wrap: wrap; gap: 8px;">${skillBadges}</div>`);
-      }
-
-      // Aplicaciones
-      if (data.applications.length > 0) {
-        htmlContent += generateSection('Historial de Aplicaciones',
-          generateTable(
-            [
-              { key: 'profile', header: 'Perfil/Vacante' },
-              { key: 'client', header: 'Cliente' },
-              { key: 'status', header: 'Estado' },
-              { key: 'date', header: 'Fecha' },
-            ],
-            data.applications.slice(0, 10).map(app => ({
-              profile: app.profile.title.substring(0, 35),
-              client: app.profile.client.substring(0, 25),
-              status: app.status_display,
-              date: formatDate(app.applied_at),
-            }))
-          )
-        );
-      }
-
-      // Envolver en página completa con estilos
-      const fullHtml = wrapInPage(htmlContent, { title: 'REPORTE DE CANDIDATO', subtitle: data.personal_info.full_name });
-
-      // Generar PDF
-      await generatePDF(fullHtml, {
-        filename: `Candidato_${data.personal_info.full_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
-      });
+      // Generar PDF con el nuevo generador
+      downloadCandidateReportPDF(reportData, filename);
 
       await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
+      await showAlert('❌ Error al generar el PDF');
     } finally {
       setExporting(false);
     }

@@ -212,35 +212,39 @@ export default function EmailManagement() {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center">
               <i className="fas fa-envelope mr-3 text-blue-600"></i>
               Gestión de Correos
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 mt-1">
               Visualiza y gestiona las plantillas de correo electrónico del sistema
             </p>
           </div>
-          
-          {/* Estadísticas */}
-          {statistics && (
-            <div className="flex space-x-4">
-              <div className="bg-white rounded-lg shadow p-4 text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {statistics.total_templates}
-                </div>
-                <div className="text-sm text-gray-600">Plantillas</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {statistics.active_templates}
-                </div>
-                <div className="text-sm text-gray-600">Activas</div>
-              </div>
-            </div>
-          )}
         </div>
+          
+        {/* Stats Cards */}
+        {statistics && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <div className="text-blue-600 text-sm font-medium">Total Plantillas</div>
+              <div className="text-xl font-bold text-gray-900">{statistics.total_templates}</div>
+            </div>
+            <div className="bg-green-50 p-3 rounded-lg">
+              <div className="text-green-600 text-sm font-medium">Activas</div>
+              <div className="text-xl font-bold text-gray-900">{statistics.active_templates}</div>
+            </div>
+            <div className="bg-yellow-50 p-3 rounded-lg">
+              <div className="text-yellow-600 text-sm font-medium">Inactivas</div>
+              <div className="text-xl font-bold text-gray-900">{statistics.total_templates - statistics.active_templates}</div>
+            </div>
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <div className="text-purple-600 text-sm font-medium">Categorías</div>
+              <div className="text-xl font-bold text-gray-900">{Object.keys(statistics.by_category || {}).length}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Layout de dos columnas */}

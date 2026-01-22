@@ -1,0 +1,725 @@
+/**
+ * ════════════════════════════════════════════════════════════════════════════
+ * PDF CANDIDATE REPORT - DISEÑO DASHBOARD MODERNO
+ * ════════════════════════════════════════════════════════════════════════════
+ * 
+ * Genera PDF tipo dashboard para reporte individual de candidato.
+ * Diseño consistente con los demás PDFs del sistema.
+ * 
+ * Features:
+ * - Header blanco con logo Bausen
+ * - Avatar con iniciales del candidato
+ * - KPIs: Aplicaciones, Documentos, Evaluaciones, Experiencia
+ * - Info de contacto e info profesional en 2 columnas
+ * - Skills como badges
+ * - Tabla de historial de aplicaciones
+ * - Corrección de mojibake UTF-8
+ * 
+ * ════════════════════════════════════════════════════════════════════════════
+ */
+
+import jsPDF from 'jspdf';
+import { BAUSEN_LOGO_BASE64 } from './logo-base64';
+
+// ════════════════════════════════════════════════════════════════════════════
+// COLORES CORPORATIVOS
+// ════════════════════════════════════════════════════════════════════════════
+const COLORS = {
+  primary: { r: 0, g: 71, b: 171 },      // Azul corporativo
+  accent: { r: 255, g: 107, b: 0 },       // Naranja Bausen
+  success: { r: 16, g: 185, b: 129 },     // Verde
+  warning: { r: 245, g: 158, b: 11 },     // Amarillo
+  danger: { r: 239, g: 68, b: 68 },       // Rojo
+  dark: { r: 31, g: 41, b: 55 },          // Gris oscuro
+  gray: { r: 107, g: 114, b: 128 },       // Gris medio
+  light: { r: 243, g: 244, b: 246 },      // Gris claro
+  white: { r: 255, g: 255, b: 255 },      // Blanco
+  black: { r: 0, g: 0, b: 0 },            // Negro
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// FUNCIÓN PARA CORREGIR MOJIBAKE (UTF-8 mal interpretado como Latin-1)
+// ════════════════════════════════════════════════════════════════════════════
+function fixMojibake(text: string): string {
+  if (!text) return '';
+  
+  // Mapa de correcciones mojibake más comunes
+  const mojibakeMap: { [key: string]: string } = {
+    // Vocales acentuadas
+    '├í': 'á', '├®': 'é', '├¡': 'í', '├│': 'ó', '├║': 'ú',
+    '├ü': 'Á', '├ë': 'É', '├ì': 'Í', '├ô': 'Ó', '├Ü': 'Ú',
+    // Ñ
+    '├▒': 'ñ', '├æ': 'Ñ',
+    // Diéresis
+    '├╝': 'ü', '├£': 'Ü',
+    // Otros
+    '%í': 'á', '%®': 'é', '%¡': 'í', '%ó': 'ó', '%ú': 'ú',
+    '%ñ': 'ñ', '%Ñ': 'Ñ',
+    // Patrones adicionales que pueden aparecer (escapados para evitar errores de sintaxis)
+    '\u00c3\u00a1': 'á', '\u00c3\u00a9': 'é', '\u00c3\u00ad': 'í', '\u00c3\u00b3': 'ó', '\u00c3\u00ba': 'ú',
+    '\u00c3\u00b1': 'ñ', '\u00c3\u0091': 'Ñ',
+    '\u00c3\u00bc': 'ü', '\u00c3\u0081': 'Á',
+    // Patrones URL encoded
+    '%C3%A1': 'á', '%C3%A9': 'é', '%C3%AD': 'í', '%C3%B3': 'ó', '%C3%BA': 'ú',
+    '%C3%B1': 'ñ', '%C3%91': 'Ñ',
+  };
+  
+  let result = text;
+  
+  // Aplicar todas las correcciones
+  for (const [corrupted, correct] of Object.entries(mojibakeMap)) {
+    result = result.split(corrupted).join(correct);
+  }
+  
+  return result;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// INTERFACES
+// ════════════════════════════════════════════════════════════════════════════
+export interface CandidateReportData {
+  nombre: string;
+  fecha_reporte: string;
+  
+  // Info de contacto
+  contacto: {
+    email: string;
+    telefono: string;
+    ciudad: string;
+    estado: string;
+  };
+  
+  // Info profesional
+  profesional: {
+    empresa_actual?: string;
+    posicion_actual?: string;
+    educacion: string;
+    universidad?: string;
+    experiencia_anios: number;
+  };
+  
+  // KPIs
+  estadisticas: {
+    aplicaciones: number;
+    documentos: number;
+    evaluaciones: number;
+  };
+  
+  // Habilidades
+  habilidades: string[];
+  
+  // Historial de aplicaciones
+  aplicaciones: Array<{
+    perfil: string;
+    cliente: string;
+    estado: string;
+    fecha: string;
+  }>;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CLASE GENERADORA DEL PDF
+// ════════════════════════════════════════════════════════════════════════════
+export class CandidateReportPDF {
+  private doc: jsPDF;
+  private pageWidth: number;
+  private pageHeight: number;
+  private margin: number;
+  private contentWidth: number;
+  private currentY: number;
+
+  constructor() {
+    this.doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'letter', // 215.9 x 279.4 mm
+    });
+    
+    this.pageWidth = 215.9;
+    this.pageHeight = 279.4;
+    this.margin = 12;
+    this.contentWidth = this.pageWidth - (this.margin * 2);
+    this.currentY = this.margin;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GENERAR PDF COMPLETO
+  // ══════════════════════════════════════════════════════════════════════════
+  generate(data: CandidateReportData): jsPDF {
+    // Limpiar todos los textos
+    const cleanData: CandidateReportData = {
+      nombre: fixMojibake(data.nombre),
+      fecha_reporte: data.fecha_reporte,
+      contacto: {
+        email: fixMojibake(data.contacto.email),
+        telefono: fixMojibake(data.contacto.telefono),
+        ciudad: fixMojibake(data.contacto.ciudad),
+        estado: fixMojibake(data.contacto.estado),
+      },
+      profesional: {
+        empresa_actual: data.profesional.empresa_actual ? fixMojibake(data.profesional.empresa_actual) : undefined,
+        posicion_actual: data.profesional.posicion_actual ? fixMojibake(data.profesional.posicion_actual) : undefined,
+        educacion: fixMojibake(data.profesional.educacion),
+        universidad: data.profesional.universidad ? fixMojibake(data.profesional.universidad) : undefined,
+        experiencia_anios: data.profesional.experiencia_anios,
+      },
+      estadisticas: data.estadisticas,
+      habilidades: data.habilidades.map(h => fixMojibake(h)),
+      aplicaciones: data.aplicaciones.map(a => ({
+        perfil: fixMojibake(a.perfil),
+        cliente: fixMojibake(a.cliente),
+        estado: fixMojibake(a.estado),
+        fecha: a.fecha,
+      })),
+    };
+    
+    this.drawHeader(cleanData);
+    this.drawHeroSection(cleanData);
+    this.drawKPIs(cleanData);
+    this.drawInfoCards(cleanData);
+    this.drawSkills(cleanData);
+    this.drawApplicationsTable(cleanData);
+    this.drawFooter();
+    
+    return this.doc;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // HEADER BLANCO CON LOGO
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawHeader(data: CandidateReportData): void {
+    const headerHeight = 22;
+    
+    // Fondo blanco
+    this.doc.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    this.doc.rect(0, 0, this.pageWidth, headerHeight, 'F');
+    
+    // Línea de acento azul en la parte inferior del header
+    this.doc.setFillColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.rect(0, headerHeight, this.pageWidth, 1.5, 'F');
+    
+    // Logo Bausen (izquierda)
+    try {
+      const logoHeight = 12;
+      const logoWidth = logoHeight * 3.46;
+      this.doc.addImage(BAUSEN_LOGO_BASE64, 'PNG', this.margin, 5, logoWidth, logoHeight);
+    } catch (e) {
+      // Fallback: texto BAUSEN
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(16);
+      this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+      this.doc.text('BAUSEN', this.margin, 14);
+    }
+    
+    // Título centrado
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(14);
+    this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+    this.doc.text('REPORTE DE CANDIDATO', this.pageWidth / 2, 12, { align: 'center' });
+    
+    // Fecha (derecha)
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(9);
+    this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+    this.doc.text(data.fecha_reporte, this.pageWidth - this.margin, 12, { align: 'right' });
+    
+    this.currentY = headerHeight + 6;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // HERO SECTION CON NOMBRE Y AVATAR
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawHeroSection(data: CandidateReportData): void {
+    const heroHeight = 28;
+    const heroY = this.currentY;
+    
+    // Fondo sutil
+    this.doc.setFillColor(248, 250, 252);
+    this.doc.roundedRect(this.margin, heroY, this.contentWidth, heroHeight, 3, 3, 'F');
+    
+    // Avatar circular con iniciales
+    const avatarSize = 20;
+    const avatarX = this.margin + 10;
+    const avatarY = heroY + heroHeight / 2;
+    
+    // Círculo del avatar
+    this.doc.setFillColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.circle(avatarX, avatarY, avatarSize / 2, 'F');
+    
+    // Iniciales
+    const initials = this.getInitials(data.nombre);
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(12);
+    this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    this.doc.text(initials, avatarX, avatarY + 1, { align: 'center' });
+    
+    // Nombre grande
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(16);
+    this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+    this.doc.text(data.nombre, avatarX + avatarSize / 2 + 8, heroY + 11);
+    
+    // Subtítulo (email + ubicación)
+    const subtitle = `${data.contacto.email} • ${data.contacto.ciudad}, ${data.contacto.estado}`;
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(9);
+    this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+    this.doc.text(subtitle, avatarX + avatarSize / 2 + 8, heroY + 19);
+    
+    this.currentY = heroY + heroHeight + 6;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // FILA DE KPIs
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawKPIs(data: CandidateReportData): void {
+    const kpiY = this.currentY;
+    const kpiHeight = 22;
+    const kpiWidth = (this.contentWidth - 9) / 4;
+    const gap = 3;
+    
+    const kpis = [
+      { label: 'Aplicaciones', value: data.estadisticas.aplicaciones.toString(), color: COLORS.primary },
+      { label: 'Documentos', value: data.estadisticas.documentos.toString(), color: COLORS.success },
+      { label: 'Evaluaciones', value: data.estadisticas.evaluaciones.toString(), color: COLORS.accent },
+      { label: 'Experiencia', value: `${data.profesional.experiencia_anios} años`, color: COLORS.warning },
+    ];
+    
+    kpis.forEach((kpi, index) => {
+      const x = this.margin + (kpiWidth + gap) * index;
+      
+      // Fondo de la card
+      this.doc.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+      this.doc.roundedRect(x, kpiY, kpiWidth, kpiHeight, 2, 2, 'F');
+      
+      // Borde superior con color
+      this.doc.setFillColor(kpi.color.r, kpi.color.g, kpi.color.b);
+      this.doc.roundedRect(x, kpiY, kpiWidth, 3, 2, 2, 'F');
+      this.doc.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+      this.doc.rect(x, kpiY + 2, kpiWidth, 2, 'F');
+      
+      // Borde sutil
+      this.doc.setDrawColor(229, 231, 235);
+      this.doc.setLineWidth(0.3);
+      this.doc.roundedRect(x, kpiY, kpiWidth, kpiHeight, 2, 2, 'S');
+      
+      // Valor grande
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(14);
+      this.doc.setTextColor(kpi.color.r, kpi.color.g, kpi.color.b);
+      this.doc.text(kpi.value, x + kpiWidth / 2, kpiY + 12, { align: 'center' });
+      
+      // Label
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(7);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(kpi.label, x + kpiWidth / 2, kpiY + 19, { align: 'center' });
+    });
+    
+    this.currentY = kpiY + kpiHeight + 6;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // CARDS DE INFO EN 2 COLUMNAS
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawInfoCards(data: CandidateReportData): void {
+    const cardWidth = (this.contentWidth - 4) / 2;
+    const cardHeight = 48;
+    const cardY = this.currentY;
+    
+    // ─────────────────────────────────────────────────────────
+    // CARD 1: Información de Contacto (izquierda)
+    // ─────────────────────────────────────────────────────────
+    this.drawInfoCard(
+      this.margin,
+      cardY,
+      cardWidth,
+      cardHeight,
+      'Información de Contacto',
+      COLORS.primary,
+      [
+        { icon: '✉', label: 'Email', value: data.contacto.email },
+        { icon: '☎', label: 'Teléfono', value: data.contacto.telefono },
+        { icon: '📍', label: 'Ciudad', value: data.contacto.ciudad },
+        { icon: '🏛', label: 'Estado', value: data.contacto.estado },
+      ]
+    );
+    
+    // ─────────────────────────────────────────────────────────
+    // CARD 2: Información Profesional (derecha)
+    // ─────────────────────────────────────────────────────────
+    const professionalItems = [];
+    if (data.profesional.empresa_actual) {
+      professionalItems.push({ icon: '🏢', label: 'Empresa', value: data.profesional.empresa_actual });
+    }
+    if (data.profesional.posicion_actual) {
+      professionalItems.push({ icon: '💼', label: 'Posición', value: data.profesional.posicion_actual });
+    }
+    professionalItems.push({ icon: '🎓', label: 'Educación', value: data.profesional.educacion });
+    if (data.profesional.universidad) {
+      professionalItems.push({ icon: '🏫', label: 'Universidad', value: data.profesional.universidad });
+    }
+    
+    this.drawInfoCard(
+      this.margin + cardWidth + 4,
+      cardY,
+      cardWidth,
+      cardHeight,
+      'Información Profesional',
+      COLORS.accent,
+      professionalItems.slice(0, 4)
+    );
+    
+    this.currentY = cardY + cardHeight + 6;
+  }
+
+  private drawInfoCard(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    title: string,
+    titleColor: { r: number; g: number; b: number },
+    items: Array<{ icon: string; label: string; value: string }>
+  ): void {
+    // Fondo
+    this.doc.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    this.doc.roundedRect(x, y, width, height, 2, 2, 'F');
+    
+    // Borde
+    this.doc.setDrawColor(229, 231, 235);
+    this.doc.setLineWidth(0.3);
+    this.doc.roundedRect(x, y, width, height, 2, 2, 'S');
+    
+    // Título
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(9);
+    this.doc.setTextColor(titleColor.r, titleColor.g, titleColor.b);
+    this.doc.text(title, x + 6, y + 8);
+    
+    // Línea separadora
+    this.doc.setDrawColor(229, 231, 235);
+    this.doc.line(x + 6, y + 11, x + width - 6, y + 11);
+    
+    // Items
+    let itemY = y + 18;
+    const itemGap = 9;
+    
+    items.forEach((item) => {
+      // Label
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(7);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(item.label, x + 6, itemY);
+      
+      // Value
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(8);
+      this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+      const maxValueWidth = width - 12;
+      const truncatedValue = this.truncateText(item.value, maxValueWidth, 8);
+      this.doc.text(truncatedValue, x + 6, itemY + 5);
+      
+      itemY += itemGap;
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN DE HABILIDADES (BADGES)
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawSkills(data: CandidateReportData): void {
+    const skillsY = this.currentY;
+    
+    // Título de sección
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(10);
+    this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+    this.doc.text('Habilidades', this.margin, skillsY);
+    
+    this.currentY = skillsY + 5;
+    
+    if (data.habilidades.length === 0) {
+      // Estado vacío elegante
+      this.doc.setFillColor(248, 250, 252);
+      this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, 12, 2, 2, 'F');
+      
+      this.doc.setFont('helvetica', 'italic');
+      this.doc.setFontSize(8);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text('Sin habilidades registradas', this.pageWidth / 2, this.currentY + 7, { align: 'center' });
+      
+      this.currentY += 16;
+      return;
+    }
+    
+    // Dibujar badges
+    const badgeHeight = 6;
+    const badgePadding = 4;
+    const badgeGap = 3;
+    let badgeX = this.margin;
+    let badgeY = this.currentY;
+    const maxSkills = 10;
+    const displaySkills = data.habilidades.slice(0, maxSkills);
+    const remaining = data.habilidades.length - maxSkills;
+    
+    displaySkills.forEach((skill) => {
+      const textWidth = this.doc.getTextWidth(skill);
+      const badgeWidth = textWidth + badgePadding * 2;
+      
+      // Si no cabe en la línea actual, saltar a la siguiente
+      if (badgeX + badgeWidth > this.margin + this.contentWidth) {
+        badgeX = this.margin;
+        badgeY += badgeHeight + 3;
+      }
+      
+      // Fondo del badge
+      this.doc.setFillColor(224, 231, 255); // Azul muy claro
+      this.doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 2, 2, 'F');
+      
+      // Texto del badge
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(7);
+      this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+      this.doc.text(skill, badgeX + badgePadding, badgeY + 4.5);
+      
+      badgeX += badgeWidth + badgeGap;
+    });
+    
+    // Indicador de "más"
+    if (remaining > 0) {
+      const moreText = `+${remaining} más`;
+      const moreWidth = this.doc.getTextWidth(moreText) + badgePadding * 2;
+      
+      if (badgeX + moreWidth > this.margin + this.contentWidth) {
+        badgeX = this.margin;
+        badgeY += badgeHeight + 3;
+      }
+      
+      this.doc.setFillColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.roundedRect(badgeX, badgeY, moreWidth, badgeHeight, 2, 2, 'F');
+      
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(7);
+      this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+      this.doc.text(moreText, badgeX + badgePadding, badgeY + 4.5);
+    }
+    
+    this.currentY = badgeY + badgeHeight + 8;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // TABLA DE HISTORIAL DE APLICACIONES
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawApplicationsTable(data: CandidateReportData): void {
+    const tableY = this.currentY;
+    
+    // Título de sección
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(10);
+    this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+    this.doc.text('Historial de Aplicaciones', this.margin, tableY);
+    
+    this.currentY = tableY + 5;
+    
+    if (data.aplicaciones.length === 0) {
+      // Estado vacío
+      this.doc.setFillColor(248, 250, 252);
+      this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, 12, 2, 2, 'F');
+      
+      this.doc.setFont('helvetica', 'italic');
+      this.doc.setFontSize(8);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text('Sin aplicaciones registradas', this.pageWidth / 2, this.currentY + 7, { align: 'center' });
+      
+      this.currentY += 16;
+      return;
+    }
+    
+    // Columnas
+    const cols = [
+      { header: 'Perfil/Vacante', width: 75, key: 'perfil' },
+      { header: 'Cliente', width: 55, key: 'cliente' },
+      { header: 'Estado', width: 30, key: 'estado' },
+      { header: 'Fecha', width: 30, key: 'fecha' },
+    ];
+    
+    const rowHeight = 8;
+    const headerHeight = 8;
+    
+    // Header de la tabla
+    let colX = this.margin;
+    this.doc.setFillColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, headerHeight, 1, 1, 'F');
+    
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(7);
+    this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    
+    cols.forEach((col) => {
+      this.doc.text(col.header, colX + 3, this.currentY + 5.5);
+      colX += col.width;
+    });
+    
+    this.currentY += headerHeight;
+    
+    // Filas de datos (máximo 8 para que quepan en la página)
+    const maxRows = 8;
+    const displayApps = data.aplicaciones.slice(0, maxRows);
+    
+    displayApps.forEach((app, index) => {
+      // Fondo alternado
+      if (index % 2 === 0) {
+        this.doc.setFillColor(248, 250, 252);
+        this.doc.rect(this.margin, this.currentY, this.contentWidth, rowHeight, 'F');
+      }
+      
+      // Datos
+      colX = this.margin;
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(7);
+      this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+      
+      // Perfil
+      const truncatedPerfil = this.truncateText(app.perfil, cols[0].width - 6, 7);
+      this.doc.text(truncatedPerfil, colX + 3, this.currentY + 5);
+      colX += cols[0].width;
+      
+      // Cliente
+      const truncatedCliente = this.truncateText(app.cliente, cols[1].width - 6, 7);
+      this.doc.text(truncatedCliente, colX + 3, this.currentY + 5);
+      colX += cols[1].width;
+      
+      // Estado (como badge)
+      this.drawStatusBadge(colX + 3, this.currentY + 2, app.estado);
+      colX += cols[2].width;
+      
+      // Fecha
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(app.fecha, colX + 3, this.currentY + 5);
+      
+      this.currentY += rowHeight;
+    });
+    
+    // Indicador si hay más aplicaciones
+    if (data.aplicaciones.length > maxRows) {
+      this.doc.setFont('helvetica', 'italic');
+      this.doc.setFontSize(7);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(
+        `Y ${data.aplicaciones.length - maxRows} aplicaciones más...`,
+        this.pageWidth / 2,
+        this.currentY + 4,
+        { align: 'center' }
+      );
+      this.currentY += 8;
+    }
+    
+    this.currentY += 4;
+  }
+
+  private drawStatusBadge(x: number, y: number, status: string): void {
+    // Colores según estado
+    let bgColor = { r: 229, g: 231, b: 235 };
+    let textColor = COLORS.dark;
+    
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('contratado') || statusLower.includes('aprobado')) {
+      bgColor = { r: 209, g: 250, b: 229 };
+      textColor = { r: 5, g: 150, b: 105 };
+    } else if (statusLower.includes('rechazado') || statusLower.includes('descartado')) {
+      bgColor = { r: 254, g: 226, b: 226 };
+      textColor = { r: 185, g: 28, b: 28 };
+    } else if (statusLower.includes('entrevista') || statusLower.includes('proceso')) {
+      bgColor = { r: 254, g: 243, b: 199 };
+      textColor = { r: 161, g: 98, b: 7 };
+    } else if (statusLower.includes('aplicó') || statusLower.includes('nuevo')) {
+      bgColor = { r: 224, g: 231, b: 255 };
+      textColor = { r: 79, g: 70, b: 229 };
+    }
+    
+    const badgeWidth = Math.min(this.doc.getTextWidth(status) + 6, 28);
+    const badgeHeight = 5;
+    
+    this.doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
+    this.doc.roundedRect(x, y, badgeWidth, badgeHeight, 1, 1, 'F');
+    
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(6);
+    this.doc.setTextColor(textColor.r, textColor.g, textColor.b);
+    
+    const truncatedStatus = this.truncateText(status, badgeWidth - 4, 6);
+    this.doc.text(truncatedStatus, x + 3, y + 3.5);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // FOOTER
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawFooter(): void {
+    const footerY = this.pageHeight - 10;
+    
+    // Línea superior
+    this.doc.setDrawColor(229, 231, 235);
+    this.doc.setLineWidth(0.3);
+    this.doc.line(this.margin, footerY - 3, this.pageWidth - this.margin, footerY - 3);
+    
+    // Texto izquierda
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(7);
+    this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.text('BAUSEN', this.margin, footerY);
+    
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+    this.doc.text(' | Sistema de Gestión de Talento', this.margin + 14, footerY);
+    
+    // Texto centro
+    this.doc.setFont('helvetica', 'italic');
+    this.doc.setFontSize(6);
+    this.doc.text('Documento confidencial', this.pageWidth / 2, footerY, { align: 'center' });
+    
+    // Texto derecha
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(7);
+    this.doc.text('Página 1', this.pageWidth - this.margin, footerY, { align: 'right' });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // HELPERS
+  // ══════════════════════════════════════════════════════════════════════════
+  private getInitials(name: string): string {
+    return name
+      .split(' ')
+      .filter(word => word.length > 0)
+      .slice(0, 2)
+      .map(word => word[0].toUpperCase())
+      .join('');
+  }
+
+  private truncateText(text: string, maxWidth: number, fontSize: number): string {
+    this.doc.setFontSize(fontSize);
+    if (this.doc.getTextWidth(text) <= maxWidth) {
+      return text;
+    }
+    
+    let truncated = text;
+    while (this.doc.getTextWidth(truncated + '...') > maxWidth && truncated.length > 0) {
+      truncated = truncated.slice(0, -1);
+    }
+    return truncated + '...';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// FUNCIONES EXPORTABLES
+// ════════════════════════════════════════════════════════════════════════════
+export function generateCandidateReportPDF(data: CandidateReportData): jsPDF {
+  const generator = new CandidateReportPDF();
+  return generator.generate(data);
+}
+
+export function downloadCandidateReportPDF(data: CandidateReportData, filename?: string): void {
+  const generator = new CandidateReportPDF();
+  const pdf = generator.generate(data);
+  const defaultFilename = `Reporte_Candidato_${data.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+  pdf.save(filename || defaultFilename);
+}

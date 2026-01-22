@@ -12,19 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { useModal } from '@/context/ModalContext';
 import { getProfileTimeline, formatDateTime, type ProfileTimelineData, type TimelineEvent } from '@/lib/api-reports';
 import * as XLSX from 'xlsx';
-import {
-  generatePDF,
-  generateHeader,
-  generateKPIRow,
-  generateSection,
-  generateTimeline,
-  wrapInPage,
-  generateHeroKPIs,
-  generateGanttChart,
-  generateComparisonBar,
-  generateCandidateCards,
-  generateCommercialBox, 
-} from '@/lib/pdf-generator';
+import { downloadTimelineReportPDF } from '@/lib/pdf-timeline-report';
 
 interface Props {
   profileId: number;
@@ -129,111 +117,56 @@ export default function ProfileTimelineReport({ profileId, onBack }: Props) {
     
     setExporting(true);
     try {
-      let htmlContent = '';
-
-      // Header institucional
-      htmlContent += generateHeader('TIMELINE DEL PROCESO', data.profile.title);
-
-      // NUEVO: Hero KPIs con métricas de eficiencia
-      if (data.metrics) {
-        htmlContent += generateHeroKPIs([
-          { 
-            label: 'Tiempo Total', 
-            value: `${data.metrics.total_duration_hours} hrs`,
-            subtext: data.metrics.savings_percent > 0 ? `↓${data.metrics.savings_percent}% más rápido` : undefined,
-            type: 'primary' 
-          },
-          { 
-            label: 'Candidatos', 
-            value: data.metrics.candidates_count,
-            subtext: `Match prom: ${data.metrics.avg_match_score}%`,
-            type: 'success' 
-          },
-          { 
-            label: 'Fases', 
-            value: data.metrics.phases_completed,
-            subtext: 'Proceso automatizado',
-            type: 'accent' 
-          },
-          { 
-            label: 'Eficiencia', 
-            value: `${data.metrics.efficiency_score}%`,
-            subtext: 'Score del proceso',
-            type: 'warning' 
-          },
-        ]);
-      }
-
-      // NUEVO: Diagrama de Gantt
-      if (data.phases && data.phases.length > 0) {
-        htmlContent += generateGanttChart(data.phases);
-      }
-
-      // NUEVO: Candidatos con match visual
-      if (data.candidates && data.candidates.length > 0) {
-        htmlContent += generateCandidateCards(
-          data.candidates.map(c => ({
-            name: c.name,
-            applied_at: c.applied_at_formatted || new Date(c.applied_at).toLocaleDateString('es-MX'),
-            match: c.match,
-          }))
-        );
-      }
-
-      // NUEVO: Comparativa vs industria
-      if (data.metrics) {
-        htmlContent += generateComparisonBar({
-          yourValue: data.metrics.total_duration_hours,
-          yourLabel: 'Este Proceso',
-          industryValue: data.metrics.industry_avg_days * 24,
-          industryLabel: 'Promedio Industria',
-          unit: 'hrs',
-          savingsText: `Ahorro estimado: ${data.metrics.savings_days} días de tiempo`,
-        });
-      }
-
-      // NUEVO: Caja comercial
-      if (data.metrics && data.metrics.savings_percent > 0) {
-        htmlContent += generateCommercialBox({
-          title: '🎯 Resultados que hablan por sí solos',
-          description: `PReclutamiento reduce el tiempo de contratación en un ${data.metrics.savings_percent}% comparado con métodos tradicionales, mientras mantiene un score de match superior al ${Math.round(data.metrics.avg_match_score)}%.`,
-          highlightValue: `${data.metrics.savings_percent}%`,
-          highlightLabel: 'más rápido',
-        });
-      }
-
-      // Timeline tradicional (reducido)
+      // Filtrar eventos si hay filtro activo
       const events = filterType 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ? data.timeline.filter((e: any) => e.type === filterType)
         : data.timeline;
 
-      if (events.length > 0) {
-        htmlContent += generateSection('Detalle de Eventos',
-          generateTimeline(
-            events.slice(0, 10).map((event: any) => ({
-              date: formatDateTime(event.timestamp),
-              title: event.title,
-              description: event.description,
-            }))
-          )
-        );
-      }
+      // Preparar datos para el nuevo generador avanzado con dashboard
+      const reportData = {
+        puesto: data.profile.title,
+        cliente: data.profile.client,
+        fecha_reporte: new Date().toLocaleDateString('es-MX', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }),
+        
+        // KPIs desde metrics del API
+        dias_abierto: data.metrics?.total_duration_days || Math.ceil((data.metrics?.total_duration_hours || 0) / 24) || 1,
+        total_candidatos: data.metrics?.candidates_count || data.candidates?.length || 0,
+        match_promedio: data.metrics?.avg_match_score || 0,
+        total_eventos: data.total_events || events.length,
+        
+        // Candidatos del API
+        candidatos: (data.candidates || []).map((c) => ({
+          nombre: c.name,
+          email: '', // No disponible en el tipo actual
+          fecha_aplico: c.applied_at_formatted || formatDateTime(c.applied_at),
+          match_porcentaje: c.match || 0,
+          estado: c.status || 'Pendiente'
+        })),
+        
+        // Eventos transformados
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        eventos: events.map((event: any) => ({
+          fecha_hora: formatDateTime(event.timestamp),
+          tipo: event.title,
+          descripcion: event.description || ''
+        }))
+      };
 
-      // Envolver en página completa con estilos
-      const fullHtml = wrapInPage(htmlContent, { 
-        title: 'TIMELINE DEL PROCESO', 
-        subtitle: data.profile.title 
-      });
-
-      // Generar PDF
-      await generatePDF(fullHtml, {
-        filename: `Timeline_${data.profile.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
-      });
+      // Generar nombre de archivo
+      const filename = `Timeline_${data.profile.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      // Generar PDF con el nuevo generador tipo dashboard
+      downloadTimelineReportPDF(reportData, filename);
 
       await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
-      await showAlert('❌ Error al generar PDF');
+      await showAlert('❌ Error al generar el PDF');
     } finally {
       setExporting(false);
     }

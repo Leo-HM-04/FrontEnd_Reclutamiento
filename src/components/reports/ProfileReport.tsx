@@ -10,18 +10,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useModal } from '@/context/ModalContext';
-import { getProfileReport, formatDate, formatCurrency, getStatusColor, type ProfileReportData } from '@/lib/api-reports';
+import { getProfileReport, getProfileCandidates, formatDate, formatCurrency, getStatusColor, type ProfileReportData, type ProfileCandidatesData } from '@/lib/api-reports';
 import * as XLSX from 'xlsx';
-import {
-  generatePDF,
-  generateHeader,
-  generateKPIRow,
-  generateSection,
-  generateInfoGrid,
-  generateParagraph,
-  generateTimeline,
-  wrapInPage,
-} from '@/lib/pdf-generator';
+import { generateProfileReport, type ProfileReportData as PDFProfileData } from '@/lib/pdf-profile-report';
 
 interface Props {
   profileId: number;
@@ -31,6 +22,7 @@ interface Props {
 export default function ProfileReport({ profileId, onBack }: Props) {
   const { showAlert } = useModal();
   const [data, setData] = useState<ProfileReportData | null>(null);
+  const [candidatesData, setCandidatesData] = useState<ProfileCandidatesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -43,8 +35,12 @@ export default function ProfileReport({ profileId, onBack }: Props) {
     try {
       setLoading(true);
       setError(null);
-      const result = await getProfileReport(profileId);
-      setData(result);
+      const [profileResult, candidatesResult] = await Promise.all([
+        getProfileReport(profileId),
+        getProfileCandidates(profileId)
+      ]);
+      setData(profileResult);
+      setCandidatesData(candidatesResult);
     } catch (err) {
       setError('Error al cargar el reporte');
       console.error(err);
@@ -57,94 +53,58 @@ export default function ProfileReport({ profileId, onBack }: Props) {
   const { profile, client, supervisor, candidates_stats, progress, status_history } = data || {} as ProfileReportData;
 
   // ═══════════════════════════════════════════════
-  // EXPORTAR A PDF
+  // EXPORTAR A PDF (NUEVO DISEÑO DASHBOARD)
   // ═══════════════════════════════════════════════
   const handleExportPDF = async () => {
     if (!data) return;
-    
+
     setExporting(true);
     try {
-      // ═══════════════════════════════════════════════
-      // CONSTRUIR HTML DEL REPORTE
-      // ═══════════════════════════════════════════════
-      let htmlContent = '';
-
-      // Header institucional
-      htmlContent += generateHeader('REPORTE DE PERFIL', profile.position_title);
-
-      // KPIs principales
-      htmlContent += generateKPIRow([
-        { label: 'Días Abierto', value: progress.days_open, type: 'primary' },
-        { label: 'Candidatos', value: candidates_stats.total, type: 'accent' },
-        { label: 'Preseleccionados', value: candidates_stats.shortlisted, type: 'success' },
-        { label: 'Entrevistas', value: candidates_stats.interviewed, type: 'warning' },
-      ]);
-
-      // Información general
-      htmlContent += generateSection('Información General',
-        generateInfoGrid([
-          { label: 'Estado', value: profile.status_display },
-          { label: 'Prioridad', value: profile.priority },
-          { label: 'Servicio', value: profile.service_type },
-          { label: 'Supervisor', value: supervisor?.name || 'No asignado' },
-        ])
-      );
-
-      // Información del cliente
-      htmlContent += generateSection('Información del Cliente',
-        generateInfoGrid([
-          { label: 'Empresa', value: client.company_name },
-          { label: 'Industria', value: client.industry },
-          { label: 'Contacto', value: client.contact_name },
-          { label: 'Email', value: client.contact_email },
-        ])
-      );
-
-      // Ubicación y compensación
-      htmlContent += generateSection('Ubicación y Compensación',
-        generateInfoGrid([
-          { label: 'Ciudad', value: `${profile.location.city}, ${profile.location.state}` },
-          { label: 'Modalidad', value: profile.location.work_mode },
-          { label: 'Salario', value: `${formatCurrency(profile.salary.min)} - ${formatCurrency(profile.salary.max)} ${profile.salary.currency}/${profile.salary.period}` },
-        ])
-      );
-
-      // Descripción del puesto
-      if (profile.description) {
-        htmlContent += generateSection('Descripción del Puesto',
-          generateParagraph(profile.description)
-        );
-      }
-
-      // Requisitos
-      if (profile.requirements) {
-        htmlContent += generateSection('Requisitos',
-          generateParagraph(profile.requirements)
-        );
-      }
-
-      // Historial de estados
-      if (status_history && status_history.length > 0) {
-        htmlContent += generateSection('Historial Reciente',
-          generateTimeline(
-            status_history.slice(0, 5).map(h => ({
-              date: formatDate(h.timestamp),
-              title: `${h.from_status_display} → ${h.to_status_display}`,
-              description: h.changed_by || '',
-            }))
-          )
-        );
-      }
-
-      // Envolver en página completa con estilos
-      const fullHtml = wrapInPage(htmlContent, { title: 'REPORTE DE PERFIL', subtitle: profile.position_title });
-
-      // Generar PDF
-      await generatePDF(fullHtml, {
-        filename: `Reporte_Perfil_${profile.position_title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+      // Debug: ver qué datos llegan
+      console.log('🔍 Datos del perfil para PDF:', {
+        description: profile.description,
+        descriptionLength: profile.description?.length,
+        descriptionFirst100: profile.description?.substring(0, 100),
       });
-      
-      await showAlert('✅ PDF generado exitosamente');
+
+      // Mapear datos al formato del nuevo generador
+      const pdfData: PDFProfileData = {
+        titulo: 'REPORTE DE PERFIL',
+        puesto: profile.position_title,
+        fecha: new Date().toLocaleDateString('es-MX', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        kpis: {
+          dias_abierto: progress.days_open,
+          candidatos: candidates_stats.total,
+          preseleccionados: candidates_stats.shortlisted,
+          entrevistas: candidates_stats.interviewed,
+        },
+        estado: profile.status_display,
+        prioridad: profile.priority === 'Alta' ? 'high' : profile.priority === 'Media' ? 'medium' : 'low',
+        servicio: profile.service_type === 'Urgente' ? 'urgente' : profile.service_type === 'Express' ? 'express' : 'normal',
+        supervisor: supervisor?.name || 'No asignado',
+        empresa: client.company_name,
+        industria: client.industry,
+        contacto: client.contact_name,
+        email: client.contact_email,
+        ciudad: `${profile.location.city}, ${profile.location.state}`,
+        modalidad: profile.location.work_mode.toLowerCase() as 'presencial' | 'remoto' | 'híbrido',
+        salario: `${formatCurrency(profile.salary.min)} - ${formatCurrency(profile.salary.max)} ${profile.salary.currency}/${profile.salary.period}`,
+        resumen_rol: profile.description || 'Sin descripción disponible',
+      };
+
+      console.log('📄 Datos a enviar al generador PDF:', pdfData);
+
+      // Generar PDF con el nuevo diseño tipo dashboard
+      generateProfileReport(
+        pdfData,
+        `Reporte_Perfil_${profile.position_title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
+      );
+
+      await showAlert('✅ PDF generado exitosamente con el nuevo diseño');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
       await showAlert('❌ Error al generar PDF');
@@ -239,7 +199,7 @@ export default function ProfileReport({ profileId, onBack }: Props) {
 
       // Guardar archivo
       XLSX.writeFile(wb, `Reporte_Perfil_${profile.position_title}_${new Date().toISOString().split('T')[0]}.xlsx`);
-      
+
       await showAlert('✅ Excel generado exitosamente');
     } catch (error) {
       console.error('Error al exportar Excel:', error);
@@ -294,15 +254,15 @@ export default function ProfileReport({ profileId, onBack }: Props) {
           </div>
           <div className="flex gap-2">
             {onBack && (
-              <button 
-                onClick={onBack} 
+              <button
+                onClick={onBack}
                 className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
               >
                 <i className="fas fa-arrow-left mr-2"></i>
                 Volver
               </button>
             )}
-            <button 
+            <button
               onClick={handleExportPDF}
               disabled={exporting}
               className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -310,7 +270,7 @@ export default function ProfileReport({ profileId, onBack }: Props) {
               <i className="fas fa-file-pdf mr-2"></i>
               {exporting ? 'Generando...' : 'PDF'}
             </button>
-            <button 
+            <button
               onClick={handleExportExcel}
               disabled={exporting}
               className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

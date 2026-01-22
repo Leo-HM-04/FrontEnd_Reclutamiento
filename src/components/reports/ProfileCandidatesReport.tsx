@@ -12,14 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { useModal } from '@/context/ModalContext';
 import { getProfileCandidates, formatDate, getStatusColor, type ProfileCandidatesData } from '@/lib/api-reports';
 import * as XLSX from 'xlsx';
-import {
-  generatePDF,
-  generateHeader,
-  generateKPIRow,
-  generateSection,
-  generateTable,
-  wrapInPage,
-} from '@/lib/pdf-generator';
+import { downloadCandidatesReportPDF } from '@/lib/pdf-candidates-report';
 
 interface Props {
   profileId: number;
@@ -62,47 +55,33 @@ export default function ProfileCandidatesReport({ profileId, onBack, onViewCandi
     
     setExporting(true);
     try {
-      let htmlContent = '';
+      // Preparar datos para el nuevo generador de PDF dashboard
+      const reportData = {
+        puesto: data.profile.title,
+        fecha: new Date().toLocaleDateString('es-MX', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }),
+        cliente: data.profile.client,
+        candidatos: data.candidates.map(c => ({
+          nombre: c.full_name,
+          email: c.email,
+          estado: c.status_display,
+          match_porcentaje: c.match_percentage ?? 0
+        }))
+      };
 
-      // Header institucional
-      htmlContent += generateHeader('CANDIDATOS DEL PERFIL', data.profile.title);
-
-      // KPIs principales
-      htmlContent += generateKPIRow([
-        { label: 'Total Candidatos', value: data.summary.total_candidates, type: 'primary' },
-        { label: 'Match Promedio', value: `${data.summary.avg_match_percentage}%`, type: 'success' },
-        { label: 'Cliente', value: data.profile.client.substring(0, 20), type: 'accent' },
-      ]);
-
-      // Tabla de candidatos
-      htmlContent += generateSection('Lista de Candidatos',
-        generateTable(
-          [
-            { key: 'name', header: 'Nombre' },
-            { key: 'email', header: 'Email' },
-            { key: 'status', header: 'Estado' },
-            { key: 'match', header: 'Match %' },
-          ],
-          data.candidates.map(c => ({
-            name: c.full_name.substring(0, 30),
-            email: c.email.substring(0, 30),
-            status: c.status_display,
-            match: c.match_percentage !== null ? `${c.match_percentage}%` : 'N/A',
-          }))
-        )
+      // Generar y descargar PDF con el nuevo diseño dashboard
+      downloadCandidatesReportPDF(
+        reportData, 
+        `Candidatos_${data.profile.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`
       );
-
-      // Envolver en página completa con estilos
-      const fullHtml = wrapInPage(htmlContent, { title: 'CANDIDATOS DEL PERFIL', subtitle: data.profile.title });
-
-      // Generar PDF
-      await generatePDF(fullHtml, {
-        filename: `Candidatos_${data.profile.title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
-      });
 
       await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
+      await showAlert('❌ Error al generar el PDF');
     } finally {
       setExporting(false);
     }

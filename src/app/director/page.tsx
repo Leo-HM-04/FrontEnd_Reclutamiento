@@ -22,7 +22,7 @@ import ReportsDashboard from '@/components/ReportsDashboard';
 import IndividualReportsHub from '@/components/reports/IndividualReportsHub';
 import DirectorReportsHub from '@/components/reports/DirectorReportsHub';
 import ShareLinkModal from '@/components/ShareLinkModal';
-import EmailManagement from '@/components/EmailManagement'; 
+import EmailManagement from '@/components/EmailManagement';
 
 type Stats = {
   activeProcesses: number;
@@ -246,10 +246,10 @@ export default function Page() {
   // ====== State principal (equivalente a directorApp) ======
   // Intentar restaurar la vista desde localStorage, si no existe usar "dashboard"
   const [currentView, setCurrentView] = useState<
-    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates" | "individual-reports" | "email-management" 
+    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates" | "individual-reports" | "email-management"
   >("dashboard");
 
-// Restaurar vista guardada al montar el componente (PRIMERO)
+  // Restaurar vista guardada al montar el componente (PRIMERO)
   useEffect(() => {
     const savedView = localStorage.getItem('directorCurrentView');
     if (savedView) {
@@ -279,7 +279,7 @@ export default function Page() {
   }, [currentView]);
 
 
-  
+
   const [loading, setLoading] = useState(false);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -337,7 +337,7 @@ export default function Page() {
     success_rate: 0,
     client_satisfaction: 0
   });
-  
+
 
   // Estado para documentos
   const [documentsData, setDocumentsData] = useState({
@@ -388,12 +388,12 @@ export default function Page() {
   const [showDocumentForm, setShowDocumentForm] = useState(false);
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
-  
+
   // Estado para manejar navegación desde aplicaciones a perfiles
-    const [profileToOpen, setProfileToOpen] = useState<{id: number | null, action: 'view' | 'edit' | null}>({
-      id: null,
-      action: null
-    });
+  const [profileToOpen, setProfileToOpen] = useState<{ id: number | null, action: 'view' | 'edit' | null }>({
+    id: null,
+    action: null
+  });
   // Estado para fases expandidas en client-progress
   const [expandedPhases, setExpandedPhases] = useState<Set<number>>(new Set());
 
@@ -413,13 +413,13 @@ export default function Page() {
     razonRechazo: ''
   });
 
-// Manejar parámetros de URL para navegación desde aplicaciones
+  // Manejar parámetros de URL para navegación desde aplicaciones
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const view = params.get('view');
     const profileId = params.get('profile');
     const editProfileId = params.get('edit');
-    
+
     if (view === 'profiles') {
       setCurrentView('profiles');
       if (profileId) {
@@ -427,44 +427,44 @@ export default function Page() {
       } else if (editProfileId) {
         setProfileToOpen({ id: parseInt(editProfileId), action: 'edit' });
       }
-      
+
       // Limpiar los parámetros URL después de usarlos
       window.history.replaceState({}, '', '/director');
     }
   }, []);
 
   // Inicializar sidebar después de hidratación (evita hydration mismatch)
-useEffect(() => {
-  setMounted(true);
-  
-  // Detectar si es desktop
-  const isDesktop = window.innerWidth >= 1024;
-  
-  if (isDesktop) {
-    // En desktop, siempre abierto
-    setSidebarOpen(true);
-  } else {
-    // En móvil, recuperar de localStorage
-    const saved = localStorage.getItem('sidebarOpen');
-    setSidebarOpen(saved === 'true');
-  }
-}, []);
+  useEffect(() => {
+    setMounted(true);
 
-// Listener para resize de ventana
-useEffect(() => {
-  if (!mounted) return;
-
-  const handleResize = () => {
+    // Detectar si es desktop
     const isDesktop = window.innerWidth >= 1024;
-    if (isDesktop) {
-      setSidebarOpen(true);
-      localStorage.setItem('sidebarOpen', 'true');
-    }
-  };
 
-  window.addEventListener('resize', handleResize);
-  return () => window.removeEventListener('resize', handleResize);
-}, [mounted]);
+    if (isDesktop) {
+      // En desktop, siempre abierto
+      setSidebarOpen(true);
+    } else {
+      // En móvil, recuperar de localStorage
+      const saved = localStorage.getItem('sidebarOpen');
+      setSidebarOpen(saved === 'true');
+    }
+  }, []);
+
+  // Listener para resize de ventana
+  useEffect(() => {
+    if (!mounted) return;
+
+    const handleResize = () => {
+      const isDesktop = window.innerWidth >= 1024;
+      if (isDesktop) {
+        setSidebarOpen(true);
+        localStorage.setItem('sidebarOpen', 'true');
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [mounted]);
 
   // ====== Chart.js ======
   const processChartRef = useRef<HTMLCanvasElement | null>(null);
@@ -473,7 +473,7 @@ useEffect(() => {
   // ====== Carga inicial ======
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
-    
+
     const initializeDashboard = async () => {
       setLoading(true);
       try {
@@ -489,16 +489,16 @@ useEffect(() => {
         setLoading(false);
       }
     };
-    
+
     initializeDashboard();
-    
+
     // Configurar intervalo SOLO si estamos en dashboard
     if (currentView === 'dashboard') {
       intervalId = setInterval(() => {
         loadDashboardData();
       }, 30000);
     }
-    
+
     // ✅ Cleanup correcto
     return () => {
       if (intervalId) {
@@ -509,22 +509,22 @@ useEffect(() => {
 
 
   // Intervalo inteligente: solo activo cuando estamos en la vista dashboard
-useEffect(() => {
-  let intervalId: NodeJS.Timeout | null = null;
-  
-  if (currentView === 'dashboard') {
-    intervalId = setInterval(() => {
-      console.log('⏰ Actualizando dashboard (intervalo de 30s)');
-      loadDashboardData();
-    }, 30000);
-  }
-  
-  return () => {
-    if (intervalId) {
-      clearInterval(intervalId);
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (currentView === 'dashboard') {
+      intervalId = setInterval(() => {
+        console.log('⏰ Actualizando dashboard (intervalo de 30s)');
+        loadDashboardData();
+      }, 30000);
     }
-  };
-}, [currentView]);
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [currentView]);
 
 
 
@@ -537,12 +537,12 @@ useEffect(() => {
   // Cargar datos de Celery cuando la vista sea "tasks"
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    
+
     if (currentView === "tasks") {
       loadCeleryData();
       interval = setInterval(loadCeleryData, 10000);
     }
-    
+
     return () => {
       if (interval) {
         clearInterval(interval);
@@ -559,7 +559,7 @@ useEffect(() => {
     }
   }, [currentView]);
 
-  
+
 
   function setupCharts() {
     const anyChart = (window as any).Chart;
@@ -591,10 +591,10 @@ useEffect(() => {
 
   async function loadDashboardData() {
     setDashboardLoading(true);
-    
+
     try {
       const token = localStorage.getItem('authToken');
-      
+
       if (!token) {
         router.push('/auth');
         return;
@@ -624,7 +624,7 @@ useEffect(() => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      
+
       const data: DashboardData = await response.json();
       console.log('✅ Datos del dashboard recibidos:', data);
 
@@ -683,7 +683,7 @@ useEffect(() => {
       // ========================================
       const alertsData = data.alerts || {};
       const notificationsList: NotificationItem[] = [];
-      
+
       if (alertsData.pending_approval > 0) {
         notificationsList.push({
           id: 1,
@@ -692,7 +692,7 @@ useEffect(() => {
           icon: 'fas fa-user-check'
         });
       }
-      
+
       if (alertsData.near_deadline > 0) {
         notificationsList.push({
           id: 2,
@@ -701,7 +701,7 @@ useEffect(() => {
           icon: 'fas fa-exclamation-triangle'
         });
       }
-      
+
       if (alertsData.pending_review > 0) {
         notificationsList.push({
           id: 3,
@@ -972,11 +972,11 @@ useEffect(() => {
       }
 
       console.log('Cargando datos de Celery...');
-      
+
       // Cargar datos por separado para manejar errores individuales
       let tasksData = null;
       let groupsData = null;
-      
+
       try {
         tasksData = await apiClient.getCeleryTasksStatus();
         console.log('Datos de tareas Celery cargados:', tasksData);
@@ -997,7 +997,7 @@ useEffect(() => {
           workers_status: { active_workers: 0, workers: [] }
         };
       }
-      
+
       try {
         groupsData = await apiClient.getCeleryTaskGroups();
         console.log('Datos de grupos Celery cargados:', groupsData);
@@ -1012,13 +1012,13 @@ useEffect(() => {
           }
         };
       }
-      
+
       setCeleryData(tasksData);
       setCeleryGroups(groupsData);
       success('Datos de sistema actualizados');
     } catch (err: any) {
       console.error('Error general loading Celery data:', err);
-      
+
       // Manejar errores de autenticación que no se capturaron antes
       if (err?.status === 401) {
         warning('Sesión expirada. Redirigiendo al login...');
@@ -1028,7 +1028,7 @@ useEffect(() => {
         router.push('/auth');
         return;
       }
-      
+
       // Para otros errores, usar datos de fallback ya configurados arriba
       warning('Algunos datos del sistema no están disponibles');
     }
@@ -1047,94 +1047,94 @@ useEffect(() => {
   };
 
   const loadCandidatesData = async () => {
-  try {
-    console.log('🔵 Cargando candidatos y estadísticas del director...');
-    
-    // Cargar candidatos y overview en paralelo
-    const [candidatesResponse, overviewResponse] = await Promise.all([
-      apiClient.getCandidates({ search: searchQuery }),
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/director/candidates/overview/`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json',
-        },
-      }).then(res => res.json())
-    ]);
-    
-    console.log('🟢 Candidatos recibidos:', candidatesResponse);
-    console.log('🟢 Overview recibido:', overviewResponse);
-    
-    // Procesar candidatos
-    const typedCandidatesResponse = candidatesResponse as { results?: Candidate[] } | Candidate[];
-    const candidatesList = Array.isArray(typedCandidatesResponse)
-      ? typedCandidatesResponse
-      : typedCandidatesResponse.results || [];
-    
-    setCandidates(candidatesList);
-    setCandidatesOverview(overviewResponse);
+    try {
+      console.log('🔵 Cargando candidatos y estadísticas del director...');
 
-    // ✅ VALIDAR overviewResponse
-    if (!overviewResponse || typeof overviewResponse !== 'object') {
-      console.warn('⚠️ overviewResponse es null, usando valores por defecto');
+      // Cargar candidatos y overview en paralelo
+      const [candidatesResponse, overviewResponse] = await Promise.all([
+        apiClient.getCandidates({ search: searchQuery }),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/director/candidates/overview/`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json',
+          },
+        }).then(res => res.json())
+      ]);
+
+      console.log('🟢 Candidatos recibidos:', candidatesResponse);
+      console.log('🟢 Overview recibido:', overviewResponse);
+
+      // Procesar candidatos
+      const typedCandidatesResponse = candidatesResponse as { results?: Candidate[] } | Candidate[];
+      const candidatesList = Array.isArray(typedCandidatesResponse)
+        ? typedCandidatesResponse
+        : typedCandidatesResponse.results || [];
+
+      setCandidates(candidatesList);
+      setCandidatesOverview(overviewResponse);
+
+      // ✅ VALIDAR overviewResponse
+      if (!overviewResponse || typeof overviewResponse !== 'object') {
+        console.warn('⚠️ overviewResponse es null, usando valores por defecto');
+        setHistoryData({
+          total_candidates: candidatesList.length,
+          hired: 0,
+          in_process: candidatesList.length,
+          rejected: 0,
+          success_rate: 0,
+          loading: false
+        });
+        return;
+      }
+
+      // ✅ Calcular estadísticas (DENTRO del try, usando overviewResponse)
+      const totalCandidates = overviewResponse.total || 0;
+      const hired = overviewResponse.by_status?.hired || 0;
+      const rejected = overviewResponse.by_status?.rejected || 0;
+      const inProcess =
+        (overviewResponse.by_status?.screening || 0) +
+        (overviewResponse.by_status?.qualified || 0) +
+        (overviewResponse.by_status?.interview || 0) +
+        (overviewResponse.by_status?.offer || 0);
+
+      const successRate = totalCandidates > 0
+        ? Math.round((hired / totalCandidates) * 100)
+        : 0;
+
       setHistoryData({
-        total_candidates: candidatesList.length,
+        total_candidates: totalCandidates,
+        hired,
+        in_process: inProcess,
+        rejected,
+        success_rate: successRate,
+        loading: false
+      });
+
+    } catch (error: any) {
+      console.error('❌ Error loading candidates:', error);
+
+      setCandidates([]);
+      setCandidatesOverview(null);
+      setHistoryData({
+        total_candidates: 0,
         hired: 0,
-        in_process: candidatesList.length,
+        in_process: 0,
         rejected: 0,
         success_rate: 0,
         loading: false
       });
-      return;
+
+      if (error?.status === 401) {
+        warning('Sesión expirada. Redirigiendo al login...');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        router.push('/auth');
+      } else {
+        error('Error al cargar candidatos');
+      }
     }
-
-    // ✅ Calcular estadísticas (DENTRO del try, usando overviewResponse)
-    const totalCandidates = overviewResponse.total || 0;
-    const hired = overviewResponse.by_status?.hired || 0;
-    const rejected = overviewResponse.by_status?.rejected || 0;
-    const inProcess = 
-      (overviewResponse.by_status?.screening || 0) +
-      (overviewResponse.by_status?.qualified || 0) +
-      (overviewResponse.by_status?.interview || 0) +
-      (overviewResponse.by_status?.offer || 0);
-
-    const successRate = totalCandidates > 0 
-      ? Math.round((hired / totalCandidates) * 100)
-      : 0;
-
-    setHistoryData({
-      total_candidates: totalCandidates,
-      hired,
-      in_process: inProcess,
-      rejected,
-      success_rate: successRate,
-      loading: false
-    });
-
-  } catch (error: any) {
-    console.error('❌ Error loading candidates:', error);
-    
-    setCandidates([]);
-    setCandidatesOverview(null);
-    setHistoryData({
-      total_candidates: 0,
-      hired: 0,
-      in_process: 0,
-      rejected: 0,
-      success_rate: 0,
-      loading: false
-    });
-    
-    if (error?.status === 401) {
-      warning('Sesión expirada. Redirigiendo al login...');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      router.push('/auth');
-    } else {
-      error('Error al cargar candidatos');
-    }
-  }
-};
+  };
   // ====== Funciones para datos de Clientes ======
   const loadClientsData = async () => {
     try {
@@ -1177,55 +1177,55 @@ useEffect(() => {
   /**
  * Cargar datos de aplicaciones desde el backend
  */
-const loadApplicationsData = async () => {
-  try {
-    setApplicationsData(prev => ({ ...prev, loading: true }));
-    
-    console.log('🔵 Cargando aplicaciones desde el backend...');
-    const response = await apiClient.getCandidateApplications();
-    
-    // El backend puede devolver datos en .results (paginado) o directamente
-    const applications = (response as any)?.results || (response as any) || [];
-    
-    console.log('✅ Aplicaciones cargadas:', applications.length);
+  const loadApplicationsData = async () => {
+    try {
+      setApplicationsData(prev => ({ ...prev, loading: true }));
 
-     // ← AGREGAR ESTE LOG PARA VER LOS DATOS
-    console.log('📊 Primera aplicación completa:', applications[0]);
-    console.log('📊 ¿Tiene candidate_name?', applications[0]?.candidate_name);
-    console.log('📊 ¿Tiene candidate_email?', applications[0]?.candidate_email);
-    
-    // Calcular estadísticas
-    const stats = {
-      total: applications.length,
-      active: applications.filter((app: any) => 
-        !['rejected', 'withdrawn', 'accepted'].includes(app.status)
-      ).length,
-      shortlisted: applications.filter((app: any) => 
-        app.status === 'shortlisted'
-      ).length,
-      rejected: applications.filter((app: any) => 
-        ['rejected', 'withdrawn'].includes(app.status)
-      ).length,
-      recent: applications.slice(0, 5),
-      loading: false
-    };
-    
-    setApplicationsData(stats);
-    console.log('📊 Estadísticas de aplicaciones:', stats);
-    
-  } catch (error: any) {
-    console.error('❌ Error al cargar aplicaciones:', error);
-    setApplicationsData({
-      total: 0,
-      active: 0,
-      shortlisted: 0,
-      rejected: 0,
-      recent: [],
-      loading: false
-    });
-  }
+      console.log('🔵 Cargando aplicaciones desde el backend...');
+      const response = await apiClient.getCandidateApplications();
 
-};
+      // El backend puede devolver datos en .results (paginado) o directamente
+      const applications = (response as any)?.results || (response as any) || [];
+
+      console.log('✅ Aplicaciones cargadas:', applications.length);
+
+      // ← AGREGAR ESTE LOG PARA VER LOS DATOS
+      console.log('📊 Primera aplicación completa:', applications[0]);
+      console.log('📊 ¿Tiene candidate_name?', applications[0]?.candidate_name);
+      console.log('📊 ¿Tiene candidate_email?', applications[0]?.candidate_email);
+
+      // Calcular estadísticas
+      const stats = {
+        total: applications.length,
+        active: applications.filter((app: any) =>
+          !['rejected', 'withdrawn', 'accepted'].includes(app.status)
+        ).length,
+        shortlisted: applications.filter((app: any) =>
+          app.status === 'shortlisted'
+        ).length,
+        rejected: applications.filter((app: any) =>
+          ['rejected', 'withdrawn'].includes(app.status)
+        ).length,
+        recent: applications.slice(0, 5),
+        loading: false
+      };
+
+      setApplicationsData(stats);
+      console.log('📊 Estadísticas de aplicaciones:', stats);
+
+    } catch (error: any) {
+      console.error('❌ Error al cargar aplicaciones:', error);
+      setApplicationsData({
+        total: 0,
+        active: 0,
+        shortlisted: 0,
+        rejected: 0,
+        recent: [],
+        loading: false
+      });
+    }
+
+  };
 
 
   /**
@@ -1234,33 +1234,33 @@ const loadApplicationsData = async () => {
   const loadDocumentsData = async () => {
     try {
       setDocumentsData(prev => ({ ...prev, loading: true }));
-      
+
       console.log('🔵 Cargando documentos desde el backend...');
       const response = await apiClient.getCandidateDocuments();
-      
+
       const documents = (response as any)?.results || (response as any) || [];
-      
+
       console.log('✅ Documentos cargados:', documents.length);
-      
+
       const stats = {
         total: documents.length,
         by_type: {
           cv: documents.filter((d: any) => d.document_type === 'cv').length,
-          contract: documents.filter((d: any) => 
+          contract: documents.filter((d: any) =>
             d.document_type === 'contract' || d.document_type === 'cover_letter'
           ).length,
           report: documents.filter((d: any) => d.document_type === 'certificate').length,
-          other: documents.filter((d: any) => 
+          other: documents.filter((d: any) =>
             !['cv', 'contract', 'cover_letter', 'certificate'].includes(d.document_type)
           ).length,
         },
         recent: documents.slice(0, 5),  // ← AGREGAR ESTA LÍNEA: Tomar los 5 más recientes
         loading: false
       };
-      
+
       setDocumentsData(stats);
       console.log('📊 Estadísticas de documentos:', stats);
-      
+
     } catch (error: any) {
       console.error('❌ Error al cargar documentos:', error);
       setDocumentsData({
@@ -1278,14 +1278,14 @@ const loadApplicationsData = async () => {
   const loadNotesData = async () => {
     try {
       setNotesData(prev => ({ ...prev, loading: true }));
-      
+
       console.log('🔵 Cargando notas desde el backend...');
       const response = await apiClient.getCandidateNotes();
-      
+
       const notes = (response as any)?.results || (response as any) || [];
-      
+
       console.log('✅ Notas cargadas:', notes.length);
-      
+
       // Contar por tipo de nota
       const stats = {
         total: notes.length,
@@ -1299,10 +1299,10 @@ const loadApplicationsData = async () => {
         recent: notes, // ← TODAS las notas (no solo 2)
         loading: false
       };
-      
+
       setNotesData(stats);
       console.log('📊 Estadísticas de notas:', stats);
-      
+
     } catch (error: any) {
       console.error('❌ Error al cargar notas:', error);
       setNotesData({
@@ -1438,7 +1438,7 @@ const loadApplicationsData = async () => {
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
-  <div className="min-h-screen bg-gray-50 fixed inset-0 overflow-y-auto" onClick={() => {}}>
+    <div className="min-h-screen bg-gray-50 fixed inset-0 overflow-y-auto" onClick={() => { }}>
       {/* Loading Overlay */}
       {loading && (
         <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
@@ -1454,15 +1454,14 @@ const loadApplicationsData = async () => {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`px-4 py-2 rounded-lg shadow text-white ${
-              t.type === "success"
-                ? "bg-green-600"
-                : t.type === "warning"
+            className={`px-4 py-2 rounded-lg shadow text-white ${t.type === "success"
+              ? "bg-green-600"
+              : t.type === "warning"
                 ? "bg-yellow-600"
                 : t.type === "error"
-                ? "bg-red-600"
-                : "bg-gray-800"
-            }`}
+                  ? "bg-red-600"
+                  : "bg-gray-800"
+              }`}
           >
             {t.text}
           </div>
@@ -1475,7 +1474,7 @@ const loadApplicationsData = async () => {
           <div className="flex items-center justify-between h-16">
             {/* Logo y Título */}
             <div className="flex items-center">
-              <button 
+              <button
                 onClick={() => {
                   const newState = !sidebarOpen;
                   setSidebarOpen(newState);
@@ -1502,9 +1501,9 @@ const loadApplicationsData = async () => {
               {/* Search */}
               <div className="hidden md:flex items-center">
                 <div className="relative">
-                  <input 
-                    type="text" 
-                    placeholder="Buscar candidatos, procesos..." 
+                  <input
+                    type="text"
+                    placeholder="Buscar candidatos, procesos..."
                     className="w-64 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={searchQuery}
                     onChange={(e) => {
@@ -1518,7 +1517,7 @@ const loadApplicationsData = async () => {
 
               {/* Notificaciones */}
               <div className="relative" onClick={stop}>
-                <button 
+                <button
                   onClick={() => setNotifOpen(!notifOpen)}
                   className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -1552,6 +1551,7 @@ const loadApplicationsData = async () => {
                           </div>
                         ))
                       )}
+
                     </div>
                   </div>
                 )}
@@ -1559,7 +1559,7 @@ const loadApplicationsData = async () => {
 
               {/* User Menu */}
               <div className="relative" onClick={stop}>
-                <button 
+                <button
                   onClick={() => setProfileOpen(!profileOpen)}
                   className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -1582,7 +1582,7 @@ const loadApplicationsData = async () => {
                       <i className="fas fa-cog mr-2"></i>Configuración
                     </a>
                     <hr className="my-2" />
-                    <button 
+                    <button
                       onClick={logout}
                       className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                     >
@@ -1607,14 +1607,12 @@ const loadApplicationsData = async () => {
       {/* Layout: Sidebar + Main Content */}
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 ${
-          mounted ? 'transition-transform duration-300' : ''
-        } ease-in-out z-30 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
+        <aside className={`fixed left-0 top-16 bottom-0 w-64 bg-white border-r border-gray-200 ${mounted ? 'transition-transform duration-300' : ''
+          } ease-in-out z-30 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}>
           {/* 🔧 WRAPPER PRINCIPAL - Controla el layout */}
           <div className="h-full flex flex-col">
-            
+
             {/* Sidebar Header - Fijo arriba */}
             <div className="p-6 border-b border-gray-100 flex-shrink-0">
               <div className="flex items-center space-x-3">
@@ -1647,13 +1645,13 @@ const loadApplicationsData = async () => {
 
                   {/* 2. CLIENTES */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("clients");
                         if (window.innerWidth < 1024) {
                           setSidebarOpen(false);
                         }
-                      }} 
+                      }}
                       className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("clients")}`}
                     >
                       <i className="fas fa-building mr-3 w-5" />
@@ -1663,13 +1661,13 @@ const loadApplicationsData = async () => {
 
                   {/* 3. PERFILES DE RECLUTAMIENTO */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("profiles");
                         if (window.innerWidth < 1024) {
                           setSidebarOpen(false);
                         }
-                      }} 
+                      }}
                       className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles")}`}
                     >
                       <i className="fas fa-briefcase mr-3 w-5" />
@@ -1684,13 +1682,13 @@ const loadApplicationsData = async () => {
 
                   {/* 4. CANDIDATOS */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("candidates");
                         if (window.innerWidth < 1024) {
                           setSidebarOpen(false);
                         }
-                      }} 
+                      }}
                       className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates")}`}
                     >
                       <i className="fas fa-user-tie mr-3 w-5" />
@@ -1700,13 +1698,13 @@ const loadApplicationsData = async () => {
 
                   {/* 5. SISTEMA DE EVALUACIONES */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("evaluations");
                         if (window.innerWidth < 1024) {
                           setSidebarOpen(false);
                         }
-                      }} 
+                      }}
                       className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("evaluations")}`}
                     >
                       <i className="fas fa-clipboard-check mr-3 w-5" />
@@ -1715,24 +1713,24 @@ const loadApplicationsData = async () => {
                   </li>
 
                   {/* 6. AVANCE DE CLIENTE - ACTIVO ✅ */}
-                    <li>
-                      <button 
-                        onClick={() => {
-                          setCurrentView("client-progress");
-                          if (window.innerWidth < 1024) {
-                            setSidebarOpen(false);
-                          }
-                        }}
-                        className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("client-progress")}`}
-                      >
-                        <i className="fas fa-chart-area mr-3 w-5" />
-                        Avance de Cliente
-                      </button>
-                    </li>
+                  <li>
+                    <button
+                      onClick={() => {
+                        setCurrentView("client-progress");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("client-progress")}`}
+                    >
+                      <i className="fas fa-chart-area mr-3 w-5" />
+                      Avance de Cliente
+                    </button>
+                  </li>
 
                   {/* REPORTES */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("reports");
                         if (window.innerWidth < 1024) {
@@ -1748,13 +1746,13 @@ const loadApplicationsData = async () => {
 
                   {/* 8. ESTADO DE PERFILES */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("profiles-status");
                         if (window.innerWidth < 1024) {
                           setSidebarOpen(false);
                         }
-                      }} 
+                      }}
                       className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("profiles-status")}`}
                     >
                       <i className="fas fa-tasks mr-3 w-5" />
@@ -1764,13 +1762,13 @@ const loadApplicationsData = async () => {
 
                   {/* 9. ESTADO DE CANDIDATOS */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("candidates-status");
                         if (window.innerWidth < 1024) {
                           setSidebarOpen(false);
                         }
-                      }} 
+                      }}
                       className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("candidates-status")}`}
                     >
                       <i className="fas fa-user-check mr-3 w-5" />
@@ -1780,13 +1778,13 @@ const loadApplicationsData = async () => {
 
                   {/* 10. PRESELECCIONADOS */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("shortlisted-candidates");
                         if (window.innerWidth < 1024) {
                           setSidebarOpen(false);
                         }
-                      }} 
+                      }}
                       className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("shortlisted-candidates")}`}
                     >
                       <i className="fas fa-star mr-3 w-5" />
@@ -1796,13 +1794,13 @@ const loadApplicationsData = async () => {
 
                   {/* 11. CANDIDATOS SELECCIONADOS */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("selected-candidates");
                         if (window.innerWidth < 1024) {
                           setSidebarOpen(false);
                         }
-                      }} 
+                      }}
                       className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("selected-candidates")}`}
                     >
                       <i className="fas fa-user-check mr-3 w-5" />
@@ -1812,13 +1810,13 @@ const loadApplicationsData = async () => {
 
                   {/* 12. REPORTES INDIVIDUALES */}
                   <li>
-                    <button 
+                    <button
                       onClick={() => {
                         setCurrentView("individual-reports");
                         if (window.innerWidth < 1024) {
                           setSidebarOpen(false);
                         }
-                      }} 
+                      }}
                       className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("individual-reports")}`}
                     >
                       <i className="fas fa-file-alt mr-3 w-5" />
@@ -1826,30 +1824,29 @@ const loadApplicationsData = async () => {
                     </button>
                   </li>
                   <li>
-                  {/* 12. GESTIÓN DE CORREOS */}
-                  <button
-                    onClick={() => {
-                      setCurrentView("email-management");
-                      if (window.innerWidth < 1024) {
-                        setSidebarOpen(false);
-                      }
-                    }}
-                    className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("email-management")}`}
-                  >
-                    <i className="fas fa-envelope mr-3 w-5" />
-                    Gestión de Correos
-                  </button>
-                </li>
+                    {/* 12. GESTIÓN DE CORREOS */}
+                    <button
+                      onClick={() => {
+                        setCurrentView("email-management");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("email-management")}`}
+                    >
+                      <i className="fas fa-envelope mr-3 w-5" />
+                      Gestión de Correos
+                    </button>
+                  </li>
                 </ul>
               </div>
             </div>
-        </div>
+          </div>
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 pt-16 bg-gray-50 transition-all duration-300 relative z-25 min-h-screen ${
-          sidebarOpen ? 'lg:ml-64' : 'ml-0'
-        }`}>
+        <main className={`flex-1 pt-16 bg-gray-50 transition-all duration-300 relative z-25 min-h-screen ${sidebarOpen ? 'lg:ml-64' : 'ml-0'
+          }`}>
           {/* DASHBOARD */}
           {currentView === "dashboard" && (
             <div className="p-6">
@@ -2040,9 +2037,8 @@ const loadApplicationsData = async () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{a.client}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                a.score >= 90 ? "bg-green-100 text-green-800" : a.score >= 80 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
-                              }`}
+                              className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${a.score >= 90 ? "bg-green-100 text-green-800" : a.score >= 80 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800"
+                                }`}
                             >
                               {a.score}%
                             </span>
@@ -2173,13 +2169,12 @@ const loadApplicationsData = async () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.client}</td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                p.status === "active"
-                                  ? "bg-green-100 text-green-800"
-                                  : p.status === "paused"
+                              className={`px-2 py-1 text-xs font-semibold rounded-full ${p.status === "active"
+                                ? "bg-green-100 text-green-800"
+                                : p.status === "paused"
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-blue-100 text-blue-800"
-                              }`}
+                                }`}
                             >
                               {p.status === "active" ? "Activo" : p.status === "paused" ? "Pausado" : "Completado"}
                             </span>
@@ -2229,13 +2224,13 @@ const loadApplicationsData = async () => {
                   <p className="text-gray-600 mt-1">Visualiza y administra todos los candidatos en el sistema</p>
                 </div>
                 <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button 
+                  <button
                     onClick={async () => {
                       setLoading(true);
                       await loadCandidatesData();
                       setLoading(false);
                       success("Datos actualizados correctamente");
-                    }} 
+                    }}
                     className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                     disabled={loading}
                   >
@@ -2255,430 +2250,440 @@ const loadApplicationsData = async () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {/* Total Candidatos */}
-              <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-blue-100">
-                    <i className="fas fa-users text-blue-600 text-xl" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Candidatos</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {candidatesOverview?.total || candidates.length || 0}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Candidatos Activos */}
-              <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-green-100">
-                    <i className="fas fa-check-circle text-green-600 text-xl" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Activos</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {candidatesOverview?.by_status?.find((s: any) => s.status === 'qualified')?.count || 0}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* En Evaluación */}
-              <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-yellow-100">
-                    <i className="fas fa-clipboard-check text-yellow-600 text-xl" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">En Evaluación</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {candidatesOverview?.by_status?.find((s: any) => s.status === 'screening')?.count || 0}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contratados */}
-              <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-purple-100">
-                    <i className="fas fa-user-check text-purple-600 text-xl" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Contratados</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {candidatesOverview?.by_status?.find((s: any) => s.status === 'hired')?.count || 0}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-              {/* Grid candidatos */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {loading ? (
-                    <div className="col-span-full flex justify-center items-center py-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                      <span className="ml-3 text-gray-600">Cargando candidatos...</span>
-                    </div>
-                  ) : candidates.length === 0 ? (
-                    <div className="col-span-full text-center py-12 empty-state">
-                      <i className="fas fa-user-tie text-6xl text-gray-300 mb-4" />
-                      <p className="text-gray-500">No hay candidatos registrados</p>
-                    </div>
-                  ) : (
-                    candidates.map((c: any) => (
-                      <div key={c.id} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center">
-                            <img
-                              className="h-12 w-12 rounded-full border-2 border-gray-200"
-                              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(c.full_name || `${c.first_name} ${c.last_name}`)}&background=3b82f6&color=fff`}
-                              alt={c.full_name || `${c.first_name} ${c.last_name}`}
-                            />
-                            <div className="ml-3">
-                              <h3 className="text-sm font-semibold text-gray-900">
-                                {c.full_name || `${c.first_name} ${c.last_name}`}
-                              </h3>
-                              <p className="text-xs text-gray-500">{c.current_position || 'Sin posición'}</p>
-                            </div>
-                          </div>
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            c.status === 'hired' ? 'bg-green-100 text-green-800' :
-                            c.status === 'qualified' ? 'bg-blue-100 text-blue-800' :
-                            c.status === 'interview' ? 'bg-purple-100 text-purple-800' :
-                            c.status === 'screening' ? 'bg-yellow-100 text-yellow-800' :
-                            c.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {c.status_display || c.status || 'Nuevo'}
-                          </span>
-                        </div>
-                        <div className="space-y-2 mb-4 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Email:</span>
-                            <span className="text-gray-900 truncate ml-2">{c.email}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Teléfono:</span>
-                            <span className="text-gray-900">{c.phone || 'N/A'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-500">Experiencia:</span>
-                            <span className="text-gray-900">{c.years_experience || 0} años</span>
-                          </div>
-                          {c.current_company && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-500">Empresa:</span>
-                              <span className="text-gray-900 truncate ml-2">{c.current_company}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                          <div className="flex space-x-2">
-                            <button onClick={() => viewCandidateDetails(c.id)} className="text-blue-600 hover:text-blue-700 p-1 rounded" title="Ver detalles">
-                              <i className="fas fa-eye text-sm" />
-                            </button>
-                            <button onClick={() => downloadDocument(c.id)} className="text-green-600 hover:text-green-700 p-1 rounded" title="Descargar CV">
-                              <i className="fas fa-download text-sm" />
-                            </button>
-                            <button onClick={() => info(`Contactando candidato ${c.id}...`)} className="text-purple-600 hover:text-purple-700 p-1 rounded" title="Contactar">
-                              <i className="fas fa-envelope text-sm" />
-                            </button>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {new Date(c.created_at).toLocaleDateString('es-MX')}
-                          </span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                </div>
-                )}
-
-          {/* APPLICATIONS */}
-          {currentView === "applications" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Aplicaciones de Candidatos</h2>
-                  <p className="text-gray-600 mt-1">Gestiona y da seguimiento a todas las aplicaciones de candidatos</p>
-                </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={() => info("Exportando aplicaciones...")} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-download mr-2" />
-                    Exportar
-                  </button>
-                  <button onClick={() => setShowApplicationForm(true)} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-plus mr-2" />
-                    Nueva Aplicación
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {/* Total Candidatos */}
                 <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                   <div className="flex items-center">
                     <div className="p-3 rounded-full bg-blue-100">
-                      <i className="fas fa-briefcase text-blue-600 text-xl" />
+                      <i className="fas fa-users text-blue-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Total Aplicaciones</p>
-                      {applicationsData.loading ? (
-                        <div className="animate-pulse">
-                          <div className="h-8 bg-gray-200 rounded w-16 mt-2"></div>
-                        </div>
-                      ) : (
-                        <p className="text-2xl font-bold text-gray-900">{applicationsData.total}</p>
-                      )}
+                      <p className="text-sm font-medium text-gray-600">Total Candidatos</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {candidatesOverview?.total || candidates.length || 0}
+                      </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Candidatos Activos */}
                 <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                   <div className="flex items-center">
                     <div className="p-3 rounded-full bg-green-100">
                       <i className="fas fa-check-circle text-green-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Preseleccionados</p>
-                      {applicationsData.loading ? (
-                        <div className="animate-pulse">
-                          <div className="h-8 bg-gray-200 rounded w-12 mt-2"></div>
-                        </div>
-                      ) : (
-                        <p className="text-2xl font-bold text-gray-900">{applicationsData.shortlisted}</p>
-                      )}
+                      <p className="text-sm font-medium text-gray-600">Activos</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {candidatesOverview?.by_status?.find((s: any) => s.status === 'qualified')?.count || 0}
+                      </p>
                     </div>
                   </div>
                 </div>
+
+                {/* En Evaluación */}
                 <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                   <div className="flex items-center">
                     <div className="p-3 rounded-full bg-yellow-100">
-                      <i className="fas fa-clock text-yellow-600 text-xl" />
+                      <i className="fas fa-clipboard-check text-yellow-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">En Revisión</p>
-                      {applicationsData.loading ? (
-                        <div className="animate-pulse">
-                          <div className="h-8 bg-gray-200 rounded w-12 mt-2"></div>
-                        </div>
-                      ) : (
-                        <p className="text-2xl font-bold text-gray-900">{applicationsData.active}</p>
-                      )}
+                      <p className="text-sm font-medium text-gray-600">En Evaluación</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {candidatesOverview?.by_status?.find((s: any) => s.status === 'screening')?.count || 0}
+                      </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Contratados */}
                 <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                   <div className="flex items-center">
                     <div className="p-3 rounded-full bg-purple-100">
-                      <i className="fas fa-percentage text-purple-600 text-xl" />
+                      <i className="fas fa-user-check text-purple-600 text-xl" />
                     </div>
                     <div className="ml-4">
-                      <p className="text-sm font-medium text-gray-600">Tasa Conversión</p>
-                      {applicationsData.loading ? (
-                        <div className="animate-pulse">...</div>
-                      ) : (
-                        <p className="text-2xl font-bold text-gray-900">
-                          {applicationsData.total > 0 
-                            ? Math.round((applicationsData.shortlisted / applicationsData.total) * 100) 
-                            : 0}%
-                        </p>
-                      )}
+                      <p className="text-sm font-medium text-gray-600">Contratados</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {candidatesOverview?.by_status?.find((s: any) => s.status === 'hired')?.count || 0}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Aplicaciones Recientes</h3>
-                  <div className="flex space-x-3">
-                    <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                      <option>Todos los estados</option>
-                      <option>En Revisión</option>
-                      <option>Preseleccionado</option>
-                      <option>Rechazado</option>
-                    </select>
+              {/* Grid candidatos */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {loading ? (
+                  <div className="col-span-full flex justify-center items-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    <span className="ml-3 text-gray-600">Cargando candidatos...</span>
                   </div>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidato</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posición</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Compatibilidad</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {applicationsData.loading ? (
-                        <tr>
-                          <td colSpan={6} className="px-6 py-12 text-center">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            <p className="mt-2 text-gray-500">Cargando aplicaciones...</p>
-                          </td>
-                        </tr>
-                      ) : applicationsData.total === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="px-6 py-12 text-center">
-                            <div className="text-gray-400">
-                              <i className="fas fa-inbox text-5xl mb-4"></i>
-                              <p className="text-lg font-medium text-gray-900">No hay aplicaciones registradas</p>
-                              <p className="text-gray-500 mt-1">Las aplicaciones aparecerán aquí cuando se agreguen</p>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        // Mostrar aplicaciones reales
-                        applicationsData.recent.map((app: any) => {
-                          // Calcular tiempo transcurrido
-                          const appliedDate = new Date(app.applied_at);
-                          const now = new Date();
-                          const diffMs = now.getTime() - appliedDate.getTime();
-                          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                          const diffDays = Math.floor(diffHours / 24);
-                          
-                          let timeAgo = '';
-                          if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
-                          else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
-                          else if (diffDays === 1) timeAgo = 'Hace 1 día';
-                          else timeAgo = `Hace ${diffDays} días`;
+                ) : candidates.length === 0 ? (
+                  <div className="col-span-full text-center py-12 empty-state">
+                    <i className="fas fa-user-tie text-6xl text-gray-300 mb-4" />
+                    <p className="text-gray-500">No hay candidatos registrados</p>
+                  </div>
+                ) : (
+                  candidates.map((c: any) => (
+                    <div key={c.id} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center">
+                          <img
+                            className="h-12 w-12 rounded-full border-2 border-gray-200"
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(c.full_name || `${c.first_name} ${c.last_name}`)}&background=3b82f6&color=fff`}
+                            alt={c.full_name || `${c.first_name} ${c.last_name}`}
+                          />
+                          <div className="ml-3">
+                            <h3 className="text-sm font-semibold text-gray-900">
+                              {c.full_name || `${c.first_name} ${c.last_name}`}
+                            </h3>
+                            <p className="text-xs text-gray-500">{c.current_position || 'Sin posición'}</p>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${c.status === 'hired' ? 'bg-green-100 text-green-800' :
+                          c.status === 'qualified' ? 'bg-blue-100 text-blue-800' :
+                            c.status === 'interview' ? 'bg-purple-100 text-purple-800' :
+                              c.status === 'screening' ? 'bg-yellow-100 text-yellow-800' :
+                                c.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                          }`}>
+                          {c.status_display || c.status || 'Nuevo'}
+                        </span>
+                      </div>
+                      <div className="space-y-2 mb-4 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Email:</span>
+                          <span className="text-gray-900 truncate ml-2">{c.email}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Teléfono:</span>
+                          <span className="text-gray-900">{c.phone || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Experiencia:</span>
+                          <span className="text-gray-900">{c.years_experience || 0} años</span>
+                        </div>
+                        {c.current_company && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Empresa:</span>
+                            <span className="text-gray-900 truncate ml-2">{c.current_company}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div className="flex gap-4 ml-4">
+                          {/* Botón de previsualización */}
+                          <button
+                            onClick={() => handlePreviewProfile(c.id)}
+                            className="px-6 py-3 bg-white text-gray-700 border border-gray-300 rounded-xl shadow-md hover:bg-gray-100 hover:text-blue-700 hover:border-blue-400 font-semibold flex items-center gap-2 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                            title="Vista previa del avance"
+                          >
+                            <i className="fas fa-eye text-lg"></i>
+                            <span className="hidden sm:inline">Previsualizar</span>
+                          </button>
 
-                          // Configuración de badge según estado
-                          const getStatusBadge = (status: string) => {
-                            const configs: Record<string, { color: string; label: string; icon: string }> = {
-                              applied: { color: 'bg-blue-100 text-blue-800', label: 'Aplicó', icon: 'fa-clock' },
-                              screening: { color: 'bg-yellow-100 text-yellow-800', label: 'En Revisión', icon: 'fa-eye' },
-                              shortlisted: { color: 'bg-green-100 text-green-800', label: 'Preseleccionado', icon: 'fa-check-circle' },
-                              interview_scheduled: { color: 'bg-purple-100 text-purple-800', label: 'Entrevista Programada', icon: 'fa-calendar-alt' },
-                              interviewed: { color: 'bg-indigo-100 text-indigo-800', label: 'Entrevistado', icon: 'fa-user' },
-                              offered: { color: 'bg-orange-100 text-orange-800', label: 'Oferta Extendida', icon: 'fa-briefcase' },
-                              accepted: { color: 'bg-green-100 text-green-800', label: 'Aceptado', icon: 'fa-check-circle' },
-                              rejected: { color: 'bg-red-100 text-red-800', label: 'Rechazado', icon: 'fa-times-circle' },
-                              withdrawn: { color: 'bg-gray-100 text-gray-800', label: 'Retirado', icon: 'fa-times' },
-                            };
-                            return configs[status] || configs.applied;
-                          };
-
-                          const statusConfig = getStatusBadge(app.status);
-
-                          // Obtener nombre del candidato
-                          const candidateName = app.candidate_name || 'Candidato sin nombre';
-                          const candidateEmail = app.candidate_email || 'Sin email';
-
-                          // Iniciales para avatar
-                          const initials = candidateName.split(' ')
-                            .map((n: string) => n[0])
-                            .slice(0, 2)
-                            .join('')
-                            .toUpperCase();
-
-                          return (
-                            <tr key={app.id} className="table-row hover:bg-gray-50">
-                              {/* Candidato */}
-                              <td className="px-6 py-4">
-                                <div className="flex items-center">
-                                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
-                                    {initials}
-                                  </div>
-                                  <div className="ml-3">
-                                    <p className="text-sm font-medium text-gray-900">{candidateName}</p>
-                                    <p className="text-sm text-gray-500">{candidateEmail}</p>
-                                  </div>
-                                </div>
-                              </td>
-
-                              {/* Posición */}
-                              <td className="px-6 py-4">
-                                <p className="text-sm font-medium text-gray-900">
-                                  {app.profile_title || app.profile?.position_title || 'Posición no especificada'}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {app.profile_client || app.profile?.client_name || 'Cliente no especificado'}
-                                </p>
-                              </td>
-
-                              {/* Fecha */}
-                              <td className="px-6 py-4">
-                                <p className="text-sm text-gray-900">{timeAgo}</p>
-                                <p className="text-xs text-gray-500">
-                                  {appliedDate.toLocaleDateString('es-MX', { 
-                                    day: '2-digit', 
-                                    month: 'short', 
-                                    year: 'numeric' 
-                                  })}
-                                </p>
-                              </td>
-
-                              {/* Compatibilidad */}
-                              <td className="px-6 py-4">
-                                {app.match_percentage !== null && app.match_percentage !== undefined ? (
-                                  <div className="flex items-center">
-                                    <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
-                                      <div 
-                                        className={`h-2 rounded-full ${
-                                          app.match_percentage >= 80 ? 'bg-green-500' :
-                                          app.match_percentage >= 60 ? 'bg-yellow-500' :
-                                          'bg-red-500'
-                                        }`}
-                                        style={{ width: `${app.match_percentage}%` }}
-                                      ></div>
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-900">
-                                      {Math.round(app.match_percentage)}%
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-sm text-gray-400">No calculado</span>
-                                )}
-                              </td>
-
-                              {/* Estado */}
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
-                                  <i className={`fas ${statusConfig.icon} mr-1.5`}></i>
-                                  {statusConfig.label}
-                                </span>
-                              </td>
-
-                              {/* Acciones */}
-                              <td className="px-6 py-4 text-right space-x-2">
-                                <button 
-                                  onClick={() => router.push(`/director/candidates/applications`)}
-                                  className="text-blue-600 hover:text-blue-900"
-                                  title="Ver detalles"
-                                >
-                                  <i className="fas fa-eye"></i>
-                                </button>
-                                <button 
-                                  onClick={() => {
-                                    console.log('Editar aplicación:', app.id);
-                                    info('Funcionalidad de edición en construcción');
-                                  }}
-                                  className="text-green-600 hover:text-green-900"
-                                  title="Editar"
-                                >
-                                  <i className="fas fa-edit"></i>
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                          {/* Botón de compartir */}
+                          <button
+                            onClick={() => handleGenerateShareLink(
+                              c.id,
+                              c.position || 'Candidato',
+                              c.email
+                            )}
+                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl shadow-md hover:from-blue-700 hover:to-blue-600 font-semibold flex items-center gap-2 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-300 border-0"
+                          >
+                            <i className="fas fa-share-alt text-lg"></i>
+                            <span className="hidden sm:inline">Compartir Avance</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
 
-          
+          {/* APPLICATIONS */}
+          {
+            currentView === "applications" && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Aplicaciones de Candidatos</h2>
+                    <p className="text-gray-600 mt-1">Gestiona y da seguimiento a todas las aplicaciones de candidatos</p>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button onClick={() => info("Exportando aplicaciones...")} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-download mr-2" />
+                      Exportar
+                    </button>
+                    <button onClick={() => setShowApplicationForm(true)} className="px-4 py-2 btn-primary text-white rounded-lg">
+                      <i className="fas fa-plus mr-2" />
+                      Nueva Aplicación
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="p-3 rounded-full bg-blue-100">
+                        <i className="fas fa-briefcase text-blue-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Total Aplicaciones</p>
+                        {applicationsData.loading ? (
+                          <div className="animate-pulse">
+                            <div className="h-8 bg-gray-200 rounded w-16 mt-2"></div>
+                          </div>
+                        ) : (
+                          <p className="text-2xl font-bold text-gray-900">{applicationsData.total}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="p-3 rounded-full bg-green-100">
+                        <i className="fas fa-check-circle text-green-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Preseleccionados</p>
+                        {applicationsData.loading ? (
+                          <div className="animate-pulse">
+                            <div className="h-8 bg-gray-200 rounded w-12 mt-2"></div>
+                          </div>
+                        ) : (
+                          <p className="text-2xl font-bold text-gray-900">{applicationsData.shortlisted}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="p-3 rounded-full bg-yellow-100">
+                        <i className="fas fa-clock text-yellow-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">En Revisión</p>
+                        {applicationsData.loading ? (
+                          <div className="animate-pulse">
+                            <div className="h-8 bg-gray-200 rounded w-12 mt-2"></div>
+                          </div>
+                        ) : (
+                          <p className="text-2xl font-bold text-gray-900">{applicationsData.active}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div className="flex items-center">
+                      <div className="p-3 rounded-full bg-purple-100">
+                        <i className="fas fa-percentage text-purple-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-600">Tasa Conversión</p>
+                        {applicationsData.loading ? (
+                          <div className="animate-pulse">...</div>
+                        ) : (
+                          <p className="text-2xl font-bold text-gray-900">
+                            {applicationsData.total > 0
+                              ? Math.round((applicationsData.shortlisted / applicationsData.total) * 100)
+                              : 0}%
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Aplicaciones Recientes</h3>
+                    <div className="flex space-x-3">
+                      <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option>Todos los estados</option>
+                        <option>En Revisión</option>
+                        <option>Preseleccionado</option>
+                        <option>Rechazado</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Candidato</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posición</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Compatibilidad</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {applicationsData.loading ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center">
+                              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                              <p className="mt-2 text-gray-500">Cargando aplicaciones...</p>
+                            </td>
+                          </tr>
+                        ) : applicationsData.total === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-12 text-center">
+                              <div className="text-gray-400">
+                                <i className="fas fa-inbox text-5xl mb-4"></i>
+                                <p className="text-lg font-medium text-gray-900">No hay aplicaciones registradas</p>
+                                <p className="text-gray-500 mt-1">Las aplicaciones aparecerán aquí cuando se agreguen</p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          // Mostrar aplicaciones reales
+                          applicationsData.recent.map((app: any) => {
+                            // Calcular tiempo transcurrido
+                            const appliedDate = new Date(app.applied_at);
+                            const now = new Date();
+                            const diffMs = now.getTime() - appliedDate.getTime();
+                            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                            const diffDays = Math.floor(diffHours / 24);
+
+                            let timeAgo = '';
+                            if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
+                            else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+                            else if (diffDays === 1) timeAgo = 'Hace 1 día';
+                            else timeAgo = `Hace ${diffDays} días`;
+
+                            // Configuración de badge según estado
+                            const getStatusBadge = (status: string) => {
+                              const configs: Record<string, { color: string; label: string; icon: string }> = {
+                                applied: { color: 'bg-blue-100 text-blue-800', label: 'Aplicó', icon: 'fa-clock' },
+                                screening: { color: 'bg-yellow-100 text-yellow-800', label: 'En Revisión', icon: 'fa-eye' },
+                                shortlisted: { color: 'bg-green-100 text-green-800', label: 'Preseleccionado', icon: 'fa-check-circle' },
+                                interview_scheduled: { color: 'bg-purple-100 text-purple-800', label: 'Entrevista Programada', icon: 'fa-calendar-alt' },
+                                interviewed: { color: 'bg-indigo-100 text-indigo-800', label: 'Entrevistado', icon: 'fa-user' },
+                                offered: { color: 'bg-orange-100 text-orange-800', label: 'Oferta Extendida', icon: 'fa-briefcase' },
+                                accepted: { color: 'bg-green-100 text-green-800', label: 'Aceptado', icon: 'fa-check-circle' },
+                                rejected: { color: 'bg-red-100 text-red-800', label: 'Rechazado', icon: 'fa-times-circle' },
+                                withdrawn: { color: 'bg-gray-100 text-gray-800', label: 'Retirado', icon: 'fa-times' },
+                              };
+                              return configs[status] || configs.applied;
+                            };
+
+                            const statusConfig = getStatusBadge(app.status);
+
+                            // Obtener nombre del candidato
+                            const candidateName = app.candidate_name || 'Candidato sin nombre';
+                            const candidateEmail = app.candidate_email || 'Sin email';
+
+                            // Iniciales para avatar
+                            const initials = candidateName.split(' ')
+                              .map((n: string) => n[0])
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase();
+
+                            return (
+                              <tr key={app.id} className="table-row hover:bg-gray-50">
+                                {/* Candidato */}
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center">
+                                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                                      {initials}
+                                    </div>
+                                    <div className="ml-3">
+                                      <p className="text-sm font-medium text-gray-900">{candidateName}</p>
+                                      <p className="text-sm text-gray-500">{candidateEmail}</p>
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Posición */}
+                                <td className="px-6 py-4">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {app.profile_title || app.profile?.position_title || 'Posición no especificada'}
+                                  </p>
+                                  <p className="text-sm text-gray-500">
+                                    {app.profile_client || app.profile?.client_name || 'Cliente no especificado'}
+                                  </p>
+                                </td>
+
+                                {/* Fecha */}
+                                <td className="px-6 py-4">
+                                  <p className="text-sm text-gray-900">{timeAgo}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {appliedDate.toLocaleDateString('es-MX', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })}
+                                  </p>
+                                </td>
+
+                                {/* Compatibilidad */}
+                                <td className="px-6 py-4">
+                                  {app.match_percentage !== null && app.match_percentage !== undefined ? (
+                                    <div className="flex items-center">
+                                      <div className="flex-1 bg-gray-200 rounded-full h-2 mr-2">
+                                        <div
+                                          className={`h-2 rounded-full ${app.match_percentage >= 80 ? 'bg-green-500' :
+                                            app.match_percentage >= 60 ? 'bg-yellow-500' :
+                                              'bg-red-500'
+                                            }`}
+                                          style={{ width: `${app.match_percentage}%` }}
+                                        ></div>
+                                      </div>
+                                      <span className="text-sm font-medium text-gray-900">
+                                        {Math.round(app.match_percentage)}%
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-gray-400">No calculado</span>
+                                  )}
+                                </td>
+
+                                {/* Estado */}
+                                <td className="px-6 py-4">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
+                                    <i className={`fas ${statusConfig.icon} mr-1.5`}></i>
+                                    {statusConfig.label}
+                                  </span>
+                                </td>
+
+                                {/* Acciones */}
+                                <td className="px-6 py-4 text-right space-x-2">
+                                  <button
+                                    onClick={() => router.push(`/director/candidates/applications`)}
+                                    className="text-blue-600 hover:text-blue-900"
+                                    title="Ver detalles"
+                                  >
+                                    <i className="fas fa-eye"></i>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      console.log('Editar aplicación:', app.id);
+                                      info('Funcionalidad de edición en construcción');
+                                    }}
+                                    className="text-green-600 hover:text-green-900"
+                                    title="Editar"
+                                  >
+                                    <i className="fas fa-edit"></i>
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+
 
           {/* Modal Formulario Nueva Aplicación */}
           <ApplicationFormModal
@@ -2692,1439 +2697,1455 @@ const loadApplicationsData = async () => {
           />
 
           {/* NOTES */}
-          {currentView === "notes" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Notas de Candidatos</h2>
-                  <p className="text-gray-600 mt-1">Gestiona notas, observaciones y comentarios sobre candidatos</p>
+          {
+            currentView === "notes" && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Notas de Candidatos</h2>
+                    <p className="text-gray-600 mt-1">Gestiona notas, observaciones y comentarios sobre candidatos</p>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button onClick={() => info("Filtrando notas...")} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-filter mr-2" />
+                      Filtrar
+                    </button>
+                    <button onClick={() => setShowNoteForm(true)} className="px-4 py-2 btn-primary text-white rounded-lg">
+                      <i className="fas fa-plus mr-2" />
+                      Nueva Nota
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={() => info("Filtrando notas...")} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-filter mr-2" />
-                    Filtrar
-                  </button>
-                  <button onClick={() => setShowNoteForm(true)} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-plus mr-2" />
-                    Nueva Nota
-                  </button>
-                </div>
-              </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-                <i className="fas fa-sticky-note text-gray-300 text-6xl mb-4"></i>
-                <p className="text-lg font-medium text-gray-900">Sección de Notas</p>
-                <p className="text-gray-500 mt-1">
-                  Las notas detalladas están en: Candidatos → Notas
-                </p>
-                <button
-                  onClick={() => router.push('/director/candidates/notes')}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  <i className="fas fa-arrow-right mr-2"></i>
-                  Ir a Notas
-                </button>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+                  <i className="fas fa-sticky-note text-gray-300 text-6xl mb-4"></i>
+                  <p className="text-lg font-medium text-gray-900">Sección de Notas</p>
+                  <p className="text-gray-500 mt-1">
+                    Las notas detalladas están en: Candidatos → Notas
+                  </p>
+                  <button
+                    onClick={() => router.push('/director/candidates/notes')}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <i className="fas fa-arrow-right mr-2"></i>
+                    Ir a Notas
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
           {/* CANDIDATE HISTORY */}
-          {currentView === "history" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Historial de Candidatos</h2>
-                  <p className="text-gray-600 mt-1">Seguimiento completo del proceso de reclutamiento por candidato</p>
+          {
+            currentView === "history" && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Historial de Candidatos</h2>
+                    <p className="text-gray-600 mt-1">Seguimiento completo del proceso de reclutamiento por candidato</p>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button onClick={() => info("Exportando historial...")} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-download mr-2" />
+                      Exportar Reporte
+                    </button>
+                    <button onClick={() => info("Filtrando historial...")} className="px-4 py-2 btn-primary text-white rounded-lg">
+                      <i className="fas fa-filter mr-2" />
+                      Filtros Avanzados
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={() => info("Exportando historial...")} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-download mr-2" />
-                    Exportar Reporte
-                  </button>
-                  <button onClick={() => info("Filtrando historial...")} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-filter mr-2" />
-                    Filtros Avanzados
-                  </button>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {historyData.loading ? (
-                  // Loading skeleton
-                  [1, 2, 3, 4].map((i) => (
-                    <div key={i} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="animate-pulse">
-                        <div className="flex items-center">
-                          <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                          <div className="ml-4 flex-1">
-                            <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                            <div className="h-6 bg-gray-200 rounded w-16"></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  {historyData.loading ? (
+                    // Loading skeleton
+                    [1, 2, 3, 4].map((i) => (
+                      <div key={i} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div className="animate-pulse">
+                          <div className="flex items-center">
+                            <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                            <div className="ml-4 flex-1">
+                              <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                              <div className="h-6 bg-gray-200 rounded w-16"></div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <>
-                    {/* Total Candidatos */}
-                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-blue-100">
-                          <i className="fas fa-users text-blue-600 text-xl" />
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Total Candidatos</p>
-                          <p className="text-2xl font-bold text-gray-900">
-                            {historyData.total_candidates.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Contratados */}
-                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-green-100">
-                          <i className="fas fa-check-circle text-green-600 text-xl" />
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Contratados</p>
-                          <p className="text-2xl font-bold text-gray-900">{historyData.hired}</p>
+                    ))
+                  ) : (
+                    <>
+                      {/* Total Candidatos */}
+                      <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div className="flex items-center">
+                          <div className="p-3 rounded-full bg-blue-100">
+                            <i className="fas fa-users text-blue-600 text-xl" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Total Candidatos</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                              {historyData.total_candidates.toLocaleString()}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* En Proceso */}
-                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-yellow-100">
-                          <i className="fas fa-clock text-yellow-600 text-xl" />
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">En Proceso</p>
-                          <p className="text-2xl font-bold text-gray-900">{historyData.in_process}</p>
+                      {/* Contratados */}
+                      <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div className="flex items-center">
+                          <div className="p-3 rounded-full bg-green-100">
+                            <i className="fas fa-check-circle text-green-600 text-xl" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Contratados</p>
+                            <p className="text-2xl font-bold text-gray-900">{historyData.hired}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Tasa de Éxito */}
-                    <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                      <div className="flex items-center">
-                        <div className="p-3 rounded-full bg-purple-100">
-                          <i className="fas fa-chart-line text-purple-600 text-xl" />
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600">Tasa Éxito</p>
-                          <p className="text-2xl font-bold text-gray-900">{historyData.success_rate}%</p>
+                      {/* En Proceso */}
+                      <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div className="flex items-center">
+                          <div className="p-3 rounded-full bg-yellow-100">
+                            <i className="fas fa-clock text-yellow-600 text-xl" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">En Proceso</p>
+                            <p className="text-2xl font-bold text-gray-900">{historyData.in_process}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
 
-              {/* Timeline de candidatos */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-                <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Línea de Tiempo Reciente</h3>
-                  <div className="flex space-x-3">
-                    <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                      <option>Últimos 30 días</option>
-                      <option>Última semana</option>
-                      <option>Hoy</option>
-                    </select>
-                  </div>
+                      {/* Tasa de Éxito */}
+                      <div className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div className="flex items-center">
+                          <div className="p-3 rounded-full bg-purple-100">
+                            <i className="fas fa-chart-line text-purple-600 text-xl" />
+                          </div>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-gray-600">Tasa Éxito</p>
+                            <p className="text-2xl font-bold text-gray-900">{historyData.success_rate}%</p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="p-6">
-                  <div className="flow-root">
-                    <ul className="-mb-8">
-                      {historyData.loading ? (
-                        // Loading skeleton
-                        [1, 2, 3].map((i) => (
-                          <li key={i}>
-                            <div className="relative pb-8">
-                              {i < 3 && <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>}
-                              <div className="relative flex space-x-3">
-                                <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-                                <div className="flex-1 space-y-2">
-                                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-                                  <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                        ))
-                      ) : candidates.length === 0 ? (
-                        <li className="text-center py-12">
-                          <i className="fas fa-inbox text-gray-300 text-5xl mb-4"></i>
-                          <p className="text-gray-500">No hay actividad reciente</p>
-                        </li>
-                      ) : (
-                        candidates.slice(0, 5).map((candidate: any, index: number) => {
-                          // Determinar icono y color según estado
-                          const getStatusConfig = (status: string) => {
-                            const configs: Record<string, { icon: string; color: string; bgColor: string; label: string }> = {
-                              hired: { icon: 'fa-user-check', color: 'text-white', bgColor: 'bg-green-500', label: 'fue contratado' },
-                              interview: { icon: 'fa-comments', color: 'text-white', bgColor: 'bg-blue-500', label: 'está en entrevista' },
-                              qualified: { icon: 'fa-check-circle', color: 'text-white', bgColor: 'bg-purple-500', label: 'fue calificado' },
-                              new: { icon: 'fa-user-plus', color: 'text-white', bgColor: 'bg-indigo-500', label: 'se registró' },
-                              screening: { icon: 'fa-search', color: 'text-white', bgColor: 'bg-yellow-500', label: 'está en revisión' },
-                              rejected: { icon: 'fa-times-circle', color: 'text-white', bgColor: 'bg-red-500', label: 'fue rechazado' },
-                            };
-                            return configs[status] || configs.new;
-                          };
 
-                          const config = getStatusConfig(candidate.status);
-
-                          // Calcular tiempo transcurrido
-                          const updatedDate = new Date(candidate.updated_at || candidate.created_at);
-                          const now = new Date();
-                          const diffMs = now.getTime() - updatedDate.getTime();
-                          const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                          const diffDays = Math.floor(diffHours / 24);
-                          
-                          let timeAgo = '';
-                          if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
-                          else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
-                          else if (diffDays === 1) timeAgo = 'Hace 1 día';
-                          else timeAgo = `Hace ${diffDays} días`;
-
-                          return (
-                            <li key={candidate.id}>
+                {/* Timeline de candidatos */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+                  <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Línea de Tiempo Reciente</h3>
+                    <div className="flex space-x-3">
+                      <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option>Últimos 30 días</option>
+                        <option>Última semana</option>
+                        <option>Hoy</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="flow-root">
+                      <ul className="-mb-8">
+                        {historyData.loading ? (
+                          // Loading skeleton
+                          [1, 2, 3].map((i) => (
+                            <li key={i}>
                               <div className="relative pb-8">
-                                {index < candidates.length - 1 && (
-                                  <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>
-                                )}
+                                {i < 3 && <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>}
                                 <div className="relative flex space-x-3">
-                                  <div>
-                                    <span className={`h-8 w-8 rounded-full ${config.bgColor} flex items-center justify-center ring-8 ring-white`}>
-                                      <i className={`fas ${config.icon} ${config.color} text-sm`} />
-                                    </span>
-                                  </div>
-                                  <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                                    <div>
-                                      <p className="text-sm text-gray-900">
-                                        <strong>{candidate.full_name || `${candidate.first_name} ${candidate.last_name}`}</strong> {config.label}
-                                        {candidate.current_position && (
-                                          <span className="font-medium text-gray-900"> para {candidate.current_position}</span>
-                                        )}
-                                      </p>
-                                      <p className="mt-0.5 text-sm text-gray-500">
-                                        {candidate.email}
-                                        {candidate.years_experience && ` • ${candidate.years_experience} años de experiencia`}
-                                      </p>
-                                    </div>
-                                    <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                      <time>{timeAgo}</time>
-                                    </div>
+                                  <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                                  <div className="flex-1 space-y-2">
+                                    <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                                    <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
                                   </div>
                                 </div>
                               </div>
                             </li>
-                          );
-                        })
-                      )}
-                    </ul>
+                          ))
+                        ) : candidates.length === 0 ? (
+                          <li className="text-center py-12">
+                            <i className="fas fa-inbox text-gray-300 text-5xl mb-4"></i>
+                            <p className="text-gray-500">No hay actividad reciente</p>
+                          </li>
+                        ) : (
+                          candidates.slice(0, 5).map((candidate: any, index: number) => {
+                            // Determinar icono y color según estado
+                            const getStatusConfig = (status: string) => {
+                              const configs: Record<string, { icon: string; color: string; bgColor: string; label: string }> = {
+                                hired: { icon: 'fa-user-check', color: 'text-white', bgColor: 'bg-green-500', label: 'fue contratado' },
+                                interview: { icon: 'fa-comments', color: 'text-white', bgColor: 'bg-blue-500', label: 'está en entrevista' },
+                                qualified: { icon: 'fa-check-circle', color: 'text-white', bgColor: 'bg-purple-500', label: 'fue calificado' },
+                                new: { icon: 'fa-user-plus', color: 'text-white', bgColor: 'bg-indigo-500', label: 'se registró' },
+                                screening: { icon: 'fa-search', color: 'text-white', bgColor: 'bg-yellow-500', label: 'está en revisión' },
+                                rejected: { icon: 'fa-times-circle', color: 'text-white', bgColor: 'bg-red-500', label: 'fue rechazado' },
+                              };
+                              return configs[status] || configs.new;
+                            };
+
+                            const config = getStatusConfig(candidate.status);
+
+                            // Calcular tiempo transcurrido
+                            const updatedDate = new Date(candidate.updated_at || candidate.created_at);
+                            const now = new Date();
+                            const diffMs = now.getTime() - updatedDate.getTime();
+                            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                            const diffDays = Math.floor(diffHours / 24);
+
+                            let timeAgo = '';
+                            if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
+                            else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+                            else if (diffDays === 1) timeAgo = 'Hace 1 día';
+                            else timeAgo = `Hace ${diffDays} días`;
+
+                            return (
+                              <li key={candidate.id}>
+                                <div className="relative pb-8">
+                                  {index < candidates.length - 1 && (
+                                    <div className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></div>
+                                  )}
+                                  <div className="relative flex space-x-3">
+                                    <div>
+                                      <span className={`h-8 w-8 rounded-full ${config.bgColor} flex items-center justify-center ring-8 ring-white`}>
+                                        <i className={`fas ${config.icon} ${config.color} text-sm`} />
+                                      </span>
+                                    </div>
+                                    <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                      <div>
+                                        <p className="text-sm text-gray-900">
+                                          <strong>{candidate.full_name || `${candidate.first_name} ${candidate.last_name}`}</strong> {config.label}
+                                          {candidate.current_position && (
+                                            <span className="font-medium text-gray-900"> para {candidate.current_position}</span>
+                                          )}
+                                        </p>
+                                        <p className="mt-0.5 text-sm text-gray-500">
+                                          {candidate.email}
+                                          {candidate.years_experience && ` • ${candidate.years_experience} años de experiencia`}
+                                        </p>
+                                      </div>
+                                      <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                                        <time>{timeAgo}</time>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })
+                        )}
+                      </ul>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Estadísticas por etapa */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Distribución por Etapa del Proceso</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
-                        <span className="text-sm text-gray-600">Aplicación Recibida</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900">324</span>
-                        <span className="text-xs text-gray-500 ml-1">(26%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
-                        <span className="text-sm text-gray-600">Revisión Inicial</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900">189</span>
-                        <span className="text-xs text-gray-500 ml-1">(15%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-purple-500 rounded-full mr-3"></div>
-                        <span className="text-sm text-gray-600">Entrevista Técnica</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900">156</span>
-                        <span className="text-xs text-gray-500 ml-1">(12%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
-                        <span className="text-sm text-gray-600">Entrevista Final</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900">89</span>
-                        <span className="text-xs text-gray-500 ml-1">(7%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                        <span className="text-sm text-gray-600">Contratado</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900">67</span>
-                        <span className="text-xs text-gray-500 ml-1">(5%)</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Tiempo Promedio por Etapa</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Revisión Inicial</span>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900">2.3 días</span>
-                        <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
-                          <div className="bg-blue-500 h-2 rounded-full" style={{ width: '23%' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Entrevista Técnica</span>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900">5.7 días</span>
-                        <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
-                          <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '57%' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Entrevista Final</span>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900">8.2 días</span>
-                        <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
-                          <div className="bg-purple-500 h-2 rounded-full" style={{ width: '82%' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Decisión Final</span>
-                      <div className="text-right">
-                        <span className="text-sm font-medium text-gray-900">4.1 días</span>
-                        <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
-                          <div className="bg-green-500 h-2 rounded-full" style={{ width: '41%' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="border-t border-gray-200 pt-3 mt-4">
+                {/* Estadísticas por etapa */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Distribución por Etapa del Proceso</h3>
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900">Tiempo Total Promedio</span>
-                        <span className="text-lg font-bold text-blue-600">20.3 días</span>
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
+                          <span className="text-sm text-gray-600">Aplicación Recibida</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-gray-900">324</span>
+                          <span className="text-xs text-gray-500 ml-1">(26%)</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+                          <span className="text-sm text-gray-600">Revisión Inicial</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-gray-900">189</span>
+                          <span className="text-xs text-gray-500 ml-1">(15%)</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-purple-500 rounded-full mr-3"></div>
+                          <span className="text-sm text-gray-600">Entrevista Técnica</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-gray-900">156</span>
+                          <span className="text-xs text-gray-500 ml-1">(12%)</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
+                          <span className="text-sm text-gray-600">Entrevista Final</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-gray-900">89</span>
+                          <span className="text-xs text-gray-500 ml-1">(7%)</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                          <span className="text-sm text-gray-600">Contratado</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-gray-900">67</span>
+                          <span className="text-xs text-gray-500 ml-1">(5%)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Tiempo Promedio por Etapa</h3>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Revisión Inicial</span>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-gray-900">2.3 días</span>
+                          <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
+                            <div className="bg-blue-500 h-2 rounded-full" style={{ width: '23%' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Entrevista Técnica</span>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-gray-900">5.7 días</span>
+                          <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
+                            <div className="bg-yellow-500 h-2 rounded-full" style={{ width: '57%' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Entrevista Final</span>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-gray-900">8.2 días</span>
+                          <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
+                            <div className="bg-purple-500 h-2 rounded-full" style={{ width: '82%' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Decisión Final</span>
+                        <div className="text-right">
+                          <span className="text-sm font-medium text-gray-900">4.1 días</span>
+                          <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
+                            <div className="bg-green-500 h-2 rounded-full" style={{ width: '41%' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="border-t border-gray-200 pt-3 mt-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-900">Tiempo Total Promedio</span>
+                          <span className="text-lg font-bold text-blue-600">20.3 días</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
           {/* CLIENTS - Using new ClientsMain component */}
           {currentView === "clients" && <ClientsMain />}
 
           {/* OLD CLIENTS VIEW - DISABLED */}
-          {false && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Gestión de Clientes</h2>
-                  <p className="text-gray-600 mt-1">Administra la información y proyectos de tus clientes</p>
-                </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-filter mr-2" />
-                    Filtros
-                  </button>
-                  <button onClick={addNewClient} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-plus mr-2" />
-                    Nuevo Cliente
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {clients.map((cl) => (
-                  <div key={cl.id} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center">
-                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                          <i className="fas fa-building text-blue-600 text-lg" />
-                        </div>
-                        <div className="ml-4">
-                          <h3 className="text-lg font-semibold text-gray-900">{cl.name}</h3>
-                          <p className="text-sm text-gray-500">{cl.industry}</p>
-                        </div>
-                      </div>
-                      <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>
-                    </div>
-
-                    <div className="space-y-3 mb-4 text-sm">
-                      <div className="flex items-center">
-                        <i className="fas fa-user-tie text-gray-400 w-4" />
-                        <span className="ml-2 text-gray-600">Contacto:</span>
-                        <span className="ml-2 text-gray-900">{cl.contact}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <i className="fas fa-envelope text-gray-400 w-4" />
-                        <span className="ml-2 text-gray-600">Email:</span>
-                        <span className="ml-2 text-gray-900">{cl.email}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <i className="fas fa-phone text-gray-400 w-4" />
-                        <span className="ml-2 text-gray-600">Teléfono:</span>
-                        <span className="ml-2 text-gray-900">{cl.phone}</span>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-gray-100 pt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Procesos Activos</span>
-                        <span className="text-sm font-semibold text-gray-900">{cl.activeProcesses}</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Candidatos Totales</span>
-                        <span className="text-sm font-semibold text-gray-900">{cl.totalCandidates}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Última Actividad</span>
-                        <span className="text-sm text-gray-500">{cl.lastActivity}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
-                      <button onClick={() => viewClientDetails(cl.id)} className="flex-1 px-3 py-2 text-sm bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100">
-                        Ver Detalles
-                      </button>
-                      <button className="px-3 py-2 text-sm bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100">
-                        <i className="fas fa-edit" />
-                      </button>
-                    </div>
+          {
+            false && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Gestión de Clientes</h2>
+                    <p className="text-gray-600 mt-1">Administra la información y proyectos de tus clientes</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* TEAM */}
-          {currentView === "team" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Gestión de Equipo</h2>
-                  <p className="text-gray-600 mt-1">Administra tu equipo de recursos humanos y sus asignaciones</p>
-                </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-chart-bar mr-2" />
-                    Performance
-                  </button>
-                  <button onClick={addTeamMember} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-user-plus mr-2" />
-                    Agregar Miembro
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {teamMembers.map((m) => (
-                  <div key={m.id} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <div className="flex items-center mb-4">
-                      <img
-                        className="h-16 w-16 rounded-full border-2 border-primary-200"
-                        src={`https://ui-avatars.com/api/?name=${m.avatar}&background=3b82f6&color=fff`}
-                        alt={m.name}
-                      />
-                      <div className="ml-4">
-                        <h3 className="text-lg font-semibold text-gray-900">{m.name}</h3>
-                        <p className="text-sm text-gray-500">{m.role}</p>
-                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 mt-1 inline-block">
-                          Activo
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 mb-4 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Procesos Asignados</span>
-                        <span className="font-semibold text-gray-900">{m.assignedProcesses}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Candidatos Gestionados</span>
-                        <span className="font-semibold text-gray-900">{m.managedCandidates}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Tasa de Éxito</span>
-                        <span className="font-semibold text-green-600">{m.successRate}%</span>
-                      </div>
-                    </div>
-
-                    <div className="border-t border-gray-100 pt-4">
-                      <div className="flex space-x-2">
-                        <button onClick={() => viewTeamMemberProfile(m.id)} className="flex-1 px-3 py-2 text-sm bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100">
-                          Ver Perfil
-                        </button>
-                        <button className="px-3 py-2 text-sm bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100">
-                          <i className="fas fa-envelope" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* APPROVALS */}
-          {currentView === "approvals" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Centro de Aprobaciones</h2>
-                  <p className="text-gray-600 mt-1">Gestiona todas las aprobaciones pendientes del sistema</p>
-                </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={filterApprovals} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-filter mr-2" />
-                    Filtrar
-                  </button>
-                  <button onClick={approveAllPending} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                    <i className="fas fa-check-double mr-2" />
-                    Aprobar Todas
-                  </button>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-                {[
-                  { icon: "fas fa-clock", label: "Pendientes", value: "12", bg: "bg-red-100", ic: "text-red-600" },
-                  { icon: "fas fa-check", label: "Aprobadas Hoy", value: "8", bg: "bg-green-100", ic: "text-green-600" },
-                  { icon: "fas fa-exclamation-triangle", label: "Urgentes", value: "3", bg: "bg-yellow-100", ic: "text-yellow-600" },
-                ].map((s) => (
-                  <div key={s.label} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <div className="flex items-center">
-                      <div className={`p-3 rounded-full ${s.bg}`}>
-                        <i className={`${s.icon} ${s.ic} text-xl`} />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">{s.label}</p>
-                        <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Lista ejemplo */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="text-lg font-semibold text-gray-900">Aprobaciones Pendientes</h3>
-                </div>
-                <div className="divide-y divide-gray-200">
-                  <div className="p-6 hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-start space-x-4">
-                        <img
-                          className="h-12 w-12 rounded-full border-2 border-gray-200"
-                          src="https://ui-avatars.com/api/?name=Carlos+Lopez&background=random"
-                          alt="Carlos López"
-                        />
-                        <div>
-                          <h4 className="text-lg font-semibold text-gray-900">Carlos López</h4>
-                          <p className="text-sm text-gray-500">Desarrollador Frontend - TechCorp</p>
-                          <div className="flex items-center mt-2 space-x-4">
-                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Score: 95%</span>
-                            <span className="text-xs text-gray-500">Supervisado por: Ana García</span>
-                            <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Urgente</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex space-x-3">
-                        <button onClick={() => success("Aprobado")} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
-                          <i className="fas fa-check mr-2" />
-                          Aprobar
-                        </button>
-                        <button onClick={() => warning("Rechazado")} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                          <i className="fas fa-times mr-2" />
-                          Rechazar
-                        </button>
-                        <button onClick={() => info("Ver detalle")} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-                          <i className="fas fa-eye" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  {/* ...más items si quieres... */}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* REPORTES - CENTRO DE INTELIGENCIA */}
-          {currentView === "reports" && <DirectorReportsHub />}
-
-          {currentView === "client-progress" && (
-            <div className="p-6 space-y-6">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900 flex items-center">
-                    <i className="fas fa-chart-line mr-3 text-blue-600"></i>
-                    Avance de Cliente
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    Comparte el progreso de los procesos de reclutamiento con tus clientes
-                  </p>
-                </div>
-              </div>
-
-              {/* Información educativa */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-2 flex items-center">
-                  <i className="fas fa-info-circle mr-2"></i>
-                  ¿Cómo funciona?
-                </h3>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Genera un enlace único para cada perfil de reclutamiento</li>
-                  <li>• Comparte el enlace con tu cliente por email o mensaje</li>
-                  <li>• El cliente puede ver el avance en tiempo real sin iniciar sesión</li>
-                  <li>• El enlace se actualiza automáticamente conforme avanza el proceso</li>
-                </ul>
-              </div>
-
-              {/* Estadísticas rápidas */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-blue-600 text-sm font-medium">Perfiles Activos</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {clientProgressProfiles.filter((p: any) => 
-                      p.status !== 'cancelled' && p.status !== 'completed'
-                    ).length}
-                  </div>
-                </div>
-
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-green-600 text-sm font-medium">Perfiles Completados</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {clientProgressProfiles.filter((p: any) => p.status === 'completed').length}
-                  </div>
-                </div>
-                
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <div className="text-yellow-600 text-sm font-medium">Pendientes Aprobación</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {clientProgressProfiles.filter((p: any) => p.status === 'pending').length}
-                  </div>
-                </div>
-                
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <div className="text-purple-600 text-sm font-medium">Total Perfiles</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {clientProgressProfiles.length}
-                  </div>
-                </div>
-              </div>
-              </div>
-
-              {/* Lista de perfiles */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                    <i className="fas fa-list mr-2 text-gray-600"></i>
-                    Perfiles Disponibles para Compartir
-                  </h3>
-                </div>
-
-                <div className="p-6">
-                  {loadingProfiles ? (
-                    <div className="text-center py-12">
-                      <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4"></div>
-                      <p className="text-gray-600">Cargando perfiles...</p>
-                    </div>
-                  ) : clientProgressProfiles.length > 0 ? (
-                    <div className="space-y-4">
-                      {clientProgressProfiles
-                        .filter((profile: any) => profile.status !== 'cancelled')
-                        .map((profile: any) => (
-                          <div
-                            key={profile.id}
-                            className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                {/* Título y cliente */}
-                                <div className="mb-3">
-                                  <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                                    {profile.position_title}
-                                  </h4>
-                                  <p className="text-gray-600 flex items-center">
-                                    <i className="fas fa-building mr-2 text-gray-400"></i>
-                                    {profile.client_name}
-                                  </p>
-                                </div>
-
-                                {/* Info adicional */}
-                                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                                  <span className="flex items-center">
-                                    <i className="fas fa-map-marker-alt mr-2 text-gray-400"></i>
-                                    {profile.location_city || 'No especificado'}
-                                  </span>
-                                  <span className="flex items-center">
-                                    <i className="fas fa-calendar mr-2 text-gray-400"></i>
-                                    {new Date(profile.created_at).toLocaleDateString('es-ES')}
-                                  </span>
-                                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                    profile.status === 'completed'
-                                      ? 'bg-green-100 text-green-800'
-                                      : profile.status === 'cancelled'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {profile.status_display || profile.status}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Botones de acción */}
-                              <div className="flex gap-3 ml-4">
-                                {/* Botón de previsualización */}
-                                <button
-                                  onClick={() => handlePreviewProfile(profile.id)}
-                                  className="px-5 py-2.5 bg-gray-400 text-white rounded-lg hover:bg-gray-700 font-medium flex items-center gap-2 transition-colors"
-                                  title="Vista previa del avance"
-                                >
-                                  <i className="fas fa-eye"></i>
-                                  Previsualizar
-                                </button>
-
-                                {/* Botón de compartir */}
-                                <button
-                                  onClick={() => handleGenerateShareLink(
-                                    profile.id,
-                                    profile.position_title,
-                                    profile.client_name
-                                  )}
-                                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 transition-colors"
-                                >
-                                  <i className="fas fa-share-alt"></i>
-                                  Compartir Avance
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <i className="fas fa-folder-open text-6xl text-gray-300 mb-4"></i>
-                      <p className="text-gray-600 text-lg">No hay perfiles disponibles</p>
-                      <p className="text-gray-500 text-sm mt-2">
-                        Los perfiles aparecerán aquí cuando se creen procesos de reclutamiento
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* DOCUMENTS */}
-          {currentView === "documents" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Gestión de Documentos</h2>
-                  <p className="text-gray-600 mt-1">Organiza y gestiona todos los documentos del sistema</p>
-                </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={searchDocuments} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-search mr-2" />
-                    Buscar
-                  </button>
-                  <button onClick={uploadDocument} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-cloud-upload-alt mr-2" />
-                    Subir Documento
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                {documentsData.loading ? (
-                  // Loading skeleton para 4 tarjetas
-                  [1, 2, 3, 4].map((i) => (
-                    <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                      <div className="animate-pulse">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
-                        </div>
-                        <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
-                        <div className="h-6 bg-gray-200 rounded w-32"></div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  [
-                    { 
-                      icon: "fas fa-file-pdf", 
-                      title: "CVs", 
-                      count: documentsData.by_type.cv, 
-                      wrap: "bg-blue-100 text-blue-600", 
-                      btn: "bg-blue-50 text-blue-600 hover:bg-blue-100" 
-                    },
-                    { 
-                      icon: "fas fa-file-contract", 
-                      title: "Contratos", 
-                      count: documentsData.by_type.contract, 
-                      wrap: "bg-green-100 text-green-600", 
-                      btn: "bg-green-50 text-green-600 hover:bg-green-100" 
-                    },
-                    { 
-                      icon: "fas fa-file-alt", 
-                      title: "Reportes", 
-                      count: documentsData.by_type.report, 
-                      wrap: "bg-purple-100 text-purple-600", 
-                      btn: "bg-purple-50 text-purple-600 hover:bg-purple-100" 
-                    },
-                    { 
-                      icon: "fas fa-folder", 
-                      title: "Otros", 
-                      count: documentsData.by_type.other, 
-                      wrap: "bg-yellow-100 text-yellow-600", 
-                      btn: "bg-yellow-50 text-yellow-600 hover:bg-yellow-100" 
-                    },
-                  ].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className={`w-12 h-12 ${item.wrap} rounded-lg flex items-center justify-center`}>
-                          <i className={`${item.icon} text-xl`} />
-                        </div>
-                      </div>
-                      <h3 className="text-gray-600 text-sm font-medium mb-1">{item.title}</h3>
-                      <p className="text-2xl font-bold text-gray-900">{item.count}</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {item.count === 1 ? 'documento' : 'documentos'}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">Documentos Recientes</h2>
-                </div>
-                
-                <div className="divide-y divide-gray-200">
-                  {documentsData.loading ? (
-                    // Loading skeleton
-                    [1, 2].map((i) => (
-                      <div key={i} className="px-6 py-4 animate-pulse">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
-                          <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : documentsData.recent.length === 0 ? (
-                    // No hay documentos
-                    <div className="px-6 py-12 text-center">
-                      <div className="text-gray-400">
-                        <i className="fas fa-inbox text-5xl mb-4"></i>
-                        <p className="text-lg font-medium text-gray-900">No hay documentos recientes</p>
-                        <p className="text-gray-500 mt-1">Los documentos aparecerán aquí cuando se suban</p>
-                      </div>
-                    </div>
-                  ) : (
-                    // Lista de documentos reales
-                    documentsData.recent.map((doc: any) => {
-                      // Calcular hace cuánto tiempo
-                      const uploadedDate = new Date(doc.uploaded_at);
-                      const now = new Date();
-                      const diffMs = now.getTime() - uploadedDate.getTime();
-                      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                      const diffDays = Math.floor(diffHours / 24);
-                      
-                      let timeAgo = '';
-                      if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
-                      else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
-                      else if (diffDays === 1) timeAgo = 'Hace 1 día';
-                      else timeAgo = `Hace ${diffDays} días`;
-                      
-                      // Determinar icono según tipo
-                      const getIcon = (type: string) => {
-                        switch(type) {
-                          case 'cv': return { icon: 'fa-file-pdf', color: 'text-red-500' };
-                          case 'certificate': return { icon: 'fa-certificate', color: 'text-green-500' };
-                          case 'portfolio': return { icon: 'fa-folder', color: 'text-purple-500' };
-                          case 'cover_letter': return { icon: 'fa-file-alt', color: 'text-blue-500' };
-                          default: return { icon: 'fa-file', color: 'text-gray-500' };
-                        }
-                      };
-                      
-                      const iconConfig = getIcon(doc.document_type);
-                      
-                      // Calcular tamaño del archivo
-                      const fileSize = doc.file_size 
-                        ? `${(doc.file_size / (1024 * 1024)).toFixed(1)} MB`
-                        : 'Tamaño desconocido';
-                      
-                      return (
-                        <div key={doc.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center justify-between">
-                            {/* Icono y nombre */}
-                            <div className="flex items-center space-x-4 flex-1 min-w-0">
-                              <div className="flex-shrink-0">
-                                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                  <i className={`fas ${iconConfig.icon} ${iconConfig.color} text-lg`}></i>
-                                </div>
-                              </div>
-                              
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                  {doc.original_filename || 'Documento sin nombre'}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  Subido por {doc.uploaded_by_name || 'Usuario'} • {timeAgo} • {fileSize}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            {/* Acciones */}
-                            <div className="flex items-center space-x-2 ml-4">
-                              <button
-                                onClick={() => window.open(doc.file_url, '_blank')}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Ver documento"
-                              >
-                                <i className="fas fa-eye"></i>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  const link = document.createElement('a');
-                                  link.href = doc.file_url;
-                                  link.download = doc.original_filename;
-                                  link.click();
-                                }}
-                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Descargar"
-                              >
-                                <i className="fas fa-download"></i>
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar este documento?');
-                                  if (confirmed) {
-                                    console.log('Eliminar documento:', doc.id);
-                                    // Aquí puedes agregar la lógica de eliminación
-                                  }
-                                }}
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Eliminar"
-                              >
-                                <i className="fas fa-trash"></i>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-                
-                {/* Footer con link a ver todos */}
-                {documentsData.recent.length > 0 && (
-                  <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
-                    <button 
-                      onClick={() => router.push('/director/candidates/documents')}
-                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Ver todos los documentos ({documentsData.total}) →
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-filter mr-2" />
+                      Filtros
+                    </button>
+                    <button onClick={addNewClient} className="px-4 py-2 btn-primary text-white rounded-lg">
+                      <i className="fas fa-plus mr-2" />
+                      Nuevo Cliente
                     </button>
                   </div>
-                )}
-              </div>           
-            </div>
-          )}
-
-          {/* TAREAS DE SISTEMA (CELERY) */}
-          {currentView === "tasks" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Tareas de Sistema</h2>
-                  <p className="text-gray-600 mt-1">Monitoreo y gestión de tareas asíncronas del sistema</p>
-                </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={refreshCeleryData} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-sync-alt mr-2" />
-                    Actualizar
-                  </button>
-                  <button onClick={() => info("Abriendo configuración...")} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-cog mr-2" />
-                    Configurar
-                  </button>
-                </div>
-              </div>
-
-
-              {/* Estadísticas generales */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <i className="fas fa-tasks text-blue-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Tareas Activas</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {celeryData ? celeryData.active_tasks.count : "0"}
-                      </p>
-                    </div>
-                  </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <i className="fas fa-check-circle text-green-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Completadas (7d)</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {celeryData ? celeryData.statistics.successful_tasks : "0"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <i className="fas fa-exclamation-triangle text-red-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Fallidas (7d)</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {celeryData ? celeryData.statistics.failed_tasks : "0"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <i className="fas fa-clock text-yellow-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">En Cola</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {celeryData ? celeryData.scheduled_tasks.count : "0"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Grupos de tareas */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Grupos de Tareas</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Servicios de IA */}
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center">
-                        <i className="fas fa-brain text-purple-600 text-lg mr-3" />
-                        <h4 className="font-medium text-gray-900">Servicios de IA</h4>
+                  {clients.map((cl) => (
+                    <div key={cl.id} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center">
+                          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <i className="fas fa-building text-blue-600 text-lg" />
+                          </div>
+                          <div className="ml-4">
+                            <h3 className="text-lg font-semibold text-gray-900">{cl.name}</h3>
+                            <p className="text-sm text-gray-500">{cl.industry}</p>
+                          </div>
+                        </div>
+                        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Activo</span>
                       </div>
-                      <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-full">23 tareas</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">Análisis de CVs, matching y generación de perfiles</p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Exitosas:</span>
-                        <span className="font-medium text-green-600">18 (78%)</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Fallidas:</span>
-                        <span className="font-medium text-red-600">2 (9%)</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">En proceso:</span>
-                        <span className="font-medium text-blue-600">3 (13%)</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Generación de documentos */}
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center">
-                        <i className="fas fa-file-pdf text-red-600 text-lg mr-3" />
-                        <h4 className="font-medium text-gray-900">Documentos</h4>
+                      <div className="space-y-3 mb-4 text-sm">
+                        <div className="flex items-center">
+                          <i className="fas fa-user-tie text-gray-400 w-4" />
+                          <span className="ml-2 text-gray-600">Contacto:</span>
+                          <span className="ml-2 text-gray-900">{cl.contact}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <i className="fas fa-envelope text-gray-400 w-4" />
+                          <span className="ml-2 text-gray-600">Email:</span>
+                          <span className="ml-2 text-gray-900">{cl.email}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <i className="fas fa-phone text-gray-400 w-4" />
+                          <span className="ml-2 text-gray-600">Teléfono:</span>
+                          <span className="ml-2 text-gray-900">{cl.phone}</span>
+                        </div>
                       </div>
-                      <span className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full">15 tareas</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">Generación de PDFs y reportes</p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Exitosas:</span>
-                        <span className="font-medium text-green-600">14 (93%)</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Fallidas:</span>
-                        <span className="font-medium text-red-600">0 (0%)</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">En proceso:</span>
-                        <span className="font-medium text-blue-600">1 (7%)</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Notificaciones */}
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center">
-                        <i className="fas fa-bell text-green-600 text-lg mr-3" />
-                        <h4 className="font-medium text-gray-900">Notificaciones</h4>
+                      <div className="border-t border-gray-100 pt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-600">Procesos Activos</span>
+                          <span className="text-sm font-semibold text-gray-900">{cl.activeProcesses}</span>
+                        </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-600">Candidatos Totales</span>
+                          <span className="text-sm font-semibold text-gray-900">{cl.totalCandidates}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Última Actividad</span>
+                          <span className="text-sm text-gray-500">{cl.lastActivity}</span>
+                        </div>
                       </div>
-                      <span className="px-2 py-1 bg-green-100 text-green-600 text-xs rounded-full">45 tareas</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">Envío de emails y notificaciones</p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Exitosas:</span>
-                        <span className="font-medium text-green-600">42 (93%)</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Fallidas:</span>
-                        <span className="font-medium text-red-600">1 (2%)</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">En proceso:</span>
-                        <span className="font-medium text-blue-600">2 (5%)</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Tareas del sistema */}
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center">
-                        <i className="fas fa-cogs text-gray-600 text-lg mr-3" />
-                        <h4 className="font-medium text-gray-900">Sistema</h4>
-                      </div>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">8 tareas</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">Mantenimiento y limpieza automática</p>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Exitosas:</span>
-                        <span className="font-medium text-green-600">8 (100%)</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Fallidas:</span>
-                        <span className="font-medium text-red-600">0 (0%)</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">En proceso:</span>
-                        <span className="font-medium text-blue-600">0 (0%)</span>
+                      <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
+                        <button onClick={() => viewClientDetails(cl.id)} className="flex-1 px-3 py-2 text-sm bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100">
+                          Ver Detalles
+                        </button>
+                        <button className="px-3 py-2 text-sm bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100">
+                          <i className="fas fa-edit" />
+                        </button>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
+            )
+          }
 
-              {/* Tareas recientes */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h3>
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarea</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Iniciada</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duración</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trabajador</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {[
-                          { id: 1, name: "analyze_cv_task", status: "SUCCESS", started: "2024-01-15 14:30", duration: "2.4s", worker: "worker-1" },
-                          { id: 2, name: "generate_document_task", status: "SUCCESS", started: "2024-01-15 14:28", duration: "5.1s", worker: "worker-2" },
-                          { id: 3, name: "send_notification_task", status: "SUCCESS", started: "2024-01-15 14:25", duration: "0.8s", worker: "worker-1" },
-                          { id: 4, name: "profile_matching_task", status: "FAILURE", started: "2024-01-15 14:20", duration: "15.2s", worker: "worker-2" },
-                          { id: 5, name: "send_bulk_notifications", status: "PROCESSING", started: "2024-01-15 14:32", duration: "30s+", worker: "worker-1" },
-                        ].map((task) => (
-                          <tr key={task.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{task.name}</div>
-                              <div className="text-sm text-gray-500">ID: {task.id}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                task.status === 'SUCCESS' ? 'bg-green-100 text-green-800' :
-                                task.status === 'FAILURE' ? 'bg-red-100 text-red-800' :
-                                task.status === 'PROCESSING' ? 'bg-blue-100 text-blue-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {task.status}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {task.started}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {task.duration}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {task.worker}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+          {/* TEAM */}
+          {
+            currentView === "team" && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Gestión de Equipo</h2>
+                    <p className="text-gray-600 mt-1">Administra tu equipo de recursos humanos y sus asignaciones</p>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-chart-bar mr-2" />
+                      Performance
+                    </button>
+                    <button onClick={addTeamMember} className="px-4 py-2 btn-primary text-white rounded-lg">
+                      <i className="fas fa-user-plus mr-2" />
+                      Agregar Miembro
+                    </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Workers status */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de Workers</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {[
-                    { name: "worker-1", status: "active", tasks: 5, uptime: "2d 14h", memory: "45%" },
-                    { name: "worker-2", status: "active", tasks: 3, uptime: "2d 14h", memory: "38%" },
-                    { name: "worker-3", status: "idle", tasks: 0, uptime: "2d 14h", memory: "22%" },
-                  ].map((worker) => (
-                    <div key={worker.name} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-medium text-gray-900">{worker.name}</h4>
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          worker.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {worker.status}
-                        </span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  {teamMembers.map((m) => (
+                    <div key={m.id} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center mb-4">
+                        <img
+                          className="h-16 w-16 rounded-full border-2 border-primary-200"
+                          src={`https://ui-avatars.com/api/?name=${m.avatar}&background=3b82f6&color=fff`}
+                          alt={m.name}
+                        />
+                        <div className="ml-4">
+                          <h3 className="text-lg font-semibold text-gray-900">{m.name}</h3>
+                          <p className="text-sm text-gray-500">{m.role}</p>
+                          <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 mt-1 inline-block">
+                            Activo
+                          </span>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Tareas activas:</span>
-                          <span className="font-medium">{worker.tasks}</span>
+
+                      <div className="space-y-3 mb-4 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Procesos Asignados</span>
+                          <span className="font-semibold text-gray-900">{m.assignedProcesses}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Tiempo activo:</span>
-                          <span className="font-medium">{worker.uptime}</span>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Candidatos Gestionados</span>
+                          <span className="font-semibold text-gray-900">{m.managedCandidates}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Memoria:</span>
-                          <span className="font-medium">{worker.memory}</span>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Tasa de Éxito</span>
+                          <span className="font-semibold text-green-600">{m.successRate}%</span>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-gray-100 pt-4">
+                        <div className="flex space-x-2">
+                          <button onClick={() => viewTeamMemberProfile(m.id)} className="flex-1 px-3 py-2 text-sm bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100">
+                            Ver Perfil
+                          </button>
+                          <button className="px-3 py-2 text-sm bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100">
+                            <i className="fas fa-envelope" />
+                          </button>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
+            )
+          }
 
-        {/* SISTEMA DE EVALUACIONES */}
-        {currentView === "evaluations" && <EvaluationsMain />}
-
-        {currentView === "profiles" && (
-          <ProfilesMain 
-            initialProfileId={profileToOpen.id}
-            initialAction={profileToOpen.action || undefined}
-          />
-        )}
-
-
-        {currentView === "candidates-status" && <CandidatesStatusDashboard />}
-
-        {currentView === "shortlisted-candidates" && <ShortlistedCandidatesDashboard />}
-
-        {currentView === "selected-candidates" && <SelectedCandidatesDashboard />}
-        
-        {currentView === "individual-reports" && <IndividualReportsHub />}
-
-          {/* LISTA DE CLIENTES */}
-          {currentView === "client-list" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Gestión de Clientes</h2>
-                  <p className="text-gray-600 mt-1">Administra empresas y organizaciones clientes</p>
-                </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={() => loadClientsData()} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-sync-alt mr-2" />
-                    Actualizar
-                  </button>
-                  <button onClick={addNewClient} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-plus mr-2" />
-                    Nuevo Cliente
-                  </button>
-                </div>
-              </div>
-
-              {/* Estadísticas de clientes */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <i className="fas fa-building text-blue-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Total Clientes</h3>
-                      <p className="text-2xl font-bold text-gray-900">{clientsData.length}</p>
-                    </div>
+          {/* APPROVALS */}
+          {
+            currentView === "approvals" && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Centro de Aprobaciones</h2>
+                    <p className="text-gray-600 mt-1">Gestiona todas las aprobaciones pendientes del sistema</p>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button onClick={filterApprovals} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-filter mr-2" />
+                      Filtrar
+                    </button>
+                    <button onClick={approveAllPending} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                      <i className="fas fa-check-double mr-2" />
+                      Aprobar Todas
+                    </button>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <i className="fas fa-check-circle text-green-600 text-xl" />
+                {/* Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                  {[
+                    { icon: "fas fa-clock", label: "Pendientes", value: "12", bg: "bg-red-100", ic: "text-red-600" },
+                    { icon: "fas fa-check", label: "Aprobadas Hoy", value: "8", bg: "bg-green-100", ic: "text-green-600" },
+                    { icon: "fas fa-exclamation-triangle", label: "Urgentes", value: "3", bg: "bg-yellow-100", ic: "text-yellow-600" },
+                  ].map((s) => (
+                    <div key={s.label} className="card-hover bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center">
+                        <div className={`p-3 rounded-full ${s.bg}`}>
+                          <i className={`${s.icon} ${s.ic} text-xl`} />
+                        </div>
+                        <div className="ml-4">
+                          <p className="text-sm font-medium text-gray-600">{s.label}</p>
+                          <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Activos</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {clientsData.filter(c => c.is_active).length}
-                      </p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <i className="fas fa-briefcase text-yellow-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Industrias</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {new Set(clientsData.map(c => c.industry)).size}
-                      </p>
-                    </div>
+                {/* Lista ejemplo */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h3 className="text-lg font-semibold text-gray-900">Aprobaciones Pendientes</h3>
                   </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <i className="fas fa-users text-purple-600 text-xl" />
+                  <div className="divide-y divide-gray-200">
+                    <div className="p-6 hover:bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-start space-x-4">
+                          <img
+                            className="h-12 w-12 rounded-full border-2 border-gray-200"
+                            src="https://ui-avatars.com/api/?name=Carlos+Lopez&background=random"
+                            alt="Carlos López"
+                          />
+                          <div>
+                            <h4 className="text-lg font-semibold text-gray-900">Carlos López</h4>
+                            <p className="text-sm text-gray-500">Desarrollador Frontend - TechCorp</p>
+                            <div className="flex items-center mt-2 space-x-4">
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Score: 95%</span>
+                              <span className="text-xs text-gray-500">Supervisado por: Ana García</span>
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Urgente</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex space-x-3">
+                          <button onClick={() => success("Aprobado")} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                            <i className="fas fa-check mr-2" />
+                            Aprobar
+                          </button>
+                          <button onClick={() => warning("Rechazado")} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
+                            <i className="fas fa-times mr-2" />
+                            Rechazar
+                          </button>
+                          <button onClick={() => info("Ver detalle")} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                            <i className="fas fa-eye" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Contactos</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {clientsData.reduce((sum, client) => sum + (client.contacts?.length || 0), 0)}
-                      </p>
-                    </div>
+                    {/* ...más items si quieres... */}
                   </div>
                 </div>
               </div>
+            )
+          }
 
-              {/* Tabla de clientes */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Industria</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asignado a</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {clientsData.map((client) => (
-                        <tr key={client.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
-                                  <i className="fas fa-building text-gray-500" />
+          {/* REPORTES - CENTRO DE INTELIGENCIA */}
+          {currentView === "reports" && <DirectorReportsHub />}
+
+          {
+            currentView === "client-progress" && (
+              <div className="p-6 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900 flex items-center">
+                      <i className="fas fa-chart-line mr-3 text-blue-600"></i>
+                      Avance de Cliente
+                    </h2>
+                    <p className="text-gray-600 mt-1">
+                      Comparte el progreso de los procesos de reclutamiento con tus clientes
+                    </p>
+                  </div>
+                </div>
+
+                {/* Información educativa */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 mb-2 flex items-center">
+                    <i className="fas fa-info-circle mr-2"></i>
+                    ¿Cómo funciona?
+                  </h3>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Genera un enlace único para cada perfil de reclutamiento</li>
+                    <li>• Comparte el enlace con tu cliente por email o mensaje</li>
+                    <li>• El cliente puede ver el avance en tiempo real sin iniciar sesión</li>
+                    <li>• El enlace se actualiza automáticamente conforme avanza el proceso</li>
+                  </ul>
+                </div>
+
+                {/* Estadísticas rápidas */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-blue-600 text-sm font-medium">Perfiles Activos</div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {clientProgressProfiles.filter((p: any) =>
+                          p.status !== 'cancelled' && p.status !== 'completed'
+                        ).length}
+                      </div>
+                    </div>
+
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <div className="text-green-600 text-sm font-medium">Perfiles Completados</div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {clientProgressProfiles.filter((p: any) => p.status === 'completed').length}
+                      </div>
+                    </div>
+
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <div className="text-yellow-600 text-sm font-medium">Pendientes Aprobación</div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {clientProgressProfiles.filter((p: any) => p.status === 'pending').length}
+                      </div>
+                    </div>
+
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <div className="text-purple-600 text-sm font-medium">Total Perfiles</div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {clientProgressProfiles.length}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lista de perfiles */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="p-6 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                      <i className="fas fa-list mr-2 text-gray-600"></i>
+                      Perfiles Disponibles para Compartir
+                    </h3>
+                  </div>
+
+                  <div className="p-6">
+                    {loadingProfiles ? (
+                      <div className="text-center py-12">
+                        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+                        <p className="text-gray-600">Cargando perfiles...</p>
+                      </div>
+                    ) : clientProgressProfiles.length > 0 ? (
+                      <div className="space-y-4">
+                        {clientProgressProfiles
+                          .filter((profile: any) => profile.status !== 'cancelled')
+                          .map((profile: any) => (
+                            <div
+                              key={profile.id}
+                              className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  {/* Título y cliente */}
+                                  <div className="mb-3">
+                                    <h4 className="text-lg font-semibold text-gray-900 mb-1">
+                                      {profile.position_title}
+                                    </h4>
+                                    <p className="text-gray-600 flex items-center">
+                                      <i className="fas fa-building mr-2 text-gray-400"></i>
+                                      {profile.client_name}
+                                    </p>
+                                  </div>
+
+                                  {/* Info adicional */}
+                                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                                    <span className="flex items-center">
+                                      <i className="fas fa-map-marker-alt mr-2 text-gray-400"></i>
+                                      {profile.location_city || 'No especificado'}
+                                    </span>
+                                    <span className="flex items-center">
+                                      <i className="fas fa-calendar mr-2 text-gray-400"></i>
+                                      {new Date(profile.created_at).toLocaleDateString('es-ES')}
+                                    </span>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${profile.status === 'completed'
+                                      ? 'bg-green-100 text-green-800'
+                                      : profile.status === 'cancelled'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-blue-100 text-blue-800'
+                                      }`}>
+                                      {profile.status_display || profile.status}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Botones de acción */}
+                                <div className="flex gap-3 ml-4">
+                                  {/* Botón de previsualización */}
+                                  <button
+                                    onClick={() => handlePreviewProfile(profile.id)}
+                                    className="px-5 py-2.5 bg-gray-400 text-white rounded-lg hover:bg-gray-700 font-medium flex items-center gap-2 transition-colors"
+                                    title="Vista previa del avance"
+                                  >
+                                    <i className="fas fa-eye"></i>
+                                    Previsualizar
+                                  </button>
+
+                                  {/* Botón de compartir */}
+                                  <button
+                                    onClick={() => handleGenerateShareLink(
+                                      profile.id,
+                                      profile.position_title,
+                                      profile.client_name
+                                    )}
+                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 transition-colors"
+                                  >
+                                    <i className="fas fa-share-alt"></i>
+                                    Compartir Avance
+                                  </button>
                                 </div>
                               </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">{client.company_name}</div>
-                                <div className="text-sm text-gray-500">{client.rfc}</div>
-                              </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{client.industry}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{client.contact_name}</div>
-                            <div className="text-sm text-gray-500">{client.contact_email}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              client.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {client.is_active ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {client.assigned_to_name || 'Sin asignar'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onClick={() => info(`Viendo cliente ${client.id}`)} className="text-blue-600 hover:text-blue-900 mr-3">
-                              <i className="fas fa-eye" />
-                            </button>
-                            <button onClick={() => info(`Editando cliente ${client.id}`)} className="text-green-600 hover:text-green-900 mr-3">
-                              <i className="fas fa-edit" />
-                            </button>
-                            <button onClick={() => deleteClient(client.id)} className="text-red-600 hover:text-red-900">
-                              <i className="fas fa-trash" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {clientsData.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                            <i className="fas fa-building text-4xl mb-4 block text-gray-300" />
-                            No hay clientes registrados
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <i className="fas fa-folder-open text-6xl text-gray-300 mb-4"></i>
+                        <p className="text-gray-600 text-lg">No hay perfiles disponibles</p>
+                        <p className="text-gray-500 text-sm mt-2">
+                          Los perfiles aparecerán aquí cuando se creen procesos de reclutamiento
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          }
+
+          {/* DOCUMENTS */}
+          {
+            currentView === "documents" && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Gestión de Documentos</h2>
+                    <p className="text-gray-600 mt-1">Organiza y gestiona todos los documentos del sistema</p>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button onClick={searchDocuments} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-search mr-2" />
+                      Buscar
+                    </button>
+                    <button onClick={uploadDocument} className="px-4 py-2 btn-primary text-white rounded-lg">
+                      <i className="fas fa-cloud-upload-alt mr-2" />
+                      Subir Documento
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                  {documentsData.loading ? (
+                    // Loading skeleton para 4 tarjetas
+                    [1, 2, 3, 4].map((i) => (
+                      <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="animate-pulse">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                          </div>
+                          <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
+                          <div className="h-6 bg-gray-200 rounded w-32"></div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    [
+                      {
+                        icon: "fas fa-file-pdf",
+                        title: "CVs",
+                        count: documentsData.by_type.cv,
+                        wrap: "bg-blue-100 text-blue-600",
+                        btn: "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                      },
+                      {
+                        icon: "fas fa-file-contract",
+                        title: "Contratos",
+                        count: documentsData.by_type.contract,
+                        wrap: "bg-green-100 text-green-600",
+                        btn: "bg-green-50 text-green-600 hover:bg-green-100"
+                      },
+                      {
+                        icon: "fas fa-file-alt",
+                        title: "Reportes",
+                        count: documentsData.by_type.report,
+                        wrap: "bg-purple-100 text-purple-600",
+                        btn: "bg-purple-50 text-purple-600 hover:bg-purple-100"
+                      },
+                      {
+                        icon: "fas fa-folder",
+                        title: "Otros",
+                        count: documentsData.by_type.other,
+                        wrap: "bg-yellow-100 text-yellow-600",
+                        btn: "bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+                      },
+                    ].map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className={`w-12 h-12 ${item.wrap} rounded-lg flex items-center justify-center`}>
+                            <i className={`${item.icon} text-xl`} />
+                          </div>
+                        </div>
+                        <h3 className="text-gray-600 text-sm font-medium mb-1">{item.title}</h3>
+                        <p className="text-2xl font-bold text-gray-900">{item.count}</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {item.count === 1 ? 'documento' : 'documentos'}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h2 className="text-xl font-semibold text-gray-900">Documentos Recientes</h2>
+                  </div>
+
+                  <div className="divide-y divide-gray-200">
+                    {documentsData.loading ? (
+                      // Loading skeleton
+                      [1, 2].map((i) => (
+                        <div key={i} className="px-6 py-4 animate-pulse">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                            <div className="flex-1 space-y-2">
+                              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : documentsData.recent.length === 0 ? (
+                      // No hay documentos
+                      <div className="px-6 py-12 text-center">
+                        <div className="text-gray-400">
+                          <i className="fas fa-inbox text-5xl mb-4"></i>
+                          <p className="text-lg font-medium text-gray-900">No hay documentos recientes</p>
+                          <p className="text-gray-500 mt-1">Los documentos aparecerán aquí cuando se suban</p>
+                        </div>
+                      </div>
+                    ) : (
+                      // Lista de documentos reales
+                      documentsData.recent.map((doc: any) => {
+                        // Calcular hace cuánto tiempo
+                        const uploadedDate = new Date(doc.uploaded_at);
+                        const now = new Date();
+                        const diffMs = now.getTime() - uploadedDate.getTime();
+                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const diffDays = Math.floor(diffHours / 24);
+
+                        let timeAgo = '';
+                        if (diffHours < 1) timeAgo = 'Hace menos de 1 hora';
+                        else if (diffHours < 24) timeAgo = `Hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+                        else if (diffDays === 1) timeAgo = 'Hace 1 día';
+                        else timeAgo = `Hace ${diffDays} días`;
+
+                        // Determinar icono según tipo
+                        const getIcon = (type: string) => {
+                          switch (type) {
+                            case 'cv': return { icon: 'fa-file-pdf', color: 'text-red-500' };
+                            case 'certificate': return { icon: 'fa-certificate', color: 'text-green-500' };
+                            case 'portfolio': return { icon: 'fa-folder', color: 'text-purple-500' };
+                            case 'cover_letter': return { icon: 'fa-file-alt', color: 'text-blue-500' };
+                            default: return { icon: 'fa-file', color: 'text-gray-500' };
+                          }
+                        };
+
+                        const iconConfig = getIcon(doc.document_type);
+
+                        // Calcular tamaño del archivo
+                        const fileSize = doc.file_size
+                          ? `${(doc.file_size / (1024 * 1024)).toFixed(1)} MB`
+                          : 'Tamaño desconocido';
+
+                        return (
+                          <div key={doc.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              {/* Icono y nombre */}
+                              <div className="flex items-center space-x-4 flex-1 min-w-0">
+                                <div className="flex-shrink-0">
+                                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                    <i className={`fas ${iconConfig.icon} ${iconConfig.color} text-lg`}></i>
+                                  </div>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {doc.original_filename || 'Documento sin nombre'}
+                                  </p>
+                                  <p className="text-sm text-gray-500">
+                                    Subido por {doc.uploaded_by_name || 'Usuario'} • {timeAgo} • {fileSize}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Acciones */}
+                              <div className="flex items-center space-x-2 ml-4">
+                                <button
+                                  onClick={() => window.open(doc.file_url, '_blank')}
+                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Ver documento"
+                                >
+                                  <i className="fas fa-eye"></i>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.href = doc.file_url;
+                                    link.download = doc.original_filename;
+                                    link.click();
+                                  }}
+                                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Descargar"
+                                >
+                                  <i className="fas fa-download"></i>
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const confirmed = await showConfirm('¿Estás seguro de que deseas eliminar este documento?');
+                                    if (confirmed) {
+                                      console.log('Eliminar documento:', doc.id);
+                                      // Aquí puedes agregar la lógica de eliminación
+                                    }
+                                  }}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Eliminar"
+                                >
+                                  <i className="fas fa-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Footer con link a ver todos */}
+                  {documentsData.recent.length > 0 && (
+                    <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                      <button
+                        onClick={() => router.push('/director/candidates/documents')}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Ver todos los documentos ({documentsData.total}) →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          }
+
+          {/* TAREAS DE SISTEMA (CELERY) */}
+          {
+            currentView === "tasks" && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Tareas de Sistema</h2>
+                    <p className="text-gray-600 mt-1">Monitoreo y gestión de tareas asíncronas del sistema</p>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button onClick={refreshCeleryData} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-sync-alt mr-2" />
+                      Actualizar
+                    </button>
+                    <button onClick={() => info("Abriendo configuración...")} className="px-4 py-2 btn-primary text-white rounded-lg">
+                      <i className="fas fa-cog mr-2" />
+                      Configurar
+                    </button>
+                  </div>
+                </div>
+
+
+                {/* Estadísticas generales */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <i className="fas fa-tasks text-blue-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Tareas Activas</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {celeryData ? celeryData.active_tasks.count : "0"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <i className="fas fa-check-circle text-green-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Completadas (7d)</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {celeryData ? celeryData.statistics.successful_tasks : "0"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <i className="fas fa-exclamation-triangle text-red-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Fallidas (7d)</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {celeryData ? celeryData.statistics.failed_tasks : "0"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-yellow-100 rounded-lg">
+                        <i className="fas fa-clock text-yellow-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">En Cola</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {celeryData ? celeryData.scheduled_tasks.count : "0"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grupos de tareas */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Grupos de Tareas</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Servicios de IA */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <i className="fas fa-brain text-purple-600 text-lg mr-3" />
+                          <h4 className="font-medium text-gray-900">Servicios de IA</h4>
+                        </div>
+                        <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-full">23 tareas</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">Análisis de CVs, matching y generación de perfiles</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Exitosas:</span>
+                          <span className="font-medium text-green-600">18 (78%)</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Fallidas:</span>
+                          <span className="font-medium text-red-600">2 (9%)</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">En proceso:</span>
+                          <span className="font-medium text-blue-600">3 (13%)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Generación de documentos */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <i className="fas fa-file-pdf text-red-600 text-lg mr-3" />
+                          <h4 className="font-medium text-gray-900">Documentos</h4>
+                        </div>
+                        <span className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full">15 tareas</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">Generación de PDFs y reportes</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Exitosas:</span>
+                          <span className="font-medium text-green-600">14 (93%)</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Fallidas:</span>
+                          <span className="font-medium text-red-600">0 (0%)</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">En proceso:</span>
+                          <span className="font-medium text-blue-600">1 (7%)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notificaciones */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <i className="fas fa-bell text-green-600 text-lg mr-3" />
+                          <h4 className="font-medium text-gray-900">Notificaciones</h4>
+                        </div>
+                        <span className="px-2 py-1 bg-green-100 text-green-600 text-xs rounded-full">45 tareas</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">Envío de emails y notificaciones</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Exitosas:</span>
+                          <span className="font-medium text-green-600">42 (93%)</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Fallidas:</span>
+                          <span className="font-medium text-red-600">1 (2%)</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">En proceso:</span>
+                          <span className="font-medium text-blue-600">2 (5%)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tareas del sistema */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <i className="fas fa-cogs text-gray-600 text-lg mr-3" />
+                          <h4 className="font-medium text-gray-900">Sistema</h4>
+                        </div>
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">8 tareas</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">Mantenimiento y limpieza automática</p>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Exitosas:</span>
+                          <span className="font-medium text-green-600">8 (100%)</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Fallidas:</span>
+                          <span className="font-medium text-red-600">0 (0%)</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">En proceso:</span>
+                          <span className="font-medium text-blue-600">0 (0%)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tareas recientes */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h3>
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarea</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Iniciada</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duración</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trabajador</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {[
+                            { id: 1, name: "analyze_cv_task", status: "SUCCESS", started: "2024-01-15 14:30", duration: "2.4s", worker: "worker-1" },
+                            { id: 2, name: "generate_document_task", status: "SUCCESS", started: "2024-01-15 14:28", duration: "5.1s", worker: "worker-2" },
+                            { id: 3, name: "send_notification_task", status: "SUCCESS", started: "2024-01-15 14:25", duration: "0.8s", worker: "worker-1" },
+                            { id: 4, name: "profile_matching_task", status: "FAILURE", started: "2024-01-15 14:20", duration: "15.2s", worker: "worker-2" },
+                            { id: 5, name: "send_bulk_notifications", status: "PROCESSING", started: "2024-01-15 14:32", duration: "30s+", worker: "worker-1" },
+                          ].map((task) => (
+                            <tr key={task.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">{task.name}</div>
+                                <div className="text-sm text-gray-500">ID: {task.id}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${task.status === 'SUCCESS' ? 'bg-green-100 text-green-800' :
+                                  task.status === 'FAILURE' ? 'bg-red-100 text-red-800' :
+                                    task.status === 'PROCESSING' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                  {task.status}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {task.started}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {task.duration}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {task.worker}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Workers status */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Estado de Workers</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {[
+                      { name: "worker-1", status: "active", tasks: 5, uptime: "2d 14h", memory: "45%" },
+                      { name: "worker-2", status: "active", tasks: 3, uptime: "2d 14h", memory: "38%" },
+                      { name: "worker-3", status: "idle", tasks: 0, uptime: "2d 14h", memory: "22%" },
+                    ].map((worker) => (
+                      <div key={worker.name} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium text-gray-900">{worker.name}</h4>
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${worker.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                            }`}>
+                            {worker.status}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Tareas activas:</span>
+                            <span className="font-medium">{worker.tasks}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Tiempo activo:</span>
+                            <span className="font-medium">{worker.uptime}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600">Memoria:</span>
+                            <span className="font-medium">{worker.memory}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          {/* SISTEMA DE EVALUACIONES */}
+          {currentView === "evaluations" && <EvaluationsMain />}
+
+          {
+            currentView === "profiles" && (
+              <ProfilesMain
+                initialProfileId={profileToOpen.id}
+                initialAction={profileToOpen.action || undefined}
+              />
+            )
+          }
+
+
+          {currentView === "candidates-status" && <CandidatesStatusDashboard />}
+
+          {currentView === "shortlisted-candidates" && <ShortlistedCandidatesDashboard />}
+
+          {currentView === "selected-candidates" && <SelectedCandidatesDashboard />}
+
+          {currentView === "individual-reports" && <IndividualReportsHub />}
+
+          {/* LISTA DE CLIENTES */}
+          {
+            currentView === "client-list" && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Gestión de Clientes</h2>
+                    <p className="text-gray-600 mt-1">Administra empresas y organizaciones clientes</p>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button onClick={() => loadClientsData()} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-sync-alt mr-2" />
+                      Actualizar
+                    </button>
+                    <button onClick={addNewClient} className="px-4 py-2 btn-primary text-white rounded-lg">
+                      <i className="fas fa-plus mr-2" />
+                      Nuevo Cliente
+                    </button>
+                  </div>
+                </div>
+
+                {/* Estadísticas de clientes */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <i className="fas fa-building text-blue-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Total Clientes</h3>
+                        <p className="text-2xl font-bold text-gray-900">{clientsData.length}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <i className="fas fa-check-circle text-green-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Activos</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {clientsData.filter(c => c.is_active).length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-yellow-100 rounded-lg">
+                        <i className="fas fa-briefcase text-yellow-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Industrias</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {new Set(clientsData.map(c => c.industry)).size}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <i className="fas fa-users text-purple-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Contactos</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {clientsData.reduce((sum, client) => sum + (client.contacts?.length || 0), 0)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabla de clientes */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Industria</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Asignado a</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {clientsData.map((client) => (
+                          <tr key={client.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="shrink-0 h-10 w-10">
+                                  <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                                    <i className="fas fa-building text-gray-500" />
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">{client.company_name}</div>
+                                  <div className="text-sm text-gray-500">{client.rfc}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{client.industry}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{client.contact_name}</div>
+                              <div className="text-sm text-gray-500">{client.contact_email}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${client.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                {client.is_active ? 'Activo' : 'Inactivo'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {client.assigned_to_name || 'Sin asignar'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button onClick={() => info(`Viendo cliente ${client.id}`)} className="text-blue-600 hover:text-blue-900 mr-3">
+                                <i className="fas fa-eye" />
+                              </button>
+                              <button onClick={() => info(`Editando cliente ${client.id}`)} className="text-green-600 hover:text-green-900 mr-3">
+                                <i className="fas fa-edit" />
+                              </button>
+                              <button onClick={() => deleteClient(client.id)} className="text-red-600 hover:text-red-900">
+                                <i className="fas fa-trash" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {clientsData.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                              <i className="fas fa-building text-4xl mb-4 block text-gray-300" />
+                              No hay clientes registrados
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )
+          }
 
           {currentView === "profiles-status" && <ProfilesStatusDashboard />}
 
@@ -4132,186 +4153,187 @@ const loadApplicationsData = async () => {
           {currentView === "email-management" && <EmailManagement />}
 
           {/* LISTA DE CONTACTOS */}
-          {currentView === "client-contacts" && (
-            <div className="p-6">
-              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold text-gray-900">Gestión de Contactos</h2>
-                  <p className="text-gray-600 mt-1">Administra contactos de clientes y prospectos</p>
+          {
+            currentView === "client-contacts" && (
+              <div className="p-6">
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-900">Gestión de Contactos</h2>
+                    <p className="text-gray-600 mt-1">Administra contactos de clientes y prospectos</p>
+                  </div>
+                  <div className="mt-4 sm:mt-0 flex space-x-3">
+                    <button onClick={() => loadContactsData()} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                      <i className="fas fa-sync-alt mr-2" />
+                      Actualizar
+                    </button>
+                    <button onClick={() => info("Abriendo formulario de nuevo contacto...")} className="px-4 py-2 btn-primary text-white rounded-lg">
+                      <i className="fas fa-plus mr-2" />
+                      Nuevo Contacto
+                    </button>
+                  </div>
                 </div>
-                <div className="mt-4 sm:mt-0 flex space-x-3">
-                  <button onClick={() => loadContactsData()} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                    <i className="fas fa-sync-alt mr-2" />
-                    Actualizar
-                  </button>
-                  <button onClick={() => info("Abriendo formulario de nuevo contacto...")} className="px-4 py-2 btn-primary text-white rounded-lg">
-                    <i className="fas fa-plus mr-2" />
-                    Nuevo Contacto
-                  </button>
-                </div>
-              </div>
 
-              {/* Estadísticas de contactos */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <i className="fas fa-address-book text-blue-600 text-xl" />
+                {/* Estadísticas de contactos */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <i className="fas fa-address-book text-blue-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Total Contactos</h3>
+                        <p className="text-2xl font-bold text-gray-900">{contactsData.length}</p>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Total Contactos</h3>
-                      <p className="text-2xl font-bold text-gray-900">{contactsData.length}</p>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <i className="fas fa-star text-green-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Primarios</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {contactsData.filter(c => c.is_primary).length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-yellow-100 rounded-lg">
+                        <i className="fas fa-envelope text-yellow-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Con Email</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {contactsData.filter(c => c.email).length}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <i className="fas fa-phone text-purple-600 text-xl" />
+                      </div>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-500">Con Teléfono</h3>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {contactsData.filter(c => c.phone).length}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <i className="fas fa-star text-green-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Primarios</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {contactsData.filter(c => c.is_primary).length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <i className="fas fa-envelope text-yellow-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Con Email</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {contactsData.filter(c => c.email).length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <i className="fas fa-phone text-purple-600 text-xl" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-sm font-medium text-gray-500">Con Teléfono</h3>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {contactsData.filter(c => c.phone).length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tabla de contactos */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {contactsData.map((contact) => (
-                        <tr key={contact.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                  <i className="fas fa-user text-gray-500" />
+                {/* Tabla de contactos */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Puesto</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {contactsData.map((contact) => (
+                          <tr key={contact.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="shrink-0 h-10 w-10">
+                                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <i className="fas fa-user text-gray-500" />
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">{contact.name}</div>
+                                  <div className="text-sm text-gray-500">ID: {contact.id}</div>
                                 </div>
                               </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">{contact.name}</div>
-                                <div className="text-sm text-gray-500">ID: {contact.id}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {clientsData.find(c => c.id === contact.client)?.company_name || `Cliente #${contact.client}`}
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {clientsData.find(c => c.id === contact.client)?.company_name || `Cliente #${contact.client}`}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{contact.position}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{contact.email}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{contact.phone}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              contact.is_primary ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {contact.is_primary ? 'Primario' : 'Secundario'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onClick={() => info(`Viendo contacto ${contact.id}`)} className="text-blue-600 hover:text-blue-900 mr-3">
-                              <i className="fas fa-eye" />
-                            </button>
-                            <button onClick={() => info(`Editando contacto ${contact.id}`)} className="text-green-600 hover:text-green-900 mr-3">
-                              <i className="fas fa-edit" />
-                            </button>
-                            <button onClick={() => deleteContact(contact.id)} className="text-red-600 hover:text-red-900">
-                              <i className="fas fa-trash" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {contactsData.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                            <i className="fas fa-address-book text-4xl mb-4 block text-gray-300" />
-                            No hay contactos registrados
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{contact.position}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{contact.email}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{contact.phone}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${contact.is_primary ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                {contact.is_primary ? 'Primario' : 'Secundario'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button onClick={() => info(`Viendo contacto ${contact.id}`)} className="text-blue-600 hover:text-blue-900 mr-3">
+                                <i className="fas fa-eye" />
+                              </button>
+                              <button onClick={() => info(`Editando contacto ${contact.id}`)} className="text-green-600 hover:text-green-900 mr-3">
+                                <i className="fas fa-edit" />
+                              </button>
+                              <button onClick={() => deleteContact(contact.id)} className="text-red-600 hover:text-red-900">
+                                <i className="fas fa-trash" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {contactsData.length === 0 && (
+                          <tr>
+                            <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                              <i className="fas fa-address-book text-4xl mb-4 block text-gray-300" />
+                              No hay contactos registrados
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          }
         </main>
 
         {/* Modal Formulario Agregar Candidato */}
-        <DirectorCandidateFormModal 
+        <DirectorCandidateFormModal
           isOpen={showCandidateForm}
           onClose={() => setShowCandidateForm(false)}
           onSuccess={success}
         />
 
         {/* Modal Formulario Agregar Documento */}
-        <CandidateDocumentFormModal 
+        <CandidateDocumentFormModal
           isOpen={showDocumentForm}
           onClose={() => setShowDocumentForm(false)}
           onSuccess={success}
         />
 
         {/* Modal Formulario Agregar Nota */}
-        <CandidateNoteFormModal 
+        <CandidateNoteFormModal
           isOpen={showNoteForm}
           onClose={() => setShowNoteForm(false)}
           onSuccess={success}
         />
 
         {/* Modal Formulario Agregar Cliente */}
-        <ClientFormModal 
+        <ClientFormModal
           isOpen={showClientForm}
           onClose={() => setShowClientForm(false)}
           onSuccess={success}
@@ -4327,7 +4349,6 @@ const loadApplicationsData = async () => {
           />
         )}
 
-        
       </div>
     </div>
   );
