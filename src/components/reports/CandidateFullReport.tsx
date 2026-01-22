@@ -114,7 +114,27 @@ export default function CandidateFullReport({ candidateId, onBack }: Props) {
           cliente: app.profile.client || '',
           estado: app.status_display || '',
           fecha: formatDate(app.applied_at),
+          match_porcentaje: app.match_percentage || 0,
         })),
+        // Nuevos datos para página 2
+        evaluaciones: data.evaluations?.map(evalItem => ({
+          template: evalItem.template || 'Evaluación',
+          categoria: evalItem.template_category || '',
+          estado: evalItem.status_display || evalItem.status || 'Pendiente',
+          puntaje: evalItem.final_score,
+          aprobado: evalItem.passed,
+        })) || [],
+        documentos: data.documents?.map(doc => ({
+          nombre: doc.filename || 'Documento',
+          tipo: doc.type || 'Otro',
+          fecha: formatDate(doc.uploaded_at),
+        })) || [],
+        notas: data.notes?.map(nota => ({
+          tipo: nota.type || 'General',
+          contenido: nota.content || '',
+          autor: nota.created_by || '',
+          fecha: formatDate(nota.created_at),
+        })) || [],
       };
 
       // Generar nombre de archivo

@@ -68,7 +68,11 @@ export default function ProfileCandidatesReport({ profileId, onBack, onViewCandi
           nombre: c.full_name,
           email: c.email,
           estado: c.status_display,
-          match_porcentaje: c.match_percentage ?? 0
+          match_porcentaje: c.match_percentage ?? 0,
+          // Nuevos campos para fecha y Gantt
+          applied_at: c.applied_at,
+          interview_date: c.interview_date,
+          offer_date: c.offer_date,
         }))
       };
 

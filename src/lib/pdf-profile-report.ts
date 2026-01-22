@@ -94,6 +94,12 @@ export interface ProfileReportData {
   
   // Contenido
   resumen_rol: string;
+  requisitos?: string;
+  
+  // Habilidades y competencias
+  technical_skills?: string[];
+  soft_skills?: string[];
+  languages?: string[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -264,6 +270,10 @@ export class ProfileReportPDF {
       salario: formatCurrency(data.salario),
       supervisor: cleanText(data.supervisor),
       resumen_rol: cleanText(data.resumen_rol),
+      requisitos: cleanText(data.requisitos || ''),
+      technical_skills: data.technical_skills || [],
+      soft_skills: data.soft_skills || [],
+      languages: data.languages || [],
       fecha: cleanText(data.fecha),
       estado: cleanText(data.estado),
     };
@@ -282,8 +292,14 @@ export class ProfileReportPDF {
     // 4. Two-column cards (Empresa + Detalles)
     this.drawInfoCards(cleanData);
     
-    // 5. Resumen del rol
-    this.drawResumenRol(cleanData.resumen_rol);
+    // 5. Resumen del rol y requisitos (incluye habilidades)
+    this.drawResumenRolYRequisitos(
+      cleanData.resumen_rol, 
+      cleanData.requisitos || '',
+      cleanData.technical_skills || [],
+      cleanData.soft_skills || [],
+      cleanData.languages || []
+    );
     
     // 6. Footer
     this.drawFooter();
@@ -702,23 +718,35 @@ export class ProfileReportPDF {
   }
   
   /**
-   * Card de resumen del rol
+   * Card de resumen del rol y requisitos (dos columnas)
    */
-  private drawResumenRol(resumen: string): void {
+  private drawResumenRolYRequisitos(
+    resumen: string, 
+    requisitos: string,
+    technicalSkills: string[],
+    softSkills: string[],
+    languages: string[]
+  ): void {
     const y = this.yPos;
     const availableHeight = this.pageHeight - y - 20; // Espacio hasta el footer
-    const cardHeight = Math.min(availableHeight, 60);
+    const cardHeight = Math.min(availableHeight, 70);
+    const columnGap = 6;
+    const columnWidth = (this.contentWidth - columnGap) / 2;
+    
+    // ═══════════════════════════════════════════════════════════════
+    // COLUMNA IZQUIERDA: Descripción del Puesto
+    // ═══════════════════════════════════════════════════════════════
     
     // Fondo
     this.pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-    this.pdf.roundedRect(this.margin, y, this.contentWidth, cardHeight, 2, 2, 'F');
+    this.pdf.roundedRect(this.margin, y, columnWidth, cardHeight, 2, 2, 'F');
     
     // Borde
     this.pdf.setDrawColor(COLORS.gray200.r, COLORS.gray200.g, COLORS.gray200.b);
     this.pdf.setLineWidth(0.3);
-    this.pdf.roundedRect(this.margin, y, this.contentWidth, cardHeight, 2, 2, 'S');
+    this.pdf.roundedRect(this.margin, y, columnWidth, cardHeight, 2, 2, 'S');
     
-    // Barra de color izquierda
+    // Barra de color izquierda (azul)
     this.pdf.setFillColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
     this.pdf.roundedRect(this.margin, y, 3, cardHeight, 2, 2, 'F');
     this.pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
@@ -726,28 +754,95 @@ export class ProfileReportPDF {
     
     // Título
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.setFontSize(10);
+    this.pdf.setFontSize(9);
     this.pdf.setTextColor(COLORS.gray900.r, COLORS.gray900.g, COLORS.gray900.b);
-    this.pdf.text('Resumen del Rol', this.margin + 8, y + 8);
+    this.pdf.text('Descripción del Puesto', this.margin + 8, y + 8);
     
-    // Texto del resumen (multi-línea)
+    // Texto del resumen
     this.pdf.setFont('helvetica', 'normal');
-    this.pdf.setFontSize(8);
+    this.pdf.setFontSize(7);
     this.pdf.setTextColor(COLORS.gray600.r, COLORS.gray600.g, COLORS.gray600.b);
     
-    const textWidth = this.contentWidth - 16;
-    const lines = this.pdf.splitTextToSize(resumen, textWidth);
+    const textWidth = columnWidth - 14;
+    const resumenLines = this.pdf.splitTextToSize(resumen || 'Sin descripción disponible', textWidth);
+    const maxLines = Math.floor((cardHeight - 14) / 3.5);
+    const displayResumenLines = resumenLines.slice(0, maxLines);
     
-    // Limitar líneas para que quepa
-    const maxLines = Math.floor((cardHeight - 14) / 4);
-    const displayLines = lines.slice(0, maxLines);
-    
-    if (lines.length > maxLines) {
-      const lastLine = displayLines[displayLines.length - 1];
-      displayLines[displayLines.length - 1] = lastLine.slice(0, -3) + '...';
+    if (resumenLines.length > maxLines && displayResumenLines.length > 0) {
+      const lastLine = displayResumenLines[displayResumenLines.length - 1];
+      displayResumenLines[displayResumenLines.length - 1] = lastLine.slice(0, -3) + '...';
     }
     
-    this.pdf.text(displayLines, this.margin + 8, y + 14);
+    this.pdf.text(displayResumenLines, this.margin + 8, y + 14);
+    
+    // ═══════════════════════════════════════════════════════════════
+    // COLUMNA DERECHA: Requisitos (Habilidades + Requisitos Adicionales)
+    // ═══════════════════════════════════════════════════════════════
+    
+    const rightColumnX = this.margin + columnWidth + columnGap;
+    
+    // Fondo
+    this.pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    this.pdf.roundedRect(rightColumnX, y, columnWidth, cardHeight, 2, 2, 'F');
+    
+    // Borde
+    this.pdf.setDrawColor(COLORS.gray200.r, COLORS.gray200.g, COLORS.gray200.b);
+    this.pdf.setLineWidth(0.3);
+    this.pdf.roundedRect(rightColumnX, y, columnWidth, cardHeight, 2, 2, 'S');
+    
+    // Barra de color izquierda (verde)
+    this.pdf.setFillColor(COLORS.success.r, COLORS.success.g, COLORS.success.b);
+    this.pdf.roundedRect(rightColumnX, y, 3, cardHeight, 2, 2, 'F');
+    this.pdf.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    this.pdf.rect(rightColumnX + 2, y, 2, cardHeight, 'F');
+    
+    // Título
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.setFontSize(9);
+    this.pdf.setTextColor(COLORS.gray900.r, COLORS.gray900.g, COLORS.gray900.b);
+    this.pdf.text('Requisitos', rightColumnX + 8, y + 8);
+    
+    // Construir texto de requisitos completo
+    const requisitosPartes: string[] = [];
+    
+    // Habilidades Técnicas
+    if (technicalSkills && technicalSkills.length > 0) {
+      requisitosPartes.push('• Técnicas: ' + technicalSkills.join(', '));
+    }
+    
+    // Habilidades Blandas
+    if (softSkills && softSkills.length > 0) {
+      requisitosPartes.push('• Competencias: ' + softSkills.join(', '));
+    }
+    
+    // Idiomas
+    if (languages && languages.length > 0) {
+      requisitosPartes.push('• Idiomas: ' + languages.join(', '));
+    }
+    
+    // Requisitos Adicionales
+    if (requisitos && requisitos.trim()) {
+      requisitosPartes.push('• Otros: ' + requisitos);
+    }
+    
+    const requisitosText = requisitosPartes.length > 0 
+      ? requisitosPartes.join('\n') 
+      : 'Sin requisitos especificados';
+    
+    // Texto de requisitos
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.setFontSize(7);
+    this.pdf.setTextColor(COLORS.gray600.r, COLORS.gray600.g, COLORS.gray600.b);
+    
+    const requisitosLines = this.pdf.splitTextToSize(requisitosText, textWidth);
+    const displayRequisitosLines = requisitosLines.slice(0, maxLines);
+    
+    if (requisitosLines.length > maxLines && displayRequisitosLines.length > 0) {
+      const lastLine = displayRequisitosLines[displayRequisitosLines.length - 1];
+      displayRequisitosLines[displayRequisitosLines.length - 1] = lastLine.slice(0, -3) + '...';
+    }
+    
+    this.pdf.text(displayRequisitosLines, rightColumnX + 8, y + 14);
     
     this.yPos += cardHeight + 4;
   }

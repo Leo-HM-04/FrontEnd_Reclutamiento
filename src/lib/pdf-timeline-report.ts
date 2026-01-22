@@ -206,85 +206,97 @@ export class TimelineReportPDF {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // HEADER CON BANDA DE COLOR
+  // HEADER LIMPIO (FONDO BLANCO)
   // ══════════════════════════════════════════════════════════════════════════
   private drawHeaderBand(data: TimelineReportData): void {
-    const bandHeight = 35;
+    const headerHeight = 32;
     
-    // Banda de color sólido
-    this.doc.setFillColor(COLORS.headerBand.r, COLORS.headerBand.g, COLORS.headerBand.b);
-    this.doc.rect(0, 0, this.pageWidth, bandHeight, 'F');
+    // Fondo blanco del header
+    this.doc.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    this.doc.rect(0, 0, this.pageWidth, headerHeight, 'F');
     
-    // Logo (blanco sobre fondo oscuro)
+    // Línea decorativa inferior azul
+    this.doc.setFillColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.rect(0, headerHeight, this.pageWidth, 1, 'F');
+    
+    // Logo Bausen (a la izquierda)
     try {
-      const logoHeight = 12;
-      const logoWidth = logoHeight * 3.46;
-      this.doc.addImage(BAUSEN_LOGO_BASE64, 'PNG', this.margin, 6, logoWidth, logoHeight);
-    } catch {
-      this.doc.setFont('helvetica', 'bold');
-      this.doc.setFontSize(14);
-      this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-      this.doc.text('BAUSEN', this.margin, 14);
-    }
-    
-    // Título principal
-    this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(16);
-    this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-    this.doc.text('TIMELINE DEL PROCESO', this.pageWidth / 2, 12, { align: 'center' });
-    
-    // Subtítulo (puesto)
-    this.doc.setFont('helvetica', 'normal');
-    this.doc.setFontSize(11);
-    this.doc.text(data.puesto, this.pageWidth / 2, 20, { align: 'center' });
-    
-    // Cliente y fecha
-    this.doc.setFontSize(9);
-    this.doc.text(`${data.cliente} • ${data.fecha_reporte}`, this.pageWidth / 2, 28, { align: 'center' });
-    
-    this.currentY = bandHeight + 8;
-  }
-
-  private drawPageHeader(title: string, data: TimelineReportData): void {
-    // Banda más pequeña para páginas secundarias
-    const bandHeight = 18;
-    
-    this.doc.setFillColor(COLORS.headerBand.r, COLORS.headerBand.g, COLORS.headerBand.b);
-    this.doc.rect(0, 0, this.pageWidth, bandHeight, 'F');
-    
-    // Logo pequeño
-    try {
-      const logoHeight = 8;
+      const logoHeight = 14;
       const logoWidth = logoHeight * 3.46;
       this.doc.addImage(BAUSEN_LOGO_BASE64, 'PNG', this.margin, 5, logoWidth, logoHeight);
     } catch {
       this.doc.setFont('helvetica', 'bold');
-      this.doc.setFontSize(10);
-      this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-      this.doc.text('BAUSEN', this.margin, 11);
+      this.doc.setFontSize(16);
+      this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+      this.doc.text('BAUSEN', this.margin, 14);
     }
     
-    // Título
+    // Etiqueta "TIMELINE DEL PROCESO" (pequeña, arriba)
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(8);
+    this.doc.setTextColor(COLORS.textSecondary.r, COLORS.textSecondary.g, COLORS.textSecondary.b);
+    this.doc.text('TIMELINE DEL PROCESO', this.margin, headerHeight + 8);
+    
+    // Nombre del puesto (grande)
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(12);
-    this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-    this.doc.text(title, this.pageWidth / 2, 11, { align: 'center' });
+    this.doc.setFontSize(16);
+    this.doc.setTextColor(COLORS.textPrimary.r, COLORS.textPrimary.g, COLORS.textPrimary.b);
+    this.doc.text(data.puesto.toUpperCase(), this.margin, headerHeight + 16);
+    
+    // Cliente y fecha (debajo del puesto)
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(9);
+    this.doc.setTextColor(COLORS.textSecondary.r, COLORS.textSecondary.g, COLORS.textSecondary.b);
+    this.doc.text(`${data.cliente} • ${data.fecha_reporte}`, this.margin, headerHeight + 22);
+    
+    this.currentY = headerHeight + 30;
+  }
+
+  private drawPageHeader(title: string, data: TimelineReportData): void {
+    const headerHeight = 22;
+    
+    // Fondo blanco
+    this.doc.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    this.doc.rect(0, 0, this.pageWidth, headerHeight, 'F');
+    
+    // Línea decorativa inferior azul
+    this.doc.setFillColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.rect(0, headerHeight, this.pageWidth, 1, 'F');
+    
+    // Logo pequeño
+    try {
+      const logoHeight = 10;
+      const logoWidth = logoHeight * 3.46;
+      this.doc.addImage(BAUSEN_LOGO_BASE64, 'PNG', this.margin, 6, logoWidth, logoHeight);
+    } catch {
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(12);
+      this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+      this.doc.text('BAUSEN', this.margin, 14);
+    }
+    
+    // Título centrado
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(14);
+    this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.text(title, this.pageWidth / 2, 14, { align: 'center' });
     
     // Puesto (derecha)
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(9);
-    this.doc.text(data.puesto, this.pageWidth - this.margin, 11, { align: 'right' });
+    this.doc.setTextColor(COLORS.textSecondary.r, COLORS.textSecondary.g, COLORS.textSecondary.b);
+    this.doc.text(data.puesto, this.pageWidth - this.margin, 14, { align: 'right' });
     
-    this.currentY = bandHeight + 6;
+    this.currentY = headerHeight + 10;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
   // KPI CARDS (4 cards con barra de color superior)
   // ══════════════════════════════════════════════════════════════════════════
   private drawKPICards(data: TimelineReportData, metrics: ReturnType<typeof this.calculateMetrics>): void {
-    const cardWidth = (this.contentWidth - 9) / 4;
-    const cardHeight = 32;
-    const gap = 3;
+    const cardWidth = (this.contentWidth - 12) / 4;
+    const cardHeight = 36;
+    const gap = 4;
     
     const kpis = [
       {
@@ -372,8 +384,8 @@ export class TimelineReportPDF {
   // DIAGRAMA TIPO GANTT
   // ══════════════════════════════════════════════════════════════════════════
   private drawGanttDiagram(data: TimelineReportData, metrics: ReturnType<typeof this.calculateMetrics>): void {
-    const ganttY = this.currentY;
-    const ganttHeight = 70;
+    const ganttY = this.currentY + 4;
+    const ganttHeight = 80;
     
     // Título de sección
     this.doc.setFont('helvetica', 'bold');
@@ -381,15 +393,18 @@ export class TimelineReportPDF {
     this.doc.setTextColor(COLORS.textPrimary.r, COLORS.textPrimary.g, COLORS.textPrimary.b);
     this.doc.text('DIAGRAMA DEL PROCESO', this.margin, ganttY);
     
-    // Contenedor
-    const containerY = ganttY + 6;
+    // Contenedor con borde sutil
+    const containerY = ganttY + 8;
     this.doc.setFillColor(COLORS.lightBg.r, COLORS.lightBg.g, COLORS.lightBg.b);
-    this.doc.roundedRect(this.margin, containerY, this.contentWidth, ganttHeight - 6, 3, 3, 'F');
+    this.doc.roundedRect(this.margin, containerY, this.contentWidth, ganttHeight - 8, 4, 4, 'F');
+    this.doc.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
+    this.doc.setLineWidth(0.3);
+    this.doc.roundedRect(this.margin, containerY, this.contentWidth, ganttHeight - 8, 4, 4, 'S');
     
     // Eje horizontal (timeline)
-    const axisY = containerY + ganttHeight - 18;
-    const axisStartX = this.margin + 50;
-    const axisEndX = this.pageWidth - this.margin - 30;
+    const axisY = containerY + ganttHeight - 22;
+    const axisStartX = this.margin + 55;
+    const axisEndX = this.pageWidth - this.margin - 35;
     const axisWidth = axisEndX - axisStartX;
     
     // Línea del eje
@@ -414,9 +429,9 @@ export class TimelineReportPDF {
     });
     
     // Fases del proceso (barras Gantt)
-    const trackHeight = 12;
-    const trackGap = 4;
-    let trackY = containerY + 12;
+    const trackHeight = 14;
+    const trackGap = 6;
+    let trackY = containerY + 14;
     
     const totalDuration = metrics.fases.reduce((sum, f) => sum + f.duracion, 0);
     let currentOffset = 0;
@@ -461,7 +476,7 @@ export class TimelineReportPDF {
       { align: 'right' }
     );
     
-    this.currentY = containerY + ganttHeight + 8;
+    this.currentY = containerY + ganttHeight;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -470,7 +485,7 @@ export class TimelineReportPDF {
   private drawCandidateCards(data: TimelineReportData): void {
     // Título de sección
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(11);
+    this.doc.setFontSize(10);
     this.doc.setTextColor(COLORS.textPrimary.r, COLORS.textPrimary.g, COLORS.textPrimary.b);
     this.doc.text('CANDIDATOS DEL PROCESO', this.margin, this.currentY);
     
@@ -479,9 +494,9 @@ export class TimelineReportPDF {
     // Ordenar por match descendente
     const sortedCandidatos = [...data.candidatos].sort((a, b) => b.match_porcentaje - a.match_porcentaje);
     
-    // Grid de 3 columnas
+    // Grid de 3 columnas - tarjetas bien proporcionadas
     const cardWidth = (this.contentWidth - 6) / 3;
-    const cardHeight = 28;
+    const cardHeight = 24;
     const gap = 3;
     
     sortedCandidatos.forEach((candidato, index) => {
@@ -496,7 +511,7 @@ export class TimelineReportPDF {
     });
     
     const rows = Math.ceil(data.candidatos.length / 3);
-    this.currentY += rows * (cardHeight + gap) + 8;
+    this.currentY += rows * (cardHeight + gap) + 6;
   }
 
   private drawCandidateCard(
@@ -513,14 +528,14 @@ export class TimelineReportPDF {
     this.doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
     this.doc.roundedRect(x, y, width, height, 2, 2, 'F');
     
-    // Borde (resaltado si es top)
+    // Borde
     const borderColor = isTop ? COLORS.success : COLORS.border;
     this.doc.setDrawColor(borderColor.r, borderColor.g, borderColor.b);
-    this.doc.setLineWidth(isTop ? 0.8 : 0.3);
+    this.doc.setLineWidth(isTop ? 0.6 : 0.3);
     this.doc.roundedRect(x, y, width, height, 2, 2, 'S');
     
     // Avatar con iniciales
-    const avatarSize = 12;
+    const avatarSize = 10;
     const avatarX = x + 8;
     const avatarY = y + height / 2;
     
@@ -530,33 +545,47 @@ export class TimelineReportPDF {
     
     const initials = this.getInitials(candidato.nombre);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(7);
+    this.doc.setFontSize(6);
     this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
     this.doc.text(initials, avatarX, avatarY + 1, { align: 'center' });
     
     // Badge de ranking (top 2)
     if (isTop) {
       this.doc.setFillColor(COLORS.warning.r, COLORS.warning.g, COLORS.warning.b);
-      this.doc.circle(avatarX + avatarSize / 2 - 1, avatarY - avatarSize / 2 + 1, 3, 'F');
+      this.doc.circle(avatarX + avatarSize / 2 - 1, avatarY - avatarSize / 2 + 1, 2.5, 'F');
       this.doc.setFont('helvetica', 'bold');
-      this.doc.setFontSize(5);
+      this.doc.setFontSize(4);
       this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-      this.doc.text(`${rank}`, avatarX + avatarSize / 2 - 1, avatarY - avatarSize / 2 + 2.5, { align: 'center' });
+      this.doc.text(`${rank}`, avatarX + avatarSize / 2 - 1, avatarY - avatarSize / 2 + 2, { align: 'center' });
     }
     
-    // Nombre
-    const textX = avatarX + avatarSize / 2 + 4;
-    this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(7);
-    this.doc.setTextColor(COLORS.textPrimary.r, COLORS.textPrimary.g, COLORS.textPrimary.b);
-    const truncatedName = this.truncateText(candidato.nombre, width - 30, 7);
-    this.doc.text(truncatedName, textX, y + 9);
+    // ═══════════════════════════════════════════════════════════════
+    // CONTENIDO A LA DERECHA DEL AVATAR
+    // ═══════════════════════════════════════════════════════════════
+    const textStartX = avatarX + avatarSize / 2 + 3;
+    const cardPadding = 3;
+    const availableWidth = width - (textStartX - x) - cardPadding;
     
-    // Match % con barra visual
-    const matchBarWidth = 30;
-    const matchBarHeight = 4;
-    const matchBarX = x + width - matchBarWidth - 4;
-    const matchBarY = y + 5;
+    // FILA 1: Nombre + Barra de Match (en la misma línea)
+    const row1Y = y + 7;
+    
+    // Calcular espacio para la barra y porcentaje
+    const percentTextWidth = 12; // espacio para "78%"
+    const matchBarWidth = 20;
+    const matchSectionWidth = matchBarWidth + percentTextWidth;
+    const nameMaxWidth = availableWidth - matchSectionWidth - 2;
+    
+    // Nombre (truncado para que quepa)
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(6);
+    this.doc.setTextColor(COLORS.textPrimary.r, COLORS.textPrimary.g, COLORS.textPrimary.b);
+    const truncatedName = this.truncateText(candidato.nombre, nameMaxWidth, 6);
+    this.doc.text(truncatedName, textStartX, row1Y);
+    
+    // Barra de Match % (alineada a la derecha del card)
+    const matchBarX = x + width - cardPadding - percentTextWidth - matchBarWidth;
+    const matchBarY = row1Y - 2.5;
+    const matchBarHeight = 3;
     
     // Fondo de la barra
     this.doc.setFillColor(COLORS.ganttTrack.r, COLORS.ganttTrack.g, COLORS.ganttTrack.b);
@@ -569,34 +598,37 @@ export class TimelineReportPDF {
     this.doc.setFillColor(progressColor.r, progressColor.g, progressColor.b);
     this.doc.roundedRect(matchBarX, matchBarY, progressWidth, matchBarHeight, 1, 1, 'F');
     
-    // Porcentaje texto
+    // Porcentaje texto (pegado a la barra, dentro del card)
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(6);
+    this.doc.setFontSize(5);
     this.doc.setTextColor(progressColor.r, progressColor.g, progressColor.b);
-    this.doc.text(`${candidato.match_porcentaje}%`, matchBarX + matchBarWidth + 2, matchBarY + 3);
+    this.doc.text(`${candidato.match_porcentaje}%`, matchBarX + matchBarWidth + 1, row1Y);
     
-    // Fecha de aplicación
+    // FILA 2: Fecha
+    const row2Y = y + 13;
     this.doc.setFont('helvetica', 'normal');
-    this.doc.setFontSize(6);
+    this.doc.setFontSize(5);
     this.doc.setTextColor(COLORS.textSecondary.r, COLORS.textSecondary.g, COLORS.textSecondary.b);
     const shortDate = this.extractShortDate(candidato.fecha_aplico);
-    this.doc.text(shortDate, textX, y + 16);
+    this.doc.text(shortDate, textStartX, row2Y);
     
-    // Estado badge
-    this.drawMiniStateBadge(textX, y + 19, candidato.estado);
+    // FILA 3: Estado badge
+    const row3Y = y + 17;
+    this.drawMiniStateBadge(textStartX, row3Y, candidato.estado);
   }
 
   private drawMiniStateBadge(x: number, y: number, estado: string): void {
-    const badgeWidth = this.doc.getTextWidth(estado) + 4;
-    const badgeHeight = 5;
+    this.doc.setFontSize(4);
+    const badgeWidth = Math.min(this.doc.getTextWidth(estado) + 3, 22);
+    const badgeHeight = 4;
     
     this.doc.setFillColor(224, 231, 255);
     this.doc.roundedRect(x, y, badgeWidth, badgeHeight, 1, 1, 'F');
     
     this.doc.setFont('helvetica', 'normal');
-    this.doc.setFontSize(5);
+    this.doc.setFontSize(4);
     this.doc.setTextColor(COLORS.accent.r, COLORS.accent.g, COLORS.accent.b);
-    this.doc.text(estado, x + 2, y + 3.5);
+    this.doc.text(estado, x + 1.5, y + 3);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -604,20 +636,25 @@ export class TimelineReportPDF {
   // ══════════════════════════════════════════════════════════════════════════
   private drawEfficiencyComparison(metrics: ReturnType<typeof this.calculateMetrics>): void {
     const sectionY = this.currentY;
-    const sectionHeight = 40;
+    const sectionHeight = 42;
     
     // Título
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(11);
+    this.doc.setFontSize(10);
     this.doc.setTextColor(COLORS.textPrimary.r, COLORS.textPrimary.g, COLORS.textPrimary.b);
     this.doc.text('COMPARATIVA DE EFICIENCIA', this.margin, sectionY);
     
-    // Contenedor
+    // Contenedor con borde
     const containerY = sectionY + 6;
     this.doc.setFillColor(COLORS.lightBg.r, COLORS.lightBg.g, COLORS.lightBg.b);
     this.doc.roundedRect(this.margin, containerY, this.contentWidth, sectionHeight - 6, 3, 3, 'F');
+    this.doc.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
+    this.doc.setLineWidth(0.3);
+    this.doc.roundedRect(this.margin, containerY, this.contentWidth, sectionHeight - 6, 3, 3, 'S');
     
-    const barWidth = this.contentWidth - 80;
+    // Calcular escala proporcional (el mayor valor = 100% del ancho)
+    const maxHoras = Math.max(metrics.tiempoTotalHoras, metrics.benchmarkHoras);
+    const barMaxWidth = this.contentWidth - 95;
     const barHeight = 10;
     const barX = this.margin + 60;
     
@@ -628,21 +665,21 @@ export class TimelineReportPDF {
     this.doc.setTextColor(COLORS.textPrimary.r, COLORS.textPrimary.g, COLORS.textPrimary.b);
     this.doc.text('Este proceso', this.margin + 4, bar1Y + 7);
     
-    // Fondo
+    // Fondo de la barra
     this.doc.setFillColor(COLORS.ganttTrack.r, COLORS.ganttTrack.g, COLORS.ganttTrack.b);
-    this.doc.roundedRect(barX, bar1Y, barWidth, barHeight, 2, 2, 'F');
+    this.doc.roundedRect(barX, bar1Y, barMaxWidth, barHeight, 2, 2, 'F');
     
-    // Progreso (proporción del benchmark)
-    const processRatio = Math.min(1, metrics.tiempoTotalHoras / metrics.benchmarkHoras);
-    const progress1Width = processRatio * barWidth;
-    this.doc.setFillColor(COLORS.success.r, COLORS.success.g, COLORS.success.b);
+    // Progreso proporcional
+    const progress1Width = (metrics.tiempoTotalHoras / maxHoras) * barMaxWidth;
+    const processColor = metrics.tiempoTotalHoras <= metrics.benchmarkHoras ? COLORS.success : COLORS.warning;
+    this.doc.setFillColor(processColor.r, processColor.g, processColor.b);
     this.doc.roundedRect(barX, bar1Y, progress1Width, barHeight, 2, 2, 'F');
     
-    // Valor
+    // Valor a la derecha
     this.doc.setFont('helvetica', 'bold');
     this.doc.setFontSize(8);
-    this.doc.setTextColor(COLORS.success.r, COLORS.success.g, COLORS.success.b);
-    this.doc.text(`${metrics.tiempoTotalHoras.toFixed(0)} hrs`, barX + barWidth + 4, bar1Y + 7);
+    this.doc.setTextColor(processColor.r, processColor.g, processColor.b);
+    this.doc.text(`${metrics.tiempoTotalHoras.toFixed(0)} hrs`, barX + barMaxWidth + 4, bar1Y + 7);
     
     // Barra: Promedio industria
     const bar2Y = containerY + 24;
@@ -651,38 +688,21 @@ export class TimelineReportPDF {
     this.doc.setTextColor(COLORS.textSecondary.r, COLORS.textSecondary.g, COLORS.textSecondary.b);
     this.doc.text('Prom. industria', this.margin + 4, bar2Y + 7);
     
-    // Fondo completo (100%)
+    // Fondo de la barra
     this.doc.setFillColor(COLORS.ganttTrack.r, COLORS.ganttTrack.g, COLORS.ganttTrack.b);
-    this.doc.roundedRect(barX, bar2Y, barWidth, barHeight, 2, 2, 'F');
+    this.doc.roundedRect(barX, bar2Y, barMaxWidth, barHeight, 2, 2, 'F');
     
-    // Barra completa (benchmark)
+    // Barra proporcional del benchmark
+    const progress2Width = (metrics.benchmarkHoras / maxHoras) * barMaxWidth;
     this.doc.setFillColor(COLORS.textSecondary.r, COLORS.textSecondary.g, COLORS.textSecondary.b);
-    this.doc.roundedRect(barX, bar2Y, barWidth, barHeight, 2, 2, 'F');
+    this.doc.roundedRect(barX, bar2Y, progress2Width, barHeight, 2, 2, 'F');
     
-    // Valor
+    // Valor a la derecha
     this.doc.setFont('helvetica', 'normal');
     this.doc.setFontSize(8);
-    this.doc.text(`${metrics.benchmarkHoras} hrs`, barX + barWidth + 4, bar2Y + 7);
+    this.doc.text(`${metrics.benchmarkHoras} hrs`, barX + barMaxWidth + 4, bar2Y + 7);
     
-    // Insight box
-    if (metrics.ahorroDias > 0) {
-      const insightX = this.pageWidth - this.margin - 60;
-      const insightY = containerY + 8;
-      
-      this.doc.setFillColor(209, 250, 229);
-      this.doc.roundedRect(insightX, insightY, 56, 22, 2, 2, 'F');
-      
-      this.doc.setFont('helvetica', 'bold');
-      this.doc.setFontSize(12);
-      this.doc.setTextColor(COLORS.success.r, COLORS.success.g, COLORS.success.b);
-      this.doc.text(`-${metrics.ahorroDias.toFixed(1)} días`, insightX + 28, insightY + 10, { align: 'center' });
-      
-      this.doc.setFont('helvetica', 'normal');
-      this.doc.setFontSize(6);
-      this.doc.text('vs promedio', insightX + 28, insightY + 17, { align: 'center' });
-    }
-    
-    this.currentY = containerY + sectionHeight + 6;
+    this.currentY = containerY + sectionHeight;
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -691,29 +711,40 @@ export class TimelineReportPDF {
   private drawEventsTimeline(data: TimelineReportData): void {
     // Título
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(11);
+    this.doc.setFontSize(10);
     this.doc.setTextColor(COLORS.textPrimary.r, COLORS.textPrimary.g, COLORS.textPrimary.b);
     this.doc.text('DETALLE DE EVENTOS', this.margin, this.currentY);
     
     this.currentY += 6;
     
+    // Altura máxima disponible (dejar espacio para el footer)
+    const maxY = this.pageHeight - 20;
+    
     // Agrupar eventos por día
     const eventosPorDia = this.groupEventsByDay(data.eventos);
     
     Object.entries(eventosPorDia).forEach(([dia, eventos]) => {
+      // Verificar si hay espacio para el header del día + al menos 1 evento
+      if (this.currentY + 16 > maxY) {
+        return; // Saltar si no hay espacio
+      }
+      
       // Separador de día
       this.doc.setFillColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
-      this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, 6, 1, 1, 'F');
+      this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, 5, 1, 1, 'F');
       
       this.doc.setFont('helvetica', 'bold');
-      this.doc.setFontSize(7);
+      this.doc.setFontSize(6);
       this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-      this.doc.text(dia, this.margin + 4, this.currentY + 4.5);
+      this.doc.text(dia, this.margin + 3, this.currentY + 3.5);
       
-      this.currentY += 8;
+      this.currentY += 7;
       
-      // Eventos del día
+      // Eventos del día (limitar para que no se desborde)
       eventos.forEach((evento, index) => {
+        if (this.currentY + 10 > maxY) {
+          return; // No dibujar si no hay espacio
+        }
         this.drawEventItem(evento, index === eventos.length - 1);
       });
       
@@ -737,14 +768,14 @@ export class TimelineReportPDF {
   }
 
   private drawEventItem(evento: TimelineEvento, isLast: boolean): void {
-    const itemHeight = 12;
-    const dotSize = 4;
-    const lineX = this.margin + 6;
+    const itemHeight = 10;
+    const dotSize = 3;
+    const lineX = this.margin + 5;
     
     // Línea vertical del timeline
     if (!isLast) {
       this.doc.setDrawColor(COLORS.border.r, COLORS.border.g, COLORS.border.b);
-      this.doc.setLineWidth(0.5);
+      this.doc.setLineWidth(0.4);
       this.doc.line(lineX, this.currentY + dotSize, lineX, this.currentY + itemHeight);
     }
     
@@ -758,28 +789,29 @@ export class TimelineReportPDF {
     const horaMatch = evento.fecha_hora.match(/(\d+:\d+ [ap]\.m\.)/);
     const hora = horaMatch ? horaMatch[1] : '';
     this.doc.setFont('helvetica', 'normal');
-    this.doc.setFontSize(6);
+    this.doc.setFontSize(5);
     this.doc.setTextColor(COLORS.textSecondary.r, COLORS.textSecondary.g, COLORS.textSecondary.b);
-    this.doc.text(hora, lineX + 6, this.currentY + 3);
+    this.doc.text(hora, lineX + 5, this.currentY + 3);
     
-    // Tipo (badge)
-    const badgeX = lineX + 30;
-    const badgeWidth = Math.min(this.doc.getTextWidth(evento.tipo) + 6, 45);
+    // Tipo (badge más compacto)
+    const badgeX = lineX + 26;
+    this.doc.setFontSize(4);
+    const badgeWidth = Math.min(this.doc.getTextWidth(evento.tipo) + 4, 35);
     this.doc.setFillColor(dotColor.r, dotColor.g, dotColor.b);
-    this.doc.roundedRect(badgeX, this.currentY, badgeWidth, 5, 1, 1, 'F');
+    this.doc.roundedRect(badgeX, this.currentY, badgeWidth, 4, 1, 1, 'F');
     
     this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(5);
+    this.doc.setFontSize(4);
     this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
-    this.doc.text(evento.tipo, badgeX + 3, this.currentY + 3.5);
+    this.doc.text(evento.tipo, badgeX + 2, this.currentY + 3);
     
     // Descripción
     this.doc.setFont('helvetica', 'normal');
-    this.doc.setFontSize(7);
+    this.doc.setFontSize(6);
     this.doc.setTextColor(COLORS.textPrimary.r, COLORS.textPrimary.g, COLORS.textPrimary.b);
-    const descX = badgeX + badgeWidth + 4;
-    const maxDescWidth = this.contentWidth - descX + this.margin - 4;
-    const truncatedDesc = this.truncateText(evento.descripcion, maxDescWidth, 7);
+    const descX = badgeX + badgeWidth + 3;
+    const maxDescWidth = this.contentWidth - (descX - this.margin) - 2;
+    const truncatedDesc = this.truncateText(evento.descripcion, maxDescWidth, 6);
     this.doc.text(truncatedDesc, descX, this.currentY + 3);
     
     this.currentY += itemHeight;

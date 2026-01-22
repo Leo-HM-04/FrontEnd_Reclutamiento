@@ -108,11 +108,37 @@ export interface CandidateReportData {
   // Habilidades
   habilidades: string[];
   
-  // Historial de aplicaciones
+  // Historial de aplicaciones (con match)
   aplicaciones: Array<{
     perfil: string;
     cliente: string;
     estado: string;
+    fecha: string;
+    match_porcentaje?: number;
+  }>;
+  
+  // Evaluaciones
+  evaluaciones?: Array<{
+    template: string;
+    categoria?: string;
+    estado: string;
+    puntaje?: number;
+    aprobado?: boolean;
+    fecha?: string;
+  }>;
+  
+  // Documentos
+  documentos?: Array<{
+    nombre: string;
+    tipo: string;
+    fecha: string;
+  }>;
+  
+  // Notas internas
+  notas?: Array<{
+    tipo: string;
+    contenido: string;
+    autor?: string;
     fecha: string;
   }>;
 }
@@ -170,15 +196,52 @@ export class CandidateReportPDF {
         cliente: fixMojibake(a.cliente),
         estado: fixMojibake(a.estado),
         fecha: a.fecha,
+        match_porcentaje: a.match_porcentaje,
+      })),
+      evaluaciones: data.evaluaciones?.map(e => ({
+        template: fixMojibake(e.template || 'Sin nombre'),
+        categoria: e.categoria ? fixMojibake(e.categoria) : undefined,
+        estado: fixMojibake(e.estado),
+        puntaje: e.puntaje,
+        aprobado: e.aprobado,
+        fecha: e.fecha,
+      })),
+      documentos: data.documentos?.map(d => ({
+        nombre: fixMojibake(d.nombre),
+        tipo: fixMojibake(d.tipo),
+        fecha: d.fecha,
+      })),
+      notas: data.notas?.map(n => ({
+        tipo: fixMojibake(n.tipo),
+        contenido: fixMojibake(n.contenido),
+        autor: n.autor ? fixMojibake(n.autor) : undefined,
+        fecha: n.fecha,
       })),
     };
     
+    // Página 1
     this.drawHeader(cleanData);
     this.drawHeroSection(cleanData);
     this.drawKPIs(cleanData);
     this.drawInfoCards(cleanData);
     this.drawSkills(cleanData);
     this.drawApplicationsTable(cleanData);
+    
+    // Página 2 (si hay contenido adicional)
+    const hasAdditionalContent = 
+      (cleanData.evaluaciones && cleanData.evaluaciones.length > 0) ||
+      (cleanData.documentos && cleanData.documentos.length > 0) ||
+      (cleanData.notas && cleanData.notas.length > 0);
+    
+    if (hasAdditionalContent) {
+      this.doc.addPage();
+      this.currentY = this.margin;
+      this.drawSecondaryHeader(cleanData);
+      this.drawEvaluationsSection(cleanData);
+      this.drawDocumentsSection(cleanData);
+      this.drawNotesSection(cleanData);
+    }
+    
     this.drawFooter();
     
     return this.doc;
@@ -535,12 +598,13 @@ export class CandidateReportPDF {
       return;
     }
     
-    // Columnas
+    // Columnas (ahora con Match%)
     const cols = [
-      { header: 'Perfil/Vacante', width: 75, key: 'perfil' },
-      { header: 'Cliente', width: 55, key: 'cliente' },
+      { header: 'Perfil/Vacante', width: 60, key: 'perfil' },
+      { header: 'Cliente', width: 45, key: 'cliente' },
+      { header: 'Match', width: 22, key: 'match' },
       { header: 'Estado', width: 30, key: 'estado' },
-      { header: 'Fecha', width: 30, key: 'fecha' },
+      { header: 'Fecha', width: 33, key: 'fecha' },
     ];
     
     const rowHeight = 8;
@@ -562,8 +626,8 @@ export class CandidateReportPDF {
     
     this.currentY += headerHeight;
     
-    // Filas de datos (máximo 8 para que quepan en la página)
-    const maxRows = 8;
+    // Filas de datos (máximo 6 para que quepan en la página)
+    const maxRows = 6;
     const displayApps = data.aplicaciones.slice(0, maxRows);
     
     displayApps.forEach((app, index) => {
@@ -589,13 +653,22 @@ export class CandidateReportPDF {
       this.doc.text(truncatedCliente, colX + 3, this.currentY + 5);
       colX += cols[1].width;
       
-      // Estado (como badge)
-      this.drawStatusBadge(colX + 3, this.currentY + 2, app.estado);
+      // Match % (con barra visual)
+      if (app.match_porcentaje !== undefined) {
+        this.drawMatchBar(colX + 2, this.currentY + 2, cols[2].width - 4, app.match_porcentaje);
+      } else {
+        this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+        this.doc.text('-', colX + 3, this.currentY + 5);
+      }
       colX += cols[2].width;
+      
+      // Estado (como badge)
+      this.drawStatusBadge(colX + 2, this.currentY + 2, app.estado);
+      colX += cols[3].width;
       
       // Fecha
       this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
-      this.doc.text(app.fecha, colX + 3, this.currentY + 5);
+      this.doc.text(app.fecha, colX + 2, this.currentY + 5);
       
       this.currentY += rowHeight;
     });
@@ -615,6 +688,28 @@ export class CandidateReportPDF {
     }
     
     this.currentY += 4;
+  }
+  
+  private drawMatchBar(x: number, y: number, width: number, percentage: number): void {
+    const barHeight = 4;
+    const barWidth = width - 12;
+    
+    // Fondo de la barra
+    this.doc.setFillColor(229, 231, 235);
+    this.doc.roundedRect(x, y, barWidth, barHeight, 1, 1, 'F');
+    
+    // Progreso
+    const progressColor = percentage >= 70 ? COLORS.success :
+                         percentage >= 50 ? COLORS.warning : COLORS.danger;
+    const progressWidth = (percentage / 100) * barWidth;
+    this.doc.setFillColor(progressColor.r, progressColor.g, progressColor.b);
+    this.doc.roundedRect(x, y, progressWidth, barHeight, 1, 1, 'F');
+    
+    // Porcentaje texto
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(6);
+    this.doc.setTextColor(progressColor.r, progressColor.g, progressColor.b);
+    this.doc.text(`${percentage}%`, x + barWidth + 1, y + 3);
   }
 
   private drawStatusBadge(x: number, y: number, status: string): void {
@@ -652,35 +747,344 @@ export class CandidateReportPDF {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // HEADER SECUNDARIO (PÁGINA 2)
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawSecondaryHeader(data: CandidateReportData): void {
+    const headerHeight = 18;
+    
+    // Fondo blanco
+    this.doc.setFillColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    this.doc.rect(0, 0, this.pageWidth, headerHeight, 'F');
+    
+    // Línea azul inferior
+    this.doc.setFillColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.rect(0, headerHeight, this.pageWidth, 1, 'F');
+    
+    // Logo
+    try {
+      const logoHeight = 10;
+      const logoWidth = logoHeight * 3.46;
+      this.doc.addImage(BAUSEN_LOGO_BASE64, 'PNG', this.margin, 4, logoWidth, logoHeight);
+    } catch {
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(12);
+      this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+      this.doc.text('BAUSEN', this.margin, 11);
+    }
+    
+    // Título
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(12);
+    this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.text('INFORMACIÓN ADICIONAL', this.pageWidth / 2, 11, { align: 'center' });
+    
+    // Nombre del candidato
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(9);
+    this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+    this.doc.text(data.nombre, this.pageWidth - this.margin, 11, { align: 'right' });
+    
+    this.currentY = headerHeight + 8;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN DE EVALUACIONES
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawEvaluationsSection(data: CandidateReportData): void {
+    if (!data.evaluaciones || data.evaluaciones.length === 0) return;
+    
+    // Título de sección
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(10);
+    this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+    this.doc.text('Evaluaciones', this.margin, this.currentY);
+    
+    this.currentY += 5;
+    
+    // Header de la tabla
+    const cols = [
+      { header: 'Evaluación', width: 70 },
+      { header: 'Categoría', width: 40 },
+      { header: 'Estado', width: 30 },
+      { header: 'Puntaje', width: 25 },
+      { header: 'Resultado', width: 25 },
+    ];
+    
+    let colX = this.margin;
+    this.doc.setFillColor(COLORS.accent.r, COLORS.accent.g, COLORS.accent.b);
+    this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, 7, 1, 1, 'F');
+    
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(6);
+    this.doc.setTextColor(COLORS.white.r, COLORS.white.g, COLORS.white.b);
+    
+    cols.forEach((col) => {
+      this.doc.text(col.header, colX + 2, this.currentY + 5);
+      colX += col.width;
+    });
+    
+    this.currentY += 7;
+    
+    // Filas
+    const maxRows = 5;
+    data.evaluaciones.slice(0, maxRows).forEach((evalItem, index) => {
+      if (index % 2 === 0) {
+        this.doc.setFillColor(248, 250, 252);
+        this.doc.rect(this.margin, this.currentY, this.contentWidth, 7, 'F');
+      }
+      
+      colX = this.margin;
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(6);
+      this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+      
+      // Evaluación
+      this.doc.text(this.truncateText(evalItem.template, cols[0].width - 4, 6), colX + 2, this.currentY + 5);
+      colX += cols[0].width;
+      
+      // Categoría
+      this.doc.text(this.truncateText(evalItem.categoria || '-', cols[1].width - 4, 6), colX + 2, this.currentY + 5);
+      colX += cols[1].width;
+      
+      // Estado
+      this.drawMiniStatusBadge(colX + 2, this.currentY + 1.5, evalItem.estado);
+      colX += cols[2].width;
+      
+      // Puntaje
+      this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+      this.doc.text(evalItem.puntaje !== undefined ? `${evalItem.puntaje}%` : '-', colX + 2, this.currentY + 5);
+      colX += cols[3].width;
+      
+      // Resultado (Aprobado/Reprobado)
+      if (evalItem.aprobado !== undefined) {
+        const resultColor = evalItem.aprobado ? COLORS.success : COLORS.danger;
+        this.doc.setTextColor(resultColor.r, resultColor.g, resultColor.b);
+        this.doc.setFont('helvetica', 'bold');
+        this.doc.text(evalItem.aprobado ? '✓ Aprobado' : '✗ Reprobado', colX + 2, this.currentY + 5);
+      } else {
+        this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+        this.doc.text('-', colX + 2, this.currentY + 5);
+      }
+      
+      this.currentY += 7;
+    });
+    
+    if (data.evaluaciones.length > maxRows) {
+      this.doc.setFont('helvetica', 'italic');
+      this.doc.setFontSize(6);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(`Y ${data.evaluaciones.length - maxRows} evaluaciones más...`, this.pageWidth / 2, this.currentY + 3, { align: 'center' });
+      this.currentY += 6;
+    }
+    
+    this.currentY += 6;
+  }
+
+  private drawMiniStatusBadge(x: number, y: number, status: string): void {
+    const badgeWidth = Math.min(this.doc.getTextWidth(status) + 4, 26);
+    const badgeHeight = 4;
+    
+    this.doc.setFillColor(224, 231, 255);
+    this.doc.roundedRect(x, y, badgeWidth, badgeHeight, 1, 1, 'F');
+    
+    this.doc.setFont('helvetica', 'normal');
+    this.doc.setFontSize(5);
+    this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+    this.doc.text(this.truncateText(status, badgeWidth - 2, 5), x + 2, y + 3);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN DE DOCUMENTOS
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawDocumentsSection(data: CandidateReportData): void {
+    if (!data.documentos || data.documentos.length === 0) return;
+    
+    // Título de sección
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(10);
+    this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+    this.doc.text('Documentos', this.margin, this.currentY);
+    
+    this.currentY += 5;
+    
+    // Contenedor
+    const containerHeight = Math.min(data.documentos.length * 8 + 4, 50);
+    this.doc.setFillColor(248, 250, 252);
+    this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, containerHeight, 2, 2, 'F');
+    this.doc.setDrawColor(229, 231, 235);
+    this.doc.setLineWidth(0.3);
+    this.doc.roundedRect(this.margin, this.currentY, this.contentWidth, containerHeight, 2, 2, 'S');
+    
+    let itemY = this.currentY + 4;
+    const maxDocs = 5;
+    
+    data.documentos.slice(0, maxDocs).forEach((doc) => {
+      // Ícono según tipo
+      const icon = doc.tipo.toLowerCase().includes('cv') || doc.tipo.toLowerCase().includes('currículum') ? '📄' :
+                   doc.tipo.toLowerCase().includes('certificado') ? '🏆' :
+                   doc.tipo.toLowerCase().includes('foto') || doc.tipo.toLowerCase().includes('imagen') ? '🖼️' :
+                   doc.tipo.toLowerCase().includes('titulo') || doc.tipo.toLowerCase().includes('diploma') ? '🎓' : '📎';
+      
+      // Nombre del documento
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(7);
+      this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+      this.doc.text(`${icon}  ${this.truncateText(doc.nombre, 100, 7)}`, this.margin + 4, itemY + 3);
+      
+      // Tipo
+      this.doc.setFontSize(6);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(doc.tipo, this.margin + 120, itemY + 3);
+      
+      // Fecha
+      this.doc.text(doc.fecha, this.pageWidth - this.margin - 20, itemY + 3);
+      
+      itemY += 8;
+    });
+    
+    if (data.documentos.length > maxDocs) {
+      this.doc.setFont('helvetica', 'italic');
+      this.doc.setFontSize(6);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(`Y ${data.documentos.length - maxDocs} documentos más...`, this.margin + this.contentWidth / 2, itemY + 2, { align: 'center' });
+    }
+    
+    this.currentY += containerHeight + 6;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN DE NOTAS INTERNAS
+  // ══════════════════════════════════════════════════════════════════════════
+  private drawNotesSection(data: CandidateReportData): void {
+    if (!data.notas || data.notas.length === 0) return;
+    
+    // Verificar espacio disponible
+    if (this.currentY > this.pageHeight - 60) return;
+    
+    // Título de sección
+    this.doc.setFont('helvetica', 'bold');
+    this.doc.setFontSize(10);
+    this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+    this.doc.text('Notas Internas', this.margin, this.currentY);
+    
+    this.currentY += 5;
+    
+    const maxNotes = 4;
+    const noteHeight = 20;
+    const noteWidth = (this.contentWidth - 4) / 2;
+    
+    data.notas.slice(0, maxNotes).forEach((nota, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = this.margin + (noteWidth + 4) * col;
+      const y = this.currentY + row * (noteHeight + 4);
+      
+      // Fondo estilo post-it
+      const noteColors = [
+        { r: 255, g: 251, b: 235 }, // Amarillo claro
+        { r: 240, g: 253, b: 244 }, // Verde claro
+        { r: 239, g: 246, b: 255 }, // Azul claro
+        { r: 254, g: 242, b: 242 }, // Rosa claro
+      ];
+      const bgColor = noteColors[index % noteColors.length];
+      
+      this.doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
+      this.doc.roundedRect(x, y, noteWidth, noteHeight, 2, 2, 'F');
+      
+      // Borde sutil
+      this.doc.setDrawColor(229, 231, 235);
+      this.doc.setLineWidth(0.3);
+      this.doc.roundedRect(x, y, noteWidth, noteHeight, 2, 2, 'S');
+      
+      // Tipo de nota (header)
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(6);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(nota.tipo.toUpperCase(), x + 3, y + 4);
+      
+      // Contenido
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(6);
+      this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
+      const lines = this.splitTextToLines(nota.contenido, noteWidth - 6, 6);
+      lines.slice(0, 2).forEach((line, lineIndex) => {
+        this.doc.text(line, x + 3, y + 9 + lineIndex * 4);
+      });
+      
+      // Autor y fecha
+      this.doc.setFont('helvetica', 'italic');
+      this.doc.setFontSize(5);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      const metaText = nota.autor ? `${nota.autor} • ${nota.fecha}` : nota.fecha;
+      this.doc.text(metaText, x + 3, y + noteHeight - 2);
+    });
+    
+    const rows = Math.ceil(Math.min(data.notas.length, maxNotes) / 2);
+    this.currentY += rows * (noteHeight + 4) + 4;
+    
+    if (data.notas.length > maxNotes) {
+      this.doc.setFont('helvetica', 'italic');
+      this.doc.setFontSize(6);
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(`Y ${data.notas.length - maxNotes} notas más...`, this.pageWidth / 2, this.currentY, { align: 'center' });
+    }
+  }
+
+  private splitTextToLines(text: string, maxWidth: number, fontSize: number): string[] {
+    this.doc.setFontSize(fontSize);
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    words.forEach(word => {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      if (this.doc.getTextWidth(testLine) <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    });
+    if (currentLine) lines.push(currentLine);
+    
+    return lines;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // FOOTER
   // ══════════════════════════════════════════════════════════════════════════
   private drawFooter(): void {
-    const footerY = this.pageHeight - 10;
+    const totalPages = this.doc.getNumberOfPages();
     
-    // Línea superior
-    this.doc.setDrawColor(229, 231, 235);
-    this.doc.setLineWidth(0.3);
-    this.doc.line(this.margin, footerY - 3, this.pageWidth - this.margin, footerY - 3);
-    
-    // Texto izquierda
-    this.doc.setFont('helvetica', 'bold');
-    this.doc.setFontSize(7);
-    this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
-    this.doc.text('BAUSEN', this.margin, footerY);
-    
-    this.doc.setFont('helvetica', 'normal');
-    this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
-    this.doc.text(' | Sistema de Gestión de Talento', this.margin + 14, footerY);
-    
-    // Texto centro
-    this.doc.setFont('helvetica', 'italic');
-    this.doc.setFontSize(6);
-    this.doc.text('Documento confidencial', this.pageWidth / 2, footerY, { align: 'center' });
-    
-    // Texto derecha
-    this.doc.setFont('helvetica', 'normal');
-    this.doc.setFontSize(7);
-    this.doc.text('Página 1', this.pageWidth - this.margin, footerY, { align: 'right' });
+    for (let i = 1; i <= totalPages; i++) {
+      this.doc.setPage(i);
+      const footerY = this.pageHeight - 10;
+      
+      // Línea superior
+      this.doc.setDrawColor(229, 231, 235);
+      this.doc.setLineWidth(0.3);
+      this.doc.line(this.margin, footerY - 3, this.pageWidth - this.margin, footerY - 3);
+      
+      // Texto izquierda
+      this.doc.setFont('helvetica', 'bold');
+      this.doc.setFontSize(7);
+      this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
+      this.doc.text('BAUSEN', this.margin, footerY);
+      
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+      this.doc.text(' | Sistema de Gestión de Talento', this.margin + 14, footerY);
+      
+      // Texto centro
+      this.doc.setFont('helvetica', 'italic');
+      this.doc.setFontSize(6);
+      this.doc.text('Documento confidencial', this.pageWidth / 2, footerY, { align: 'center' });
+      
+      // Texto derecha - número de página
+      this.doc.setFont('helvetica', 'normal');
+      this.doc.setFontSize(7);
+      this.doc.text(`Página ${i} de ${totalPages}`, this.pageWidth - this.margin, footerY, { align: 'right' });
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════

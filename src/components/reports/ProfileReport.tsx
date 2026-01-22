@@ -94,6 +94,11 @@ export default function ProfileReport({ profileId, onBack }: Props) {
         modalidad: profile.location.work_mode.toLowerCase() as 'presencial' | 'remoto' | 'híbrido',
         salario: `${formatCurrency(profile.salary.min)} - ${formatCurrency(profile.salary.max)} ${profile.salary.currency}/${profile.salary.period}`,
         resumen_rol: profile.description || 'Sin descripción disponible',
+        requisitos: profile.requirements || '',
+        // Habilidades y competencias
+        technical_skills: profile.technical_skills || [],
+        soft_skills: profile.soft_skills || [],
+        languages: profile.languages || [],
       };
 
       console.log('📄 Datos a enviar al generador PDF:', pdfData);
