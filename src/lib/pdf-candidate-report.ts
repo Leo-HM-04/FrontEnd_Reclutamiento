@@ -45,71 +45,65 @@ function fixMojibake(value: any): string {
   if (value === null || value === undefined) return '';
 
   let result = String(value);
-  
-  // Detectar si el texto tiene patron de corrupcion con ampersands
-  const ampersandCount = (result.match(/&/g) || []).length;
-  
-  // DEBUG: Log para verificar que la funcion se ejecuta
-  if (ampersandCount >= 3) {
-    console.log('[fixMojibake] INPUT:', result.substring(0, 50));
-  }
-  
-  // Si hay 3+ ampersands, probablemente esta corrupto
-  if (ampersandCount >= 3) {
-    // Quitar basura al inicio (caracteres especiales antes del primer &)
-    result = result.replace(/^[^a-zA-Z0-9&]+/, '');
-    
-    // Extraer caracteres usando un algoritmo que preserva espacios
-    let finalResult = '';
-    let i = 0;
-    while (i < result.length) {
-      if (result[i] === '&') {
-        if (i + 1 < result.length && result[i + 1] === ' ') {
-          // '& ' significa un espacio
-          finalResult += ' ';
-          i += 2;
-        } else if (i + 1 < result.length && /[a-zA-Z0-9]/.test(result[i + 1])) {
-          // '&X' donde X es letra/numero - extraer X
-          finalResult += result[i + 1];
-          i += 2;
-        } else {
-          // Saltar el & solo
-          i++;
-        }
-      } else if (result[i] === ' ') {
-        // Espacio normal
-        finalResult += ' ';
-        i++;
-      } else if (/[a-zA-Z0-9]/.test(result[i])) {
-        // Caracter alfanumerico suelto (raro pero posible)
-        finalResult += result[i];
-        i++;
-      } else {
-        // Saltar otros caracteres
-        i++;
-      }
-    }
-    
-    // DEBUG: Log del resultado
-    console.log('[fixMojibake] OUTPUT:', finalResult.substring(0, 50));
-    
-    // Limpiar espacios multiples y retornar
-    return finalResult.replace(/\s+/g, ' ').trim();
-  }
 
-  // Si no hay ampersands, limpieza normal
+  // 1) Decodificar entidades HTML comunes (si vienen del backend)
   result = result
     .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
     .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(parseInt(code, 10)))
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
-    .replace(/[\u0000-\u001F\u007F]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&quot;/gi, '"')
+    .replace(/&amp;/gi, '&');
+
+  // 2) Quitar NULs y controles (ESTO es lo que te estaba separando letras)
+  //    - Antes tú los convertías a " " y quedaba "L e o n a r d o"
+  result = result
+    .replace(/\u0000/g, '') // NUL intercalado típico de UTF-16 mal interpretado
+    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '') // otros controles
+    .replace(/[\r\n\t]+/g, ' '); // normalizar saltos/ tabs a espacio
+
+  // 3) Mojibake común "Ã¡" (UTF-8 leído como Latin-1)
+  //    Intento seguro usando TextDecoder si existe
+  if (/[ÃÂ][\x80-\xBF]/.test(result) && typeof TextDecoder !== 'undefined') {
+    try {
+      const bytes = Uint8Array.from(result, c => c.charCodeAt(0) & 0xff);
+      const decoded = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+      // solo usar si realmente mejora (heurística simple)
+      if (decoded && decoded.length >= result.length * 0.6) result = decoded;
+    } catch {
+      // ignore
+    }
+  }
+
+  // 4) Mojibake tipo "├í", "├®", "├▒" (CP437/CP850) — tu caso histórico
+  const map: Record<string, string> = {
+    // minúsculas (variantes cp437/cp850)
+    '├í': 'á',
+    '├®': 'é',
+    '├¡': 'í',
+    '├ó': 'ó',
+    '├│': 'ó',
+    '├ú': 'ú',
+    '├║': 'ú',
+    '├ñ': 'ñ',
+    '├▒': 'ñ',
+
+    // mayúsculas comunes
+    '├ü': 'Á',
+    '├ë': 'É',
+    '├ì': 'Í',
+    '├ô': 'Ó',
+    '├Ü': 'Ú',
+    '├Ñ': 'Ñ',
+  };
+
+  result = result.replace(/├./g, (m) => map[m] ?? m);
+
+  // 5) Normalizar espacios finales
+  result = result.replace(/\s+/g, ' ').trim();
 
   return result;
 }
+
 
 
 // INTERFACES
@@ -948,20 +942,22 @@ export class CandidateReportPDF {
       colX += cols[2].width;
       
       // Puntaje
-      this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
-      this.doc.text(evalItem.puntaje !== undefined ? `${evalItem.puntaje}%` : '-', colX + 2, this.currentY + 5);
-      colX += cols[3].width;
-      
-      // Resultado (Aprobado/Reprobado)
-      if (evalItem.aprobado !== undefined) {
+      const puntajeValido = evalItem.puntaje !== null && evalItem.puntaje !== undefined;
+      this.doc.text(puntajeValido ? `${evalItem.puntaje}%` : '-', colX + 2, this.currentY + 5);
+
+      // Resultado (sin ✓ ✗ porque también se rompen con fuentes estándar)
+      const aprobadoValido = evalItem.aprobado !== null && evalItem.aprobado !== undefined;
+      if (aprobadoValido) {
         const resultColor = evalItem.aprobado ? COLORS.success : COLORS.danger;
         this.doc.setTextColor(resultColor.r, resultColor.g, resultColor.b);
         this.doc.setFont('helvetica', 'bold');
-        this.doc.text(evalItem.aprobado ? '✓ Aprobado' : '✗ Reprobado', colX + 2, this.currentY + 5);
+        this.doc.text(evalItem.aprobado ? 'Aprobado' : 'Reprobado', colX + 2, this.currentY + 5);
       } else {
         this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
+        this.doc.setFont('helvetica', 'normal');
         this.doc.text('-', colX + 2, this.currentY + 5);
       }
+
       
       this.currentY += 7;
     });
@@ -989,6 +985,16 @@ export class CandidateReportPDF {
     this.doc.setTextColor(COLORS.primary.r, COLORS.primary.g, COLORS.primary.b);
     this.doc.text(this.truncateText(status, badgeWidth - 2, 5), x + 2, y + 3);
   }
+
+  private getDocTypePrefix(tipo: string): string {
+    const t = (tipo || '').toLowerCase();
+    if (t.includes('cv') || t.includes('curr')) return '[CV]';
+    if (t.includes('cert')) return '[CERT]';
+    if (t.includes('foto') || t.includes('imagen')) return '[IMG]';
+    if (t.includes('titulo') || t.includes('diploma')) return '[DIP]';
+    return '[DOC]';
+  }
+
 
   // ══════════════════════════════════════════════════════════════════════════
   // SECCIÓN DE DOCUMENTOS
@@ -1026,7 +1032,8 @@ export class CandidateReportPDF {
       this.doc.setFont('helvetica', 'normal');
       this.doc.setFontSize(7);
       this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
-      this.doc.text(`${icon}  ${this.truncateText(doc.nombre, 100, 7)}`, this.margin + 4, itemY + 3);
+      const prefix = this.getDocTypePrefix(doc.tipo);
+      this.doc.text(`${prefix} ${this.truncateText(doc.nombre, 100, 7)}`, this.margin + 4, itemY + 3);
       
       // Tipo
       this.doc.setFontSize(6);
@@ -1221,6 +1228,8 @@ export function generateCandidateReportPDF(data: CandidateReportData): jsPDF {
 export function downloadCandidateReportPDF(data: CandidateReportData, filename?: string): void {
   const generator = new CandidateReportPDF();
   const pdf = generator.generate(data);
-  const defaultFilename = `Reporte_Candidato_${data.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+  const safeName = fixMojibake(data.nombre).replace(/\s+/g, '_');
+  const defaultFilename = `Reporte_Candidato_${safeName}_${new Date().toISOString().split('T')[0]}.pdf`;
+
   pdf.save(filename || defaultFilename);
 }
