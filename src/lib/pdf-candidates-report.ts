@@ -16,6 +16,7 @@
 
 import jsPDF from 'jspdf';
 import { BAUSEN_LOGO_BASE64, BAUSEN_LOGO_RATIO } from './logo-base64';
+import { BECHAPRA_WATERMARK_B_BASE64 } from './watermarkBase64';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // COLORES DEL TEMA
@@ -92,6 +93,7 @@ export interface CandidatesReportData {
   fecha: string;
   cliente: string;
   candidatos: CandidateData[];
+  incluirMarcaAgua?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -233,6 +235,7 @@ export class CandidatesReportPDF {
   private margin: number = 12;
   private contentWidth: number;
   private yPos: number = 0;
+  private incluirMarcaAgua: boolean = true;
   
   constructor() {
     this.pdf = new jsPDF({
@@ -247,9 +250,66 @@ export class CandidatesReportPDF {
   }
   
   /**
+   * Aplica marca de agua con el logo de Bausen
+   * Se renderiza con opacidad sutil ENCIMA del contenido
+   * Posicionada en la parte inferior izquierda del documento
+   */
+  private aplicarMarcaAgua(): void {
+    if (!this.incluirMarcaAgua) return;
+    
+    const anyDoc = this.pdf as any;
+    const imgData = BECHAPRA_WATERMARK_B_BASE64;
+    
+    try {
+      // Obtener propiedades de la imagen para mantener aspect ratio
+      const props = anyDoc.getImageProperties(imgData);
+      const ratio = props.width / props.height;
+      
+      // Tamaño para marca de agua (75% del ancho de página)
+      const wmW = this.pageWidth * 0.75;
+      const wmH = wmW / ratio;
+      
+      // Posición: INFERIOR IZQUIERDA
+      const x = -18;
+      const y = this.pageHeight - wmH + 12;
+      
+      // Verificar si soporta estados gráficos para opacidad
+      const hasGState = typeof anyDoc.GState === 'function' && typeof anyDoc.setGState === 'function';
+      
+      // Guardar estado gráfico actual
+      if (typeof anyDoc.saveGraphicsState === 'function') {
+        anyDoc.saveGraphicsState();
+      }
+      
+      // Aplicar opacidad muy sutil (5%)
+      if (hasGState) {
+        anyDoc.setGState(new anyDoc.GState({ opacity: 0.05 }));
+      }
+      
+      // Dibujar marca de agua ENCIMA del contenido
+      anyDoc.addImage(imgData, 'PNG', x, y, wmW, wmH, 'WM_BAUSEN_CANDIDATES', 'FAST');
+      
+      // Restaurar estado gráfico a opacidad completa
+      if (hasGState) {
+        anyDoc.setGState(new anyDoc.GState({ opacity: 1 }));
+      }
+      if (typeof anyDoc.restoreGraphicsState === 'function') {
+        anyDoc.restoreGraphicsState();
+      }
+      
+      console.log('✅ [PDF Candidates] Marca de agua aplicada correctamente');
+    } catch (e) {
+      console.warn('⚠️ [PDF Candidates] Marca de agua no pudo renderizarse:', e);
+    }
+  }
+  
+  /**
    * Genera el reporte completo
    */
   generate(data: CandidatesReportData): jsPDF {
+    // Configurar opción de marca de agua
+    this.incluirMarcaAgua = data.incluirMarcaAgua !== false;
+    
     // Limpiar datos
     const cleanData: CandidatesReportData = {
       puesto: cleanText(data.puesto),
@@ -289,6 +349,9 @@ export class CandidatesReportPDF {
     
     // 6. Footer
     this.drawFooter();
+    
+    // 7. Aplicar marca de agua AL FINAL (se dibuja encima con opacidad)
+    this.aplicarMarcaAgua();
     
     return this.pdf;
   }

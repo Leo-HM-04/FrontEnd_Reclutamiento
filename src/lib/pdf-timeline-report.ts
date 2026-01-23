@@ -17,6 +17,7 @@
 
 import jsPDF from 'jspdf';
 import { BAUSEN_LOGO_BASE64 } from './logo-base64';
+import { BECHAPRA_WATERMARK_B_BASE64 } from './watermarkBase64';
 
 // ════════════════════════════════════════════════════════════════════════════
 // COLORES CORPORATIVOS (Sistema del PDF de referencia)
@@ -102,6 +103,9 @@ export interface TimelineReportData {
   
   // Eventos
   eventos: TimelineEvento[];
+  
+  // Opciones de diseño
+  incluirMarcaAgua?: boolean;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -116,6 +120,7 @@ export class TimelineReportPDF {
   private currentY: number;
   private pageNumber: number;
   private totalPages: number;
+  private incluirMarcaAgua: boolean = true;
 
   constructor() {
     this.doc = new jsPDF({
@@ -133,10 +138,67 @@ export class TimelineReportPDF {
     this.totalPages = 2;
   }
 
+  /**
+   * Aplica marca de agua con el logo de Bausen
+   * Se renderiza con opacidad sutil ENCIMA del contenido
+   * Posicionada en la parte inferior izquierda del documento
+   */
+  private aplicarMarcaAgua(): void {
+    if (!this.incluirMarcaAgua) return;
+    
+    const anyDoc = this.doc as any;
+    const imgData = BECHAPRA_WATERMARK_B_BASE64;
+    
+    try {
+      // Obtener propiedades de la imagen para mantener aspect ratio
+      const props = anyDoc.getImageProperties(imgData);
+      const ratio = props.width / props.height;
+      
+      // Tamaño para marca de agua (75% del ancho de página)
+      const wmW = this.pageWidth * 0.75;
+      const wmH = wmW / ratio;
+      
+      // Posición: INFERIOR IZQUIERDA
+      const x = -18;
+      const y = this.pageHeight - wmH + 12;
+      
+      // Verificar si soporta estados gráficos para opacidad
+      const hasGState = typeof anyDoc.GState === 'function' && typeof anyDoc.setGState === 'function';
+      
+      // Guardar estado gráfico actual
+      if (typeof anyDoc.saveGraphicsState === 'function') {
+        anyDoc.saveGraphicsState();
+      }
+      
+      // Aplicar opacidad muy sutil (5%)
+      if (hasGState) {
+        anyDoc.setGState(new anyDoc.GState({ opacity: 0.05 }));
+      }
+      
+      // Dibujar marca de agua ENCIMA del contenido
+      anyDoc.addImage(imgData, 'PNG', x, y, wmW, wmH, `WM_BAUSEN_TIMELINE_${this.pageNumber}`, 'FAST');
+      
+      // Restaurar estado gráfico a opacidad completa
+      if (hasGState) {
+        anyDoc.setGState(new anyDoc.GState({ opacity: 1 }));
+      }
+      if (typeof anyDoc.restoreGraphicsState === 'function') {
+        anyDoc.restoreGraphicsState();
+      }
+      
+      console.log(`✅ [PDF Timeline] Marca de agua aplicada correctamente en página ${this.pageNumber}`);
+    } catch (e) {
+      console.warn(`⚠️ [PDF Timeline] Marca de agua no pudo renderizarse en página ${this.pageNumber}:`, e);
+    }
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // GENERAR PDF COMPLETO
   // ══════════════════════════════════════════════════════════════════════════
   generate(data: TimelineReportData): jsPDF {
+    // Configurar opción de marca de agua
+    this.incluirMarcaAgua = data.incluirMarcaAgua !== false;
+    
     // Limpiar datos
     const cleanData = this.cleanAllData(data);
     
@@ -149,6 +211,9 @@ export class TimelineReportPDF {
     this.drawGanttDiagram(cleanData, metrics);
     this.drawFooter();
     
+    // Aplicar marca de agua a la página 1
+    this.aplicarMarcaAgua();
+    
     // ─── PÁGINA 2: Candidatos + Eficiencia + Eventos ───
     this.doc.addPage();
     this.pageNumber = 2;
@@ -159,6 +224,9 @@ export class TimelineReportPDF {
     this.drawEfficiencyComparison(metrics);
     this.drawEventsTimeline(cleanData);
     this.drawFooter();
+    
+    // Aplicar marca de agua a la página 2
+    this.aplicarMarcaAgua();
     
     return this.doc;
   }

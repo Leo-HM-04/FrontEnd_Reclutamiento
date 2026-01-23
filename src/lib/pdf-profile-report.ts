@@ -16,6 +16,7 @@
 
 import jsPDF from 'jspdf';
 import { BAUSEN_LOGO_BASE64, BAUSEN_LOGO_RATIO } from './logo-base64';
+import { BECHAPRA_WATERMARK_B_BASE64 } from './watermarkBase64';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // COLORES DEL TEMA
@@ -100,6 +101,9 @@ export interface ProfileReportData {
   technical_skills?: string[];
   soft_skills?: string[];
   languages?: string[];
+  
+  // Opciones de diseño
+  incluirMarcaAgua?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -109,23 +113,42 @@ export interface ProfileReportData {
 /**
  * Limpia texto con problemas de encoding UTF-8 y entidades HTML
  */
-function cleanText(text: string): string {
+function cleanText(text: string | any): string {
+  // Manejar valores no-string
   if (!text) return '';
+  if (typeof text !== 'string') {
+    console.warn('⚠️ [cleanText] Valor no-string recibido:', typeof text, text);
+    return String(text);
+  }
   
   let cleaned = text;
+  const original = text; // Guardar original para logging
   
   // 0. Detectar y corregir el patrón "&X" repetido (cada carácter precedido de &)
   // Este patrón ocurre cuando el texto ha sido mal procesado
   // Ejemplo: "&E&s&t&a&m&o&s" → "Estamos"
+  const ampersandCount = (cleaned.match(/&/g) || []).length;
+  const letterCount = cleaned.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑüÜ0-9]/g, '').length;
+  
+  // LOG: Si detectamos muchos &, reportar
+  if (ampersandCount > 5) {
+    console.log('🚨 [cleanText] Texto con muchos ampersands detectado:', {
+      original: original.substring(0, 100),
+      ampersandCount,
+      letterCount,
+      ratio: ampersandCount / letterCount,
+    });
+  }
+  
   if (/^&[^&]/.test(cleaned) || /&[a-zA-ZáéíóúñÁÉÍÓÚÑüÜ0-9]&/.test(cleaned)) {
     // Remover todos los & que preceden a caracteres individuales (no entidades HTML válidas)
     // Primero verificamos si parece ser este patrón específico
-    const ampersandCount = (cleaned.match(/&/g) || []).length;
-    const letterCount = cleaned.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑüÜ0-9]/g, '').length;
     
     // Si hay casi tantos & como letras, es el patrón problemático
     if (ampersandCount > letterCount * 0.5) {
+      console.log('🔧 [cleanText] Aplicando limpieza de ampersands...');
       cleaned = cleaned.replace(/&(?![a-z]+;|#\d+;|#x[0-9a-f]+;)/gi, '');
+      console.log('✅ [cleanText] Resultado después de limpiar:', cleaned.substring(0, 100));
     }
   }
   
@@ -239,6 +262,7 @@ export class ProfileReportPDF {
   private margin: number = 12; // mm (equivale a ~34pt)
   private contentWidth: number;
   private yPos: number = 0;
+  private incluirMarcaAgua: boolean = true; // Por defecto habilitada
   
   constructor() {
     // Tamaño carta: 215.9mm x 279.4mm
@@ -254,9 +278,74 @@ export class ProfileReportPDF {
   }
   
   /**
+   * Aplica marca de agua con el logo de Bausen
+   * Se renderiza con opacidad sutil ENCIMA del contenido
+   * Posicionada en el centro-inferior del documento para máxima visibilidad
+   */
+  private aplicarMarcaAgua(): void {
+    if (!this.incluirMarcaAgua) return;
+    
+    const anyDoc = this.pdf as any;
+    const imgData = BECHAPRA_WATERMARK_B_BASE64; // Usar la marca de agua oficial
+    
+    try {
+      // Obtener propiedades de la imagen para mantener aspect ratio
+      const props = anyDoc.getImageProperties(imgData);
+      const ratio = props.width / props.height;
+      
+      // Tamaño para marca de agua (75% del ancho de página)
+      const wmW = this.pageWidth * 0.75;
+      const wmH = wmW / ratio;
+      
+      // Posición: INFERIOR IZQUIERDA (ligeramente fuera para efecto profesional)
+      const x = -18; // Ligeramente hacia la izquierda
+      const y = this.pageHeight - wmH + 12; // Parte inferior con ligero ajuste
+      
+      // Verificar si soporta estados gráficos para opacidad
+      const hasGState = typeof anyDoc.GState === 'function' && typeof anyDoc.setGState === 'function';
+      
+      // Guardar estado gráfico actual
+      if (typeof anyDoc.saveGraphicsState === 'function') {
+        anyDoc.saveGraphicsState();
+      }
+      
+      // Aplicar opacidad muy sutil (5%)
+      // Este valor mantiene la marca visible pero muy discreta
+      if (hasGState) {
+        anyDoc.setGState(new anyDoc.GState({ opacity: 0.05 }));
+      }
+      
+      // Dibujar marca de agua ENCIMA del contenido
+      anyDoc.addImage(imgData, 'PNG', x, y, wmW, wmH, 'WM_BAUSEN_PROFILE', 'FAST');
+      
+      // Restaurar estado gráfico a opacidad completa
+      if (hasGState) {
+        anyDoc.setGState(new anyDoc.GState({ opacity: 1 }));
+      }
+      if (typeof anyDoc.restoreGraphicsState === 'function') {
+        anyDoc.restoreGraphicsState();
+      }
+      
+      console.log('✅ [PDF Profile] Marca de agua aplicada correctamente');
+    } catch (e) {
+      // Si falla, no romper el PDF
+      console.warn('⚠️ [PDF Profile] Marca de agua no pudo renderizarse:', e);
+    }
+  }
+  
+  /**
    * Genera el reporte completo
    */
   generate(data: ProfileReportData): jsPDF {
+    // LOG: Datos originales recibidos
+    console.log('📄 [PDF Profile] Datos originales recibidos:', {
+      puesto: data.puesto,
+      requisitos: data.requisitos,
+      technical_skills: data.technical_skills,
+      soft_skills: data.soft_skills,
+      languages: data.languages,
+    });
+    
     // Limpiar todos los textos
     const cleanData: ProfileReportData = {
       ...data,
@@ -271,12 +360,30 @@ export class ProfileReportPDF {
       supervisor: cleanText(data.supervisor),
       resumen_rol: cleanText(data.resumen_rol),
       requisitos: cleanText(data.requisitos || ''),
-      technical_skills: data.technical_skills || [],
-      soft_skills: data.soft_skills || [],
-      languages: data.languages || [],
+      technical_skills: (data.technical_skills || [])
+        .filter(skill => skill && (typeof skill === 'string' || typeof skill === 'number'))
+        .map(skill => cleanText(skill)),
+      soft_skills: (data.soft_skills || [])
+        .filter(skill => skill && (typeof skill === 'string' || typeof skill === 'number'))
+        .map(skill => cleanText(skill)),
+      languages: (data.languages || [])
+        .filter(lang => lang && (typeof lang === 'string' || typeof lang === 'number'))
+        .map(lang => cleanText(lang)),
       fecha: cleanText(data.fecha),
       estado: cleanText(data.estado),
     };
+    
+    // LOG: Datos después de limpiar
+    console.log('✅ [PDF Profile] Datos después de cleanText:', {
+      puesto: cleanData.puesto,
+      requisitos: cleanData.requisitos,
+      technical_skills: cleanData.technical_skills,
+      soft_skills: cleanData.soft_skills,
+      languages: cleanData.languages,
+    });
+    
+    // Configurar opción de marca de agua
+    this.incluirMarcaAgua = data.incluirMarcaAgua !== false; // Por defecto true
     
     this.yPos = this.margin;
     
@@ -303,6 +410,9 @@ export class ProfileReportPDF {
     
     // 6. Footer
     this.drawFooter();
+    
+    // 7. Aplicar marca de agua AL FINAL (se dibuja encima con opacidad)
+    this.aplicarMarcaAgua();
     
     return this.pdf;
   }
@@ -805,29 +915,46 @@ export class ProfileReportPDF {
     // Construir texto de requisitos completo
     const requisitosPartes: string[] = [];
     
+    // LOG: Verificar datos que llegan a la función de renderizado
+    console.log('📊 [PDF Profile] Renderizando requisitos:', {
+      technicalSkills,
+      softSkills,
+      languages,
+      requisitos,
+    });
+    
     // Habilidades Técnicas
     if (technicalSkills && technicalSkills.length > 0) {
-      requisitosPartes.push('• Técnicas: ' + technicalSkills.join(', '));
+      const skillsText = technicalSkills.join(', ');
+      console.log('🔧 Technical skills concatenadas:', skillsText);
+      requisitosPartes.push('• Técnicas: ' + skillsText);
     }
     
     // Habilidades Blandas
     if (softSkills && softSkills.length > 0) {
-      requisitosPartes.push('• Competencias: ' + softSkills.join(', '));
+      const skillsText = softSkills.join(', ');
+      console.log('💼 Soft skills concatenadas:', skillsText);
+      requisitosPartes.push('• Competencias: ' + skillsText);
     }
     
     // Idiomas
     if (languages && languages.length > 0) {
-      requisitosPartes.push('• Idiomas: ' + languages.join(', '));
+      const languagesText = languages.join(', ');
+      console.log('🌐 Languages concatenados:', languagesText);
+      requisitosPartes.push('• Idiomas: ' + languagesText);
     }
     
     // Requisitos Adicionales
     if (requisitos && requisitos.trim()) {
+      console.log('📝 Requisitos adicionales:', requisitos);
       requisitosPartes.push('• Otros: ' + requisitos);
     }
     
     const requisitosText = requisitosPartes.length > 0 
       ? requisitosPartes.join('\n') 
       : 'Sin requisitos especificados';
+    
+    console.log('📄 Texto final de requisitos:', requisitosText);
     
     // Texto de requisitos
     this.pdf.setFont('helvetica', 'normal');

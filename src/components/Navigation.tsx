@@ -79,6 +79,7 @@ export function Navigation({ userRole = 'admin' }: NavigationProps) {
               aria-expanded={isSidebarOpen}
             >
               <FontAwesomeIcon icon={isSidebarOpen ? faTimes : faBars} aria-hidden="true" />
+            </button>
             <Link href="/dashboard" className="ml-4 lg:ml-0">
               <h1 className="text-xl font-bold text-blue-600">RecruitPro</h1>
             </Link>

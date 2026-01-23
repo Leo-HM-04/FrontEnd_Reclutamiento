@@ -20,6 +20,7 @@
 
 import jsPDF from 'jspdf';
 import { BAUSEN_LOGO_BASE64 } from './logo-base64';
+import { BECHAPRA_WATERMARK_B_BASE64 } from './watermarkBase64';
 
 // ════════════════════════════════════════════════════════════════════════════
 // COLORES CORPORATIVOS
@@ -40,41 +41,77 @@ const COLORS = {
 // ════════════════════════════════════════════════════════════════════════════
 // FUNCIÓN PARA CORREGIR MOJIBAKE (UTF-8 mal interpretado como Latin-1)
 // ════════════════════════════════════════════════════════════════════════════
-function fixMojibake(text: string): string {
-  if (!text) return '';
+function fixMojibake(value: any): string {
+  if (value === null || value === undefined) return '';
+
+  let result = String(value);
   
-  // Mapa de correcciones mojibake más comunes
-  const mojibakeMap: { [key: string]: string } = {
-    // Vocales acentuadas
-    '├í': 'á', '├®': 'é', '├¡': 'í', '├│': 'ó', '├║': 'ú',
-    '├ü': 'Á', '├ë': 'É', '├ì': 'Í', '├ô': 'Ó', '├Ü': 'Ú',
-    // Ñ
-    '├▒': 'ñ', '├æ': 'Ñ',
-    // Diéresis
-    '├╝': 'ü', '├£': 'Ü',
-    // Otros
-    '%í': 'á', '%®': 'é', '%¡': 'í', '%ó': 'ó', '%ú': 'ú',
-    '%ñ': 'ñ', '%Ñ': 'Ñ',
-    // Patrones adicionales que pueden aparecer (escapados para evitar errores de sintaxis)
-    '\u00c3\u00a1': 'á', '\u00c3\u00a9': 'é', '\u00c3\u00ad': 'í', '\u00c3\u00b3': 'ó', '\u00c3\u00ba': 'ú',
-    '\u00c3\u00b1': 'ñ', '\u00c3\u0091': 'Ñ',
-    '\u00c3\u00bc': 'ü', '\u00c3\u0081': 'Á',
-    // Patrones URL encoded
-    '%C3%A1': 'á', '%C3%A9': 'é', '%C3%AD': 'í', '%C3%B3': 'ó', '%C3%BA': 'ú',
-    '%C3%B1': 'ñ', '%C3%91': 'Ñ',
-  };
+  // Detectar si el texto tiene patron de corrupcion con ampersands
+  const ampersandCount = (result.match(/&/g) || []).length;
   
-  let result = text;
-  
-  // Aplicar todas las correcciones
-  for (const [corrupted, correct] of Object.entries(mojibakeMap)) {
-    result = result.split(corrupted).join(correct);
+  // DEBUG: Log para verificar que la funcion se ejecuta
+  if (ampersandCount >= 3) {
+    console.log('[fixMojibake] INPUT:', result.substring(0, 50));
   }
   
+  // Si hay 3+ ampersands, probablemente esta corrupto
+  if (ampersandCount >= 3) {
+    // Quitar basura al inicio (caracteres especiales antes del primer &)
+    result = result.replace(/^[^a-zA-Z0-9&]+/, '');
+    
+    // Extraer caracteres usando un algoritmo que preserva espacios
+    let finalResult = '';
+    let i = 0;
+    while (i < result.length) {
+      if (result[i] === '&') {
+        if (i + 1 < result.length && result[i + 1] === ' ') {
+          // '& ' significa un espacio
+          finalResult += ' ';
+          i += 2;
+        } else if (i + 1 < result.length && /[a-zA-Z0-9]/.test(result[i + 1])) {
+          // '&X' donde X es letra/numero - extraer X
+          finalResult += result[i + 1];
+          i += 2;
+        } else {
+          // Saltar el & solo
+          i++;
+        }
+      } else if (result[i] === ' ') {
+        // Espacio normal
+        finalResult += ' ';
+        i++;
+      } else if (/[a-zA-Z0-9]/.test(result[i])) {
+        // Caracter alfanumerico suelto (raro pero posible)
+        finalResult += result[i];
+        i++;
+      } else {
+        // Saltar otros caracteres
+        i++;
+      }
+    }
+    
+    // DEBUG: Log del resultado
+    console.log('[fixMojibake] OUTPUT:', finalResult.substring(0, 50));
+    
+    // Limpiar espacios multiples y retornar
+    return finalResult.replace(/\s+/g, ' ').trim();
+  }
+
+  // Si no hay ampersands, limpieza normal
+  result = result
+    .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(parseInt(code, 10)))
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
   return result;
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+
 // INTERFACES
 // ════════════════════════════════════════════════════════════════════════════
 export interface CandidateReportData {
@@ -122,8 +159,8 @@ export interface CandidateReportData {
     template: string;
     categoria?: string;
     estado: string;
-    puntaje?: number;
-    aprobado?: boolean;
+    puntaje?: number | null;
+    aprobado?: boolean | null;
     fecha?: string;
   }>;
   
@@ -141,6 +178,9 @@ export interface CandidateReportData {
     autor?: string;
     fecha: string;
   }>;
+  
+  // Opciones de diseño
+  incluirMarcaAgua?: boolean;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -153,6 +193,8 @@ export class CandidateReportPDF {
   private margin: number;
   private contentWidth: number;
   private currentY: number;
+  private incluirMarcaAgua: boolean = true;
+  private pageNumber: number = 1;
 
   constructor() {
     this.doc = new jsPDF({
@@ -167,11 +209,59 @@ export class CandidateReportPDF {
     this.contentWidth = this.pageWidth - (this.margin * 2);
     this.currentY = this.margin;
   }
+  
+  /**
+   * Aplica marca de agua con el logo de Bausen
+   * Se renderiza con opacidad sutil ENCIMA del contenido
+   */
+  private aplicarMarcaAgua(): void {
+    if (!this.incluirMarcaAgua) return;
+    
+    const anyDoc = this.doc as any;
+    const imgData = BECHAPRA_WATERMARK_B_BASE64;
+    
+    try {
+      const props = anyDoc.getImageProperties(imgData);
+      const ratio = props.width / props.height;
+      
+      const wmW = this.pageWidth * 0.75;
+      const wmH = wmW / ratio;
+      
+      const x = -18;
+      const y = this.pageHeight - wmH + 12;
+      
+      const hasGState = typeof anyDoc.GState === 'function' && typeof anyDoc.setGState === 'function';
+      
+      if (typeof anyDoc.saveGraphicsState === 'function') {
+        anyDoc.saveGraphicsState();
+      }
+      
+      if (hasGState) {
+        anyDoc.setGState(new anyDoc.GState({ opacity: 0.05 }));
+      }
+      
+      anyDoc.addImage(imgData, 'PNG', x, y, wmW, wmH, `WM_BAUSEN_CANDIDATE_${this.pageNumber}`, 'FAST');
+      
+      if (hasGState) {
+        anyDoc.setGState(new anyDoc.GState({ opacity: 1 }));
+      }
+      if (typeof anyDoc.restoreGraphicsState === 'function') {
+        anyDoc.restoreGraphicsState();
+      }
+      
+      console.log(`✅ [PDF Candidate] Marca de agua aplicada en página ${this.pageNumber}`);
+    } catch (e) {
+      console.warn(`⚠️ [PDF Candidate] Error al aplicar marca de agua:`, e);
+    }
+  }
 
   // ══════════════════════════════════════════════════════════════════════════
   // GENERAR PDF COMPLETO
   // ══════════════════════════════════════════════════════════════════════════
   generate(data: CandidateReportData): jsPDF {
+    // Configurar marca de agua
+    this.incluirMarcaAgua = data.incluirMarcaAgua !== false;
+    
     // Limpiar todos los textos
     const cleanData: CandidateReportData = {
       nombre: fixMojibake(data.nombre),
@@ -227,6 +317,9 @@ export class CandidateReportPDF {
     this.drawSkills(cleanData);
     this.drawApplicationsTable(cleanData);
     
+    // Aplicar marca de agua en página 1
+    this.aplicarMarcaAgua();
+    
     // Página 2 (si hay contenido adicional)
     const hasAdditionalContent = 
       (cleanData.evaluaciones && cleanData.evaluaciones.length > 0) ||
@@ -235,11 +328,15 @@ export class CandidateReportPDF {
     
     if (hasAdditionalContent) {
       this.doc.addPage();
+      this.pageNumber = 2;
       this.currentY = this.margin;
       this.drawSecondaryHeader(cleanData);
       this.drawEvaluationsSection(cleanData);
       this.drawDocumentsSection(cleanData);
       this.drawNotesSection(cleanData);
+      
+      // Aplicar marca de agua en página 2
+      this.aplicarMarcaAgua();
     }
     
     this.drawFooter();
@@ -337,7 +434,7 @@ export class CandidateReportPDF {
   // ══════════════════════════════════════════════════════════════════════════
   private drawKPIs(data: CandidateReportData): void {
     const kpiY = this.currentY;
-    const kpiHeight = 22;
+    const kpiHeight = 20; // Reducido de 22 a 20
     const kpiWidth = (this.contentWidth - 9) / 4;
     const gap = 3;
     
@@ -368,15 +465,15 @@ export class CandidateReportPDF {
       
       // Valor grande
       this.doc.setFont('helvetica', 'bold');
-      this.doc.setFontSize(14);
+      this.doc.setFontSize(13); // Reducido de 14 a 13
       this.doc.setTextColor(kpi.color.r, kpi.color.g, kpi.color.b);
-      this.doc.text(kpi.value, x + kpiWidth / 2, kpiY + 12, { align: 'center' });
+      this.doc.text(kpi.value, x + kpiWidth / 2, kpiY + 11, { align: 'center' }); // Ajustado de 12 a 11
       
       // Label
       this.doc.setFont('helvetica', 'normal');
       this.doc.setFontSize(7);
       this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
-      this.doc.text(kpi.label, x + kpiWidth / 2, kpiY + 19, { align: 'center' });
+      this.doc.text(kpi.label, x + kpiWidth / 2, kpiY + 17.5, { align: 'center' }); // Ajustado de 19 a 17.5
     });
     
     this.currentY = kpiY + kpiHeight + 6;
@@ -386,8 +483,8 @@ export class CandidateReportPDF {
   // CARDS DE INFO EN 2 COLUMNAS
   // ══════════════════════════════════════════════════════════════════════════
   private drawInfoCards(data: CandidateReportData): void {
-    const cardWidth = (this.contentWidth - 4) / 2;
-    const cardHeight = 48;
+    const cardWidth = (this.contentWidth - 6) / 2;
+    const cardHeight = 42; // Altura ajustada para 4 items
     const cardY = this.currentY;
     
     // ─────────────────────────────────────────────────────────
@@ -465,23 +562,23 @@ export class CandidateReportPDF {
     this.doc.line(x + 6, y + 11, x + width - 6, y + 11);
     
     // Items
-    let itemY = y + 18;
-    const itemGap = 9;
+    let itemY = y + 14; // Más compacto
+    const itemGap = 7; // Gap reducido para que quepan 4 items
     
     items.forEach((item) => {
-      // Label
+      // Label + Value en una sola línea
       this.doc.setFont('helvetica', 'normal');
-      this.doc.setFontSize(7);
+      this.doc.setFontSize(6);
       this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
-      this.doc.text(item.label, x + 6, itemY);
+      this.doc.text(item.label + ':', x + 6, itemY);
       
-      // Value
+      // Value al lado del label
       this.doc.setFont('helvetica', 'bold');
-      this.doc.setFontSize(8);
+      this.doc.setFontSize(7);
       this.doc.setTextColor(COLORS.dark.r, COLORS.dark.g, COLORS.dark.b);
-      const maxValueWidth = width - 12;
-      const truncatedValue = this.truncateText(item.value, maxValueWidth, 8);
-      this.doc.text(truncatedValue, x + 6, itemY + 5);
+      const maxValueWidth = width - 35;
+      const truncatedValue = this.truncateText(item.value, maxValueWidth, 7);
+      this.doc.text(truncatedValue, x + 28, itemY);
       
       itemY += itemGap;
     });
