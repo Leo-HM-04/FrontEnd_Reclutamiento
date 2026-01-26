@@ -25,6 +25,7 @@ import {
   getStatusLabel,
   getStatusBadgeType,
 } from '@/lib/pdf-generator';
+import { downloadConsolidatedReportPDF } from '@/lib/pdf-consolidated-report';
 
 // ═══════════════════════════════════════════════════════════════════
 // INTERFACES DETALLADAS
@@ -460,8 +461,8 @@ export default function FullConsolidatedReport({ onBack }: Props) {
             phone: c.phone || c.phone_number || 'N/A',
             status: c.status || 'new',
             profile_id: c.profile_id || c.profile || 0,
-            profile_title: c.profile_title || c.profile_name || profile?.position_title || 'Sin perfil asignado',
-            client_name: client?.company_name || c.client_name || 'N/A',
+            profile_title: profile?.position_title || 'Sin perfil asignado',
+            client_name: client?.company_name || 'N/A',
             source: c.source || 'Directo',
             created_at: c.created_at,
             updated_at: c.updated_at,
@@ -496,108 +497,118 @@ export default function FullConsolidatedReport({ onBack }: Props) {
     
     setExporting(true);
     try {
-      const successRate = data.summary.total_profiles ? 
-        Math.round((data.summary.profiles_completed / data.summary.total_profiles) * 100) : 0;
-
-      // ═══════════════════════════════════════════════
-      // CONSTRUIR REPORTE COMPLETO
-      // ═══════════════════════════════════════════════
-      let content = '';
+      // Obtener datos filtrados
+      const filteredData = getFilteredData();
       
-      // KPIs principales
-      content += generateKPIRow([
-        { label: 'Total Perfiles', value: data.summary.total_profiles, type: 'primary' },
-        { label: 'Total Candidatos', value: data.summary.total_candidates, type: 'accent' },
-        { label: 'Total Clientes', value: data.summary.total_clients, type: 'success' },
-        { label: 'Tasa de Éxito', value: `${successRate}%`, type: 'warning' },
-      ]);
-
-      // Estadísticas generales
-      content += generateSectionTitle('📊 Estadísticas Generales');
-      content += generateInfoGrid([
-        { label: 'Perfiles Completados', value: String(data.summary.profiles_completed) },
-        { label: 'Candidatos Contratados', value: String(data.summary.candidates_hired) },
-        { label: 'Perfiles Activos', value: String(data.summary.total_profiles - data.summary.profiles_completed) },
-        { label: 'Promedio días por cierre', value: data.summary.avg_time_to_fill ? `${data.summary.avg_time_to_fill} días` : 'N/A' },
-      ]);
-
-      // ═══════════════════════════════════════════════
-      // SECCIÓN: TODOS LOS PERFILES DETALLADOS
-      // ═══════════════════════════════════════════════
-      content += generateSectionTitle('📋 Perfiles (Información Detallada)');
+      // Calcular tasa de éxito
+      const successRate = data.summary.total_profiles > 0 
+        ? Math.round((data.summary.profiles_completed / data.summary.total_profiles) * 100) 
+        : 0;
       
-      data.profiles.forEach((profile, idx) => {
-        // Info del perfil
-        content += generateInfoGrid([
-          { label: `#${idx + 1} - Posición`, value: profile.position_title },
-          { label: 'Cliente', value: profile.client_name },
-          { label: 'Estado', value: getStatusLabel(profile.status) },
-          { label: 'Prioridad', value: profile.priority === 'high' ? 'Alta' : profile.priority === 'urgent' ? 'Urgente' : 'Normal' },
-          { label: 'Ubicación', value: `${profile.location_city}, ${profile.location_state}` },
-          { label: 'Modalidad', value: profile.work_modality },
-          { label: 'Salario', value: profile.salary_min > 0 ? `${formatCurrency(profile.salary_min)} - ${formatCurrency(profile.salary_max)} ${profile.salary_period}` : 'N/A' },
-          { label: 'Experiencia Requerida', value: `${profile.years_experience} años` },
-          { label: 'Nivel Educativo', value: profile.education_level },
-          { label: 'Tipo de Servicio', value: profile.service_type },
-          { label: 'Candidatos', value: String(profile.candidates_count) },
-          { label: 'Días Abierto', value: `${profile.days_open} días` },
-        ]);
-      });
-
-      // ═══════════════════════════════════════════════
-      // SECCIÓN: TODOS LOS CLIENTES DETALLADOS
-      // ═══════════════════════════════════════════════
-      content += generateSectionTitle('🏢 Clientes (Información Detallada)');
+      // Determinar tipo de filtro aplicado
+      let filterInfo: { type: 'all' | 'client' | 'profile'; clientId?: number; clientName?: string; profileId?: number; profileTitle?: string } = { type: 'all' };
       
-      data.clients.forEach((client, idx) => {
-        content += generateInfoGrid([
-          { label: `#${idx + 1} - Empresa`, value: client.company_name },
-          { label: 'Industria', value: client.industry },
-          { label: 'Contacto', value: client.contact_name },
-          { label: 'Email', value: client.contact_email },
-          { label: 'Teléfono', value: client.contact_phone },
-          { label: 'Perfiles Activos', value: String(client.active_profiles) },
-          { label: 'Total Perfiles', value: String(client.total_profiles) },
-          { label: 'Candidatos Contratados', value: String(client.total_candidates_hired) },
-        ]);
-      });
+      if (selectedClientFilter) {
+        const client = data.clients.find(c => c.id === selectedClientFilter);
+        filterInfo = {
+          type: 'client',
+          clientId: selectedClientFilter,
+          clientName: client?.company_name || 'N/A',
+        };
+      } else if (selectedProfileFilter) {
+        const profile = data.profiles.find(p => p.id === selectedProfileFilter);
+        filterInfo = {
+          type: 'profile',
+          profileId: selectedProfileFilter,
+          profileTitle: profile?.position_title || 'N/A',
+        };
+      }
 
-      // ═══════════════════════════════════════════════
-      // SECCIÓN: TODOS LOS CANDIDATOS
-      // ═══════════════════════════════════════════════
-      content += generateSectionTitle('👥 Candidatos (Información Detallada)');
-      
-      // Tabla de candidatos
-      const candidateData = data.candidates.map((c, idx) => ({
-        num: idx + 1,
-        nombre: c.full_name,
-        email: c.email,
-        telefono: c.phone,
-        estado: getStatusLabel(c.status),
-        perfil: c.profile_title.substring(0, 25),
-      }));
-      
-      content += generateTable(
-        [
-          { key: 'num', header: '#', width: 8 },
-          { key: 'nombre', header: 'Nombre', width: 40 },
-          { key: 'email', header: 'Email', width: 45 },
-          { key: 'estado', header: 'Estado', width: 25 },
-          { key: 'perfil', header: 'Perfil', width: 40 },
-        ],
-        candidateData,
-        { maxRows: 50 }
-      );
+      // Construir datos para el generador de PDF
+      const reportData = {
+        filter: filterInfo,
+        summary: {
+          total_profiles: filteredData.profiles.length,
+          total_candidates: filteredData.candidates.length,
+          total_clients: filteredData.clients.length,
+          profiles_completed: filteredData.profiles.filter(p => p.status === 'completed').length,
+          candidates_hired: filteredData.candidates.filter(c => c.status === 'hired').length,
+          avg_time_to_fill: data.summary.avg_time_to_fill || 0,
+          success_rate: successRate,
+          profiles_by_status: filteredData.profiles.reduce((acc, p) => {
+            acc[p.status] = (acc[p.status] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          candidates_by_status: filteredData.candidates.reduce((acc, c) => {
+            acc[c.status] = (acc[c.status] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+        },
+        profiles: filteredData.profiles.map(p => ({
+          id: p.id,
+          position_title: p.position_title,
+          client_name: p.client_name,
+          client_id: p.client_id,
+          status: p.status,
+          priority: p.priority,
+          created_at: p.created_at,
+          candidates_count: p.candidates_count,
+          shortlisted_count: p.shortlisted_count,
+          interviewed_count: p.interviewed_count,
+          salary_min: p.salary_min,
+          salary_max: p.salary_max,
+          location_city: p.location_city,
+          location_state: p.location_state,
+          work_modality: p.work_modality,
+          years_experience: p.years_experience,
+          education_level: p.education_level,
+          days_open: p.days_open,
+          candidates_by_status: p.candidates_by_status,
+        })),
+        clients: filteredData.clients.map(c => ({
+          id: c.id,
+          company_name: c.company_name,
+          industry: c.industry,
+          contact_name: c.contact_name,
+          contact_email: c.contact_email,
+          contact_phone: c.contact_phone,
+          active_profiles: c.active_profiles,
+          total_profiles: c.total_profiles,
+          total_candidates_hired: c.total_candidates_hired,
+          total_candidates: c.total_candidates,
+          profiles_completed: c.profiles_completed,
+          success_rate: c.success_rate,
+          profiles_by_status: c.profiles_by_status,
+        })),
+        candidates: filteredData.candidates.map(c => ({
+          id: c.id,
+          full_name: c.full_name,
+          email: c.email,
+          phone: c.phone,
+          status: c.status,
+          profile_id: c.profile_id,
+          profile_title: c.profile_title,
+          client_name: c.client_name,
+          matching_score: c.matching_score,
+          current_position: c.current_position,
+          current_company: c.current_company,
+          years_experience: c.years_experience,
+          city: c.city,
+          state: c.state,
+        })),
+      };
 
-      // Generar PDF
-      const htmlContent = wrapInPage(content, {
-        title: 'Reporte Consolidado Completo',
-        subtitle: 'Información Detallada de Perfiles, Clientes y Candidatos',
-      });
+      // Generar nombre de archivo
+      let filename = 'Reporte_General_Consolidado';
+      if (filterInfo.type === 'client') {
+        filename = `Reporte_Cliente_${filterInfo.clientName?.replace(/\s+/g, '_')}`;
+      } else if (filterInfo.type === 'profile') {
+        filename = `Reporte_Perfil_${filterInfo.profileTitle?.substring(0, 30).replace(/\s+/g, '_')}`;
+      }
+      filename += `_${new Date().toISOString().split('T')[0]}.pdf`;
 
-      await generatePDF(htmlContent, {
-        filename: `reporte-consolidado-completo-${new Date().toISOString().split('T')[0]}.pdf`,
-      });
+      // Generar PDF con el nuevo generador
+      downloadConsolidatedReportPDF(reportData, filename);
       
       await showAlert('✅ Reporte PDF generado exitosamente');
     } catch (error) {

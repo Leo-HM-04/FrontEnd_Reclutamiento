@@ -1040,8 +1040,8 @@ export class CandidateReportPDF {
       this.doc.setTextColor(COLORS.gray.r, COLORS.gray.g, COLORS.gray.b);
       this.doc.text(doc.tipo, this.margin + 120, itemY + 3);
       
-      // Fecha
-      this.doc.text(doc.fecha, this.pageWidth - this.margin - 20, itemY + 3);
+      // Fecha (alineada a la derecha dentro del contenedor)
+      this.doc.text(doc.fecha, this.margin + this.contentWidth - 4, itemY + 3, { align: 'right' });
       
       itemY += 8;
     });

@@ -12,15 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { useModal } from '@/context/ModalContext';
 import { getClientFullReport, formatDate, getStatusColor, type ClientFullReportData } from '@/lib/api-reports';
 import * as XLSX from 'xlsx';
-import {
-  generatePDF,
-  generateHeader,
-  generateKPIRow,
-  generateSection,
-  generateInfoGrid,
-  generateTable,
-  wrapInPage,
-} from '@/lib/pdf-generator';
+import { downloadClientReportPDF } from '@/lib/pdf-client-report';
 
 interface Props {
   clientId: number;
@@ -96,78 +88,54 @@ export default function ClientFullReport({ clientId, onBack, onViewProfile }: Pr
     
     setExporting(true);
     try {
-      let htmlContent = '';
+      // Preparar datos para el generador
+      const reportData = {
+        client: {
+          company_name: data.client.company_name,
+          industry: data.client.industry,
+          website: data.client.website,
+          contact_name: data.client.contact_name,
+          contact_email: data.client.contact_email,
+          contact_phone: data.client.contact_phone,
+          address: data.client.address,
+          city: data.client.city,
+          state: data.client.state,
+          notes: data.client.notes || '',
+        },
+        statistics: {
+          total_profiles: data.statistics.total_profiles,
+          completed_profiles: data.statistics.completed_profiles,
+          active_profiles: data.statistics.active_profiles,
+          success_rate: data.statistics.success_rate,
+          avg_days_to_complete: data.statistics.avg_days_to_complete,
+          total_candidates_managed: data.statistics.total_candidates_managed,
+        },
+        profiles: data.profiles.map(profile => ({
+          title: profile.position_title || profile.title || 'Sin título',
+          status_display: profile.status_display || 'N/A',
+          priority: profile.priority || 'N/A',
+          candidates_count: profile.candidates_count || 0,
+          created_at: profile.created_at,
+          end_date: profile.completed_at || undefined,
+        })),
+        profiles_by_status: data.profiles_by_status,
+      };
 
-      // Header institucional
-      htmlContent += generateHeader('REPORTE DE CLIENTE', data.client.company_name);
-
-      // KPIs principales
-      htmlContent += generateKPIRow([
-        { label: 'Perfiles', value: data.statistics.total_profiles, type: 'primary' },
-        { label: 'Activos', value: data.statistics.active_profiles, type: 'success' },
-        { label: 'Completados', value: data.statistics.completed_profiles, type: 'accent' },
-        { label: 'Tasa de Éxito', value: `${data.statistics.success_rate}%`, type: 'warning' },
-      ]);
-
-      // Información del cliente
-      htmlContent += generateSection('Información General',
-        generateInfoGrid([
-          { label: 'Industria', value: data.client.industry || 'N/A' },
-          { label: 'Sitio Web', value: data.client.website || 'N/A' },
-        ])
-      );
-
-      // Contacto principal
-      htmlContent += generateSection('Contacto Principal',
-        generateInfoGrid([
-          { label: 'Nombre', value: data.client.contact_name },
-          { label: 'Email', value: data.client.contact_email },
-          { label: 'Teléfono', value: data.client.contact_phone || 'N/A' },
-        ])
-      );
-
-      // Ubicación
-      htmlContent += generateSection('Ubicación',
-        generateInfoGrid([
-          { label: 'Dirección', value: data.client.address || 'N/A' },
-          { label: 'Ciudad', value: `${data.client.city || 'N/A'}, ${data.client.state || 'N/A'}` },
-        ])
-      );
-
-      // Tabla de perfiles
-      if (data.profiles.length > 0) {
-        htmlContent += generateSection('Perfiles / Vacantes',
-          generateTable(
-            [
-              { key: 'position', header: 'Posición' },
-              { key: 'status', header: 'Estado' },
-              { key: 'candidates', header: 'Candidatos' },
-            ],
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            data.profiles.slice(0, 15).map((profile: any) => ({
-              position: profile.position_title.substring(0, 35),
-              status: profile.status_display,
-              candidates: String(profile.candidates_count),
-            }))
-          )
-        );
-      }
-
-      // Envolver en página completa con estilos
-      const fullHtml = wrapInPage(htmlContent, { title: 'REPORTE DE CLIENTE', subtitle: data.client.company_name });
-
+      // Generar nombre de archivo
+      const filename = `Cliente_${data.client.company_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      
       // Generar PDF
-      await generatePDF(fullHtml, {
-        filename: `Cliente_${data.client.company_name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
-      });
+      downloadClientReportPDF(reportData, filename);
 
       await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
+      await showAlert('❌ Error al generar el PDF');
     } finally {
       setExporting(false);
     }
   };
+
 
   // ═══════════════════════════════════════════════
   // EXPORTAR A EXCEL
