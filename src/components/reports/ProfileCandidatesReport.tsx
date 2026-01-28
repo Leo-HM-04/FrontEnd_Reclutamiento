@@ -11,7 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useModal } from '@/context/ModalContext';
 import { getProfileCandidates, formatDate, getStatusColor, type ProfileCandidatesData } from '@/lib/api-reports';
-import jsPDF from 'jspdf';
+import { downloadCandidatesReportPDF, type CandidatesReportData, type CandidateData } from '@/lib/pdf-candidates-report';
 import * as XLSX from 'xlsx';
 
 interface Props {
@@ -50,7 +50,7 @@ export default function ProfileCandidatesReport({ profileId, onBack, onViewCandi
   };
 
   // ═══════════════════════════════════════════════
-  // EXPORTAR A PDF
+  // EXPORTAR A PDF (USANDO GENERADOR MODERNO)
   // ═══════════════════════════════════════════════
   const handleExportPDF = async () => {
 
@@ -58,123 +58,34 @@ export default function ProfileCandidatesReport({ profileId, onBack, onViewCandi
     
     setExporting(true);
     try {
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
+      // Mapear datos al formato esperado por el generador de PDF moderno
+      const candidatosData: CandidateData[] = data.candidates.map(candidate => ({
+        nombre: candidate.full_name,
+        email: candidate.email,
+        estado: candidate.status_display,
+        match_porcentaje: candidate.match_percentage || 0,
+        applied_at: candidate.applied_at,
+        interview_date: candidate.interview_date || undefined,
+        offer_date: candidate.offer_date || undefined,
+        status_history: [] // El historial se puede agregar si está disponible
+      }));
 
-      let yPos = 20;
-      const leftMargin = 20;
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      const checkNewPage = (height: number) => {
-        if (yPos + height > pageHeight - 20) {
-          pdf.addPage();
-          yPos = 20;
-        }
+      const reportData: CandidatesReportData = {
+        puesto: data.profile.title,
+        cliente: data.profile.client,
+        fecha: new Date().toLocaleDateString('es-MX', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        candidatos: candidatosData,
+        incluirMarcaAgua: true
       };
 
-      // HEADER
-      pdf.setFillColor(147, 51, 234);
-      pdf.rect(0, 0, pageWidth, 50, 'F');
-      
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(24);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('CANDIDATOS DEL PERFIL', leftMargin, 25);
-      
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(data.profile.title, leftMargin, 35);
-      pdf.text(data.profile.client, leftMargin, 42);
+      // Generar y descargar el PDF con el diseño moderno tipo dashboard
+      const filename = `Candidatos_${data.profile.title.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      downloadCandidatesReportPDF(reportData, filename);
 
-      yPos = 60;
-      pdf.setTextColor(0, 0, 0);
-
-      // RESUMEN
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Resumen', leftMargin, yPos);
-      yPos += 10;
-
-      const stats = [
-        { label: 'Total', value: data.summary.total_candidates, color: [147, 51, 234] },
-        { label: 'Match Promedio', value: `${data.summary.avg_match_percentage}%`, color: [34, 197, 94] },
-      ];
-
-      let xPos = leftMargin;
-      stats.forEach((stat) => {
-        pdf.setFillColor(stat.color[0], stat.color[1], stat.color[2]);
-        pdf.roundedRect(xPos, yPos, 60, 25, 3, 3, 'F');
-        
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(18);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(stat.value.toString(), xPos + 30, yPos + 12, { align: 'center' });
-        
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(stat.label, xPos + 30, yPos + 20, { align: 'center' });
-        
-        xPos += 70;
-      });
-
-      pdf.setTextColor(0, 0, 0);
-      yPos += 35;
-
-      // CANDIDATOS
-      checkNewPage(20);
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Lista de Candidatos', leftMargin, yPos);
-      yPos += 10;
-
-      pdf.setFontSize(10);
-      data.candidates.forEach((candidate, index) => {
-        checkNewPage(40);
-        
-        // Nombre
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`${index + 1}. ${candidate.full_name}`, leftMargin, yPos);
-        yPos += 6;
-        
-        pdf.setFont('helvetica', 'normal');
-        pdf.text(`Email: ${candidate.email}`, leftMargin + 5, yPos);
-        yPos += 5;
-        
-        if (candidate.phone) {
-          pdf.text(`Tel: ${candidate.phone}`, leftMargin + 5, yPos);
-          yPos += 5;
-        }
-        
-        pdf.text(`Estado: ${candidate.status_display}`, leftMargin + 5, yPos);
-        yPos += 5;
-        
-        if (candidate.match_percentage !== null) {
-          pdf.text(`Match: ${candidate.match_percentage}%`, leftMargin + 5, yPos);
-          yPos += 5;
-        }
-        
-        yPos += 3;
-      });
-
-      // FOOTER
-      const pageCount = pdf.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text(
-          `Generado el ${new Date().toLocaleDateString('es-MX')} - Página ${i} de ${pageCount}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: 'center' }
-        );
-      }
-
-      pdf.save(`Candidatos_${data.profile.title}_${new Date().toISOString().split('T')[0]}.pdf`);
       await showAlert('✅ PDF generado exitosamente');
     } catch (error) {
       console.error('Error al exportar PDF:', error);
