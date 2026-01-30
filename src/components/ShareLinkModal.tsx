@@ -28,6 +28,8 @@ interface ShareLinkModalProps {
   profileTitle: string;
   clientName: string;
   onRevoke?: () => void;
+  // Modo: 'progress' muestra "Compartir Avance"; 'form' muestra "Compartir Formulario Público"
+  mode?: 'progress' | 'form';
 }
 
 // ============================================================
@@ -41,6 +43,7 @@ export default function ShareLinkModal({
   profileTitle,
   clientName,
   onRevoke,
+  mode = 'progress',
 }: ShareLinkModalProps) {
   const [copied, setCopied] = useState(false);
 
@@ -97,12 +100,12 @@ export default function ShareLinkModal({
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mr-4">
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${mode === 'form' ? 'bg-orange-600' : 'bg-blue-600'}`}>
                 <i className="fas fa-share-alt text-white text-xl"></i>
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Compartir Avance</h2>
-                <p className="text-sm text-gray-600 mt-1">Enlace público del progreso</p>
+                <h2 className="text-2xl font-bold text-gray-900">{mode === 'form' ? 'Compartir Formulario Público' : 'Compartir Avance'}</h2>
+                <p className="text-sm text-gray-600 mt-1">{mode === 'form' ? 'Enlace público para que cualquiera complete el formulario y cree un perfil' : 'Enlace público del progreso'}</p>
               </div>
             </div>
             <button
@@ -136,7 +139,7 @@ export default function ShareLinkModal({
             {/* Enlace para Compartir */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <i className="fas fa-link mr-2 text-blue-600"></i>
+                <i className={`fas fa-link mr-2 ${mode === 'form' ? 'text-orange-600' : 'text-blue-600'}`}></i>
                 Enlace para Compartir
               </label>
               <div className="flex items-center gap-2">
@@ -151,7 +154,7 @@ export default function ShareLinkModal({
                   className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
                     copied
                       ? 'bg-green-600 text-white'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      : `${mode === 'form' ? 'bg-orange-600 hover:bg-orange-700 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'}`
                   }`}
                 >
                   <i className={`fas ${copied ? 'fa-check-circle' : 'fa-copy'}`}></i>

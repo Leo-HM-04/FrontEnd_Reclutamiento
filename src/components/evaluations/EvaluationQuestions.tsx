@@ -24,6 +24,7 @@ export default function EvaluationQuestions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<EvaluationQuestion | null>(null);
+  const { showAlert, showConfirm } = useModal();
 
   const questionTypes = [
     { value: "multiple_choice", label: "Opción Múltiple" },

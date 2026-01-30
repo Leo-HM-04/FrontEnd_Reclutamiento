@@ -11,6 +11,7 @@ import ProfileStats from "./ProfileStats";
 import CVAnalysisModal from "./CVAnalysisModal";
 import ProfileGenerationModal from "./ProfileGenerationModal";
 import BulkCVUploadModal from "./BulkCVUploadModal";
+import ShareProfileForm from "./ShareProfileForm";
 import { apiClient } from "@/lib/api";
 
 
@@ -22,6 +23,7 @@ type ProfileView =
   | "profile-history" 
   | "profile-documents"
   | "profile-stats"
+  | "share-profile-form"
   | "ai-cv-analysis"
   | "ai-profile-generation"
   | "ai-bulk-cv-upload";
@@ -74,6 +76,12 @@ export default function ProfilesMain({ onClose, initialProfileId, initialAction 
       label: "Crear Nuevo Perfil",
       icon: "fa-plus-circle",
       description: "Crear un nuevo perfil de reclutamiento"
+    },
+    {
+      id: "share-profile-form",
+      label: "Enviar Formulario de Perfil",
+      icon: "fa-share-alt",
+      description: "Compartir enlace público del formulario"
     },
     {
       id: "profiles-pending",
@@ -261,6 +269,9 @@ const handleDeleteProfile = async (profileId: number) => {
             )}
             {currentView === "profile-stats" && (
               <ProfileStats />
+            )}
+            {currentView === "share-profile-form" && (
+              <ShareProfileForm />
             )}
           </div>
         </div>

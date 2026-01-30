@@ -28,6 +28,7 @@ export default function EvaluationComments() {
   const [filterEvaluation, setFilterEvaluation] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const { showAlert, showConfirm } = useModal();
 
   useEffect(() => {
     fetchData();

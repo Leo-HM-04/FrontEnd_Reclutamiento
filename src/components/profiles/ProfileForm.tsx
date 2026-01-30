@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useModal } from '@/context/ModalContext';
 import { createProfile, updateProfile, getProfile, getClients, apiClient } from "@/lib/api";
+import ShareLinkModal from '@/components/ShareLinkModal';
 interface ProfileFormProps {
   profileId?: number;
   onSuccess?: () => void;
@@ -26,6 +27,19 @@ export default function ProfileForm({ profileId, onSuccess }: ProfileFormProps) 
   const [clients, setClients] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const { showAlert } = useModal();
+
+  // Compartir enlace público
+  const [createdProfileId, setCreatedProfileId] = useState<number | undefined>(profileId);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareLink, setShareLink] = useState("");
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareProfileTitle, setShareProfileTitle] = useState("");
+  const [shareClientName, setShareClientName] = useState("");
+
+  useEffect(() => {
+    setCreatedProfileId(profileId);
+  }, [profileId]);
   
   
   const [formData, setFormData] = useState({
@@ -299,9 +313,12 @@ ${formData.benefits || 'No especificados'}
 
     if (profileId) {
       await updateProfile(profileId, submitData);
+      setCreatedProfileId(profileId);
       await showAlert("Perfil actualizado exitosamente");
     } else {
-      await createProfile(submitData);
+      const created = await createProfile(submitData);
+      // Guardar el id para acciones posteriores (como compartir)
+      setCreatedProfileId(created.id);
       await showAlert("Perfil creado exitosamente");
     }
     
@@ -315,7 +332,162 @@ ${formData.benefits || 'No especificados'}
   }
 };
 
-  
+  // Compartir formulario: crear link público (crea borrador si no existe) y mostrar modal
+  const ensureProfileExists = async () : Promise<number> => {
+    // Si ya existe profile en backend, devolverlo
+    if (createdProfileId) return createdProfileId;
+
+    // Si no hay cliente seleccionado, crear o reutilizar un cliente temporal "Cliente Público (Formulario)"
+    let clientId: number | undefined = formData.client ? parseInt(formData.client as any) : undefined;
+    if (!clientId) {
+      try {
+        // Buscar cliente temporal existente
+        const clientsRes: any = await getClients();
+        const clientsList = clientsRes?.results || clientsRes || [];
+        const existing = clientsList.find((c: any) => c.company_name && c.company_name === 'Cliente Público (Formulario)');
+        if (existing) {
+          clientId = existing.id;
+        } else {
+          // Crear cliente temporal
+          // Crear cliente temporal con todos los campos requeridos (placeholders válidos)
+        const placeholder = await apiClient.createClient({
+          company_name: 'Cliente Público (Formulario)',
+          rfc: 'XAXX010101000',
+          industry: 'No especificado',
+          website: '',
+          contact_name: 'Contacto Público',
+          contact_email: 'no-reply@publico.example',
+          contact_phone: '0000000000',
+          contact_position: 'Representante',
+          address_street: 'No especificado',
+          address_city: 'Sin especificar',
+          address_state: 'Sin especificar',
+          address_zip: '00000',
+          address_country: 'México',
+          notes: 'Cliente generado automáticamente para formularios públicos',
+        });
+        clientId = placeholder.id;
+        await showAlert('🔔 Se creó un cliente temporal "Cliente Público (Formulario)" para asociar los envíos públicos.');
+        }
+
+        // Reflejar en el formulario (opcional)
+        setFormData(prev => ({ ...prev, client: clientId ? clientId.toString() : '' }));
+      } catch (err) {
+        console.error('Error creando cliente temporal:', err);
+        await showAlert('❌ Error creando cliente temporal para compartir. Intenta seleccionando un cliente manualmente.');
+        throw err;
+      }
+    }
+
+    // Crear un template mínimo (campos obligatorios rellenados con placeholders en backend)
+    try {
+      const submitData = {
+        client: clientId,
+        // Valores mínimos que satisfacen validaciones en backend; la página pública IGNORARÁ estos valores
+        position_title: 'Plantilla - completar por cliente',
+        position_description: 'Por favor completa la información del perfil en este formulario público',
+        department: '',
+        location_city: 'Sin especificar',
+        location_state: 'Sin especificar',
+        is_remote: false,
+        is_hybrid: false,
+        salary_min: 1,
+        salary_max: 1,
+        salary_currency: formData.salary_currency || 'MXN',
+        salary_period: formData.salary_period || 'mensual',
+        education_level: 'No especificado',
+        years_experience: 0,
+        age_min: null,
+        age_max: null,
+        technical_skills: [],
+        soft_skills: [],
+        languages: [],
+        benefits: '',
+        additional_requirements: '',
+        status: 'draft',
+        service_type: 'normal',
+        number_of_positions: 1,
+        priority: 'medium',
+        deadline: null,
+        desired_start_date: null,
+        assigned_to: undefined,
+        internal_notes: '',
+        published_platforms: [],
+      };
+
+      const created = await createProfile(submitData);
+      setCreatedProfileId(created.id);
+      return created.id;
+    } catch (err: any) {
+      console.error('Error creando template para compartir:', err);
+
+      // Intentar extraer errores de validación del backend
+      const extractMessages = (e: any): string[] => {
+        const msgs: string[] = [];
+        if (!e) return msgs;
+        // Buscar objeto details en profundidad
+        const d = e?.details || e;
+        const deepest = (obj: any): any => {
+          if (!obj) return obj;
+          if (obj.details) return deepest(obj.details);
+          return obj;
+        };
+        const payload = deepest(d);
+        if (payload && typeof payload === 'object') {
+          for (const key of Object.keys(payload)) {
+            const val = payload[key];
+            if (Array.isArray(val)) msgs.push(`${key}: ${val.join(', ')}`);
+            else if (typeof val === 'object') msgs.push(`${key}: ${JSON.stringify(val)}`);
+            else msgs.push(`${key}: ${val}`);
+          }
+        } else if (d.message) {
+          msgs.push(d.message);
+        }
+        return msgs;
+      };
+
+      const messages = extractMessages(err);
+      if (messages.length > 0) {
+        await showAlert(`❌ Error creando template: ${messages.slice(0,4).join(' | ')}`);
+      } else {
+        await showAlert('❌ Error creando template para compartir. Revisa la consola para más detalles.');
+      }
+
+      throw err;
+    }
+  };
+
+  const handleShareForm = async () => {
+    setShareLoading(true);
+    try {
+      const id = await ensureProfileExists();
+      const token = localStorage.getItem('authToken');
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+      const response = await fetch(`${apiBase}/api/profiles/profiles/${id}/generate_share_link/`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Error al generar enlace');
+
+      const data = await response.json();
+      // Usar la ruta pública de formulario en lugar de la vista de avance
+      const createLink = `${window.location.origin}/public/profile-create/${data.token}`;
+      setShareLink(createLink);
+      setShareProfileTitle(data.position_title || formData.position_title);
+      setShareClientName(data.client_name || '');
+      setShareModalOpen(true);
+    } catch (err) {
+      console.error('Error generando link de compartir:', err);
+      await showAlert('❌ Error al generar el enlace.');
+    } finally {
+      setShareLoading(false);
+    }
+  };
 
   if (loadingData) {
     return (
@@ -328,13 +500,36 @@ ${formData.benefits || 'No especificados'}
 
   return (
     <div>
-      <div className="mb-6">
-        <h3 className="text-xl font-semibold text-gray-900">
-          {profileId ? "Editar Perfil" : "Crear Nuevo Perfil"}
-        </h3>
-        <p className="text-gray-600 mt-1">
-          Complete la información del perfil de reclutamiento
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900">
+            {profileId ? "Editar Perfil" : "Crear Nuevo Perfil"}
+          </h3>
+          <p className="text-gray-600 mt-1">
+            Complete la información del perfil de reclutamiento
+          </p>
+        </div>
+        <div className="ml-4 flex items-center">
+          <button
+            type="button"
+            onClick={handleShareForm}
+            disabled={shareLoading}
+            className="inline-flex items-center px-4 py-2 rounded-md border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+            title="Compartir formulario"
+          >
+            {shareLoading ? (
+              <>
+                <i className="fas fa-spinner fa-spin mr-2"></i>
+                Generando enlace...
+              </>
+            ) : (
+              <>
+                <i className="fas fa-share-alt mr-2"></i>
+                Compartir formulario
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -949,6 +1144,17 @@ ${formData.benefits || 'No especificados'}
           </button>
         </div>
       </form>
+
+      {/* Share Link Modal */}
+      <ShareLinkModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        shareLink={shareLink}
+        profileTitle={shareProfileTitle || formData.position_title}
+        clientName={shareClientName}
+        mode="form"
+      />
+
     </div>
   );
 }

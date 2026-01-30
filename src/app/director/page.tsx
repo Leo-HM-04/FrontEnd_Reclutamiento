@@ -23,6 +23,11 @@ import IndividualReportsHub from '@/components/reports/IndividualReportsHub';
 import DirectorReportsHub from '@/components/reports/DirectorReportsHub';
 import ShareLinkModal from '@/components/ShareLinkModal';
 import EmailManagement from '@/components/EmailManagement';
+import NextImage from "next/image";
+
+import bausenLogo from "@/logos/bausen-logo.png";
+import verticalLogo from "@/logos/Copia_Logo_Vertical_01.png";
+
 
 type Stats = {
   activeProcesses: number;
@@ -1486,13 +1491,33 @@ export default function Page() {
                 <i className={`fas ${sidebarOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
               </button>
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-linear-to-br from-blue-600 to-blue-800 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-users text-white text-sm"></i>
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900">Sistema de Reclutamiento</h1>
-                  <p className="text-xs text-gray-500">Panel Directivo</p>
-                </div>
+                
+                <div className="flex items-center gap-3">
+  {/* Favicon de bausen */}
+  {/* <NextImage
+    src={verticalLogo}
+    alt="Icono"
+    width={32}
+    height={32}
+    className="rounded-lg"
+    priority
+  /> */}
+
+  {/* Logo */}
+  <div className="flex flex-col leading-tight">
+    <NextImage
+      src={bausenLogo}
+      alt="Sistema de Reclutamiento"
+      width={160}
+      height={32}
+      className="h-8 w-auto"
+      priority
+    />
+    <p className="text-xs text-gray-500">Panel Directivo</p>
+  </div>
+</div>
+
+
               </div>
             </div>
 

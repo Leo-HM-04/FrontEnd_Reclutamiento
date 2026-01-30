@@ -689,9 +689,114 @@ class ApiClient {
     return response.json();
   }
 
-  async deleteProfileDocument(documentId: number): Promise<void> {
-    return this.makeRequest<void>(`/api/profiles/documents/${documentId}/`, {
+  /**
+   * Generate share link for a profile
+   */
+  async generateShareLink(profileId: number, options?: { duration_hours?: number }): Promise<any> {
+    const body = options ? JSON.stringify(options) : '{}';
+    return this.makeRequest<any>(`/api/profiles/profiles/${profileId}/generate_share_link/`, {
+      method: 'POST',
+      body: body,
+    });
+  }
+
+  /**
+   * Get shared links for profiles
+   */
+  async getSharedLinks(): Promise<any> {
+    return this.makeRequest<any>('/api/profiles/shared-links/');
+  }
+
+
+
+  // ====== CLIENTS ENDPOINTS ======
+
+  /**
+   * Get all clients
+   */
+  async getClients(params?: Record<string, string>): Promise<any> {
+    const cleanParams: Record<string, string> = {};
+    
+    if (params) {
+      if (params.search && params.search.trim() !== '') {
+        cleanParams.search = params.search;
+      }
+      if (params.industry && params.industry !== 'all') {
+        cleanParams.industry = params.industry;
+      }
+      if (params.is_active !== undefined) {
+        cleanParams.is_active = params.is_active;
+      }
+    }
+    
+    const queryString = Object.keys(cleanParams).length > 0
+      ? '?' + new URLSearchParams(cleanParams).toString()
+      : '';
+    
+    return this.makeRequest<any>(`/api/clients/${queryString}`);
+  }
+
+  /**
+   * Get single client by ID
+   */
+  async getClient(id: number): Promise<any> {
+    return this.makeRequest<any>(`/api/clients/${id}/`);
+  }
+
+  /**
+   * Create new client
+   */
+  async createClient(clientData: Partial<Client>): Promise<Client> {
+    return this.makeRequest<Client>('/api/clients/', {
+      method: 'POST',
+      body: JSON.stringify(clientData),
+    });
+  }
+
+  /**
+   * Update client
+   */
+  async updateClient(id: number, clientData: Partial<Client>): Promise<Client> {
+    return this.makeRequest<Client>(`/api/clients/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(clientData),
+    });
+  }
+
+  /**
+   * Delete client
+   */
+  async deleteClient(id: number): Promise<void> {
+    return this.makeRequest<void>(`/api/clients/${id}/`, {
       method: 'DELETE',
+    });
+  }
+
+  /**
+   * Generate share link for a client (to create profiles)
+   */
+  async generateClientShareLink(clientId: number, options?: { duration_hours?: number }): Promise<any> {
+    const body = options ? JSON.stringify(options) : '{}';
+    return this.makeRequest<any>(`/api/clients/${clientId}/generate_share_link/`, {
+      method: 'POST',
+      body: body,
+    });
+  }
+
+  /**
+   * Get shared links for clients (list of clients with active share tokens and status)
+   */
+  async getClientSharedLinks(): Promise<any> {
+    return this.makeRequest<any>(`/api/clients/shared_links/`);
+  }
+
+  /**
+   * Revoke a specific shared link for a client
+   */
+  async revokeClientSharedLink(clientId: number, token: string): Promise<any> {
+    return this.makeRequest<any>(`/api/clients/${clientId}/revoke_shared_link/`, {
+      method: 'POST',
+      body: JSON.stringify({ token }),
     });
   }
 
