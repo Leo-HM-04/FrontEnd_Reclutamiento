@@ -12,11 +12,21 @@ interface Client {
   contact_email: string;
 }
 
+interface SharedLink {
+  token: string;
+  share_url: string;
+  expires_at?: string | null;
+  created_at?: string | null;
+  used_at?: string | null;
+  client: { id: number; company_name: string };
+  status: 'pending' | 'used' | 'expired' | 'in_progress' | 'completed' | string;
+}
+
 export default function ShareProfileForm() {
   const { showAlert } = useModal();
   const [clients, setClients] = useState<Client[]>([]);
   // Lista de links compartidos (cargados desde clientes con token o añadidos dinámicamente)
-  const [sharedLinks, setSharedLinks] = useState<Array<any>>([]);
+  const [sharedLinks, setSharedLinks] = useState<SharedLink[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [duration, setDuration] = useState('24'); // horas por defecto
@@ -63,7 +73,7 @@ export default function ShareProfileForm() {
 
     setLoading(true);
     try {
-      const response = await apiClient.generateClientShareLink(parseInt(selectedClient), {
+      const response: any = await apiClient.generateClientShareLink(parseInt(selectedClient), {
         duration_hours: parseInt(duration)
       });
 
@@ -75,12 +85,12 @@ export default function ShareProfileForm() {
       await showAlert(`Link copiado al portapapeles: ${linkUrl}`);
 
       // Añadir el link recién creado a la lista de links compartidos en pantalla
-      const newLink = {
+      const newLink: SharedLink = {
         token: response.token,
         share_url: response.share_url || linkUrl,
-        expires_at: response.expires_at || response.expires_at,
+        expires_at: response.expires_at || null,
         created_at: response.created_at || new Date().toISOString(),
-        client: response.client || { id: parseInt(selectedClient), company_name: clients.find(c => c.id === parseInt(selectedClient))?.company_name },
+        client: response.client || { id: parseInt(selectedClient), company_name: clients.find(c => c.id === parseInt(selectedClient))?.company_name || '' },
         status: 'pending'
       };
 
@@ -108,7 +118,7 @@ export default function ShareProfileForm() {
     }
   };
 
-  const revokeLink = async (link: any) => {
+  const revokeLink = async (link: SharedLink) => {
     if (!window.confirm('¿Deseas invalidar este enlace? Esta acción no se puede deshacer.')) return;
 
     try {
@@ -383,9 +393,9 @@ export default function ShareProfileForm() {
                   <button
                     onClick={() => revokeLink(link)}
                     disabled={link.status === 'used' || link.status === 'expired' || loading}
-                    className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`px-3 py-1 text-sm rounded ${link.status === 'used' ? 'bg-gray-300 text-gray-700 cursor-not-allowed' : link.status === 'expired' ? 'bg-gray-200 text-gray-600 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'} ${ (link.status === 'expired' || loading) ? 'opacity-50 cursor-not-allowed' : '' }`}
                   >
-                    Invalidar
+                    {link.status === 'used' ? 'Invalidado' : link.status === 'expired' ? 'Expirado' : 'Invalidar'}
                   </button>
                 </div>
               </div>

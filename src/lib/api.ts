@@ -227,6 +227,32 @@ class ApiClient {
 
   // ====== APPLICATIONS (CANDIDATEPROFILE) ENDPOINTS ======
 
+  // ====== NOTIFICATIONS ======
+  async getNotifications(params?: any) {
+    const qs = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return this.makeRequest(`/api/notifications/${qs}`);
+  }
+
+  async getUnreadNotifications() {
+    return this.makeRequest(`/api/notifications/unread/`);
+  }
+
+  async markNotificationRead(id: number) {
+    return this.makeRequest(`/api/notifications/${id}/mark_as_read/`, { method: 'POST' });
+  }
+
+  async markNotificationUnread(id: number) {
+    return this.makeRequest(`/api/notifications/${id}/mark_as_unread/`, { method: 'POST' });
+  }
+
+  async markAllNotificationsRead() {
+    return this.makeRequest(`/api/notifications/mark_all_as_read/`, { method: 'POST' });
+  }
+
+  async clearReadNotifications() {
+    return this.makeRequest(`/api/notifications/clear_read/`, { method: 'DELETE' });
+  }
+
   /**
    * Get candidate applications
    */

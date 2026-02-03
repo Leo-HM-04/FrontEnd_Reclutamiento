@@ -41,9 +41,11 @@ interface ProfilesMainProps {
   onClose?: () => void;
   initialProfileId?: number | null;
   initialAction?: 'view' | 'edit';
+  initialSubView?: ProfileView;
+  initialHighlightId?: number | null;
 }
 
-export default function ProfilesMain({ onClose, initialProfileId, initialAction }: ProfilesMainProps) {
+export default function ProfilesMain({ onClose, initialProfileId, initialAction, initialSubView, initialHighlightId }: ProfilesMainProps) {
   const { showAlert, showConfirm } = useModal();
   const [currentView, setCurrentView] = useState<ProfileView>("profiles-list");
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
@@ -52,7 +54,17 @@ export default function ProfilesMain({ onClose, initialProfileId, initialAction 
   const [successMessage, setSuccessMessage] = useState<string>(""); // NUEVO
   const [showBulkCVUpload, setShowBulkCVUpload] = useState(false);
 
+  // Aplicar sub-vista inicial si se pide desde el exterior (p.ej. notificación)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    if (initialSubView) {
+      setCurrentView(initialSubView);
+    }
+  }, [initialSubView]);
+
   // Manejar perfil inicial desde URL
+  // Nota: este efecto establece estado inicial desde las props/párametros URL
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (initialProfileId) {
       setSelectedProfileId(initialProfileId);
@@ -239,6 +251,7 @@ const handleDeleteProfile = async (profileId: number) => {
                   onViewProfile={handleViewProfile}
                   onEditProfile={handleEditProfile}
                   onDeleteProfile={handleDeleteProfile}
+                  highlightId={initialHighlightId || undefined}
                 />
               )}
            {currentView === "profile-create" && (
@@ -259,6 +272,7 @@ const handleDeleteProfile = async (profileId: number) => {
                 onViewProfile={handleViewProfile}
                 onEditProfile={handleEditProfile}
                 onDeleteProfile={handleDeleteProfile}
+                highlightId={initialHighlightId || undefined}
               />
             )}
             {currentView === "profile-history" && (

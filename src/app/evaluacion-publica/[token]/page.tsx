@@ -27,6 +27,7 @@ interface Template {
 export default function PublicEvaluationPage() {
   const params = useParams();
   const token = params.token as string;
+  const { showAlert } = useModal();
 
   const [template, setTemplate] = useState<Template | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);

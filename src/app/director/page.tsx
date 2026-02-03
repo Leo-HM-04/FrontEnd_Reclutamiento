@@ -42,6 +42,16 @@ type NotificationItem = {
   message: string;
   time: string;
   icon: string;
+  // Optional navigation helpers
+  route?: string; // full route (e.g. '/director/candidates/notes')
+  view?: string; // dashboard view (e.g. 'profiles', 'evaluations')
+  subview?: string; // subview name inside a view (e.g. 'profiles-pending')
+  profileId?: number; // optional profile id to open
+  action?: 'view' | 'edit' | null;
+  // Local-only flag for notifications created client-side (e.g. dashboard alerts)
+  isLocal?: boolean;
+  // Optional read timestamp coming from server
+  read_at?: string | null;
 };
 
 type Approval = {
@@ -303,10 +313,18 @@ export default function Page() {
     activeProfiles: 0,
   });
 
-  const [notifications, setNotifications] = useState<{ unread: number; items: NotificationItem[] }>({
+  // Notifications state: we keep unread items and read items separately and persist read items to localStorage
+  const [notifications, setNotifications] = useState<{ unread: number; unreadItems: NotificationItem[]; readItems: NotificationItem[] }>({
     unread: 0,
-    items: [],
+    unreadItems: [],
+    readItems: [],
   });
+
+  // For micro-animations: keep track of recently read notification ids so we can animate their entrance
+  const [justReadIds, setJustReadIds] = useState<number[]>([]);
+  // Loading state for notifications UI and retry logic
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
 
   const [pendingApprovals, setPendingApprovals] = useState<Approval[]>([]);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
@@ -402,6 +420,23 @@ export default function Page() {
   // Estado para fases expandidas en client-progress
   const [expandedPhases, setExpandedPhases] = useState<Set<number>>(new Set());
 
+  // Tipado para sub-vistas de Profiles
+  type ProfileView =
+    | "profiles-list"
+    | "profile-create"
+    | "profile-detail"
+    | "profiles-pending"
+    | "profile-history"
+    | "profile-documents"
+    | "profile-stats"
+    | "share-profile-form"
+    | "ai-cv-analysis"
+    | "ai-profile-generation"
+    | "ai-bulk-cv-upload";
+
+  // Sub-vista para pasar a `ProfilesMain` cuando navegamos desde notificaciones o URL
+  const [profilesInitialSubView, setProfilesInitialSubView] = useState<ProfileView | null>(null);
+
   // Estados del formulario de aplicación
   const [applicationForm, setApplicationForm] = useState({
     candidato: '',
@@ -424,9 +459,13 @@ export default function Page() {
     const view = params.get('view');
     const profileId = params.get('profile');
     const editProfileId = params.get('edit');
+    const subview = params.get('subview');
 
     if (view === 'profiles') {
       setCurrentView('profiles');
+      if (subview) {
+        setProfilesInitialSubView((subview as ProfileView) || null);
+      }
       if (profileId) {
         setProfileToOpen({ id: parseInt(profileId), action: 'view' });
       } else if (editProfileId) {
@@ -435,8 +474,13 @@ export default function Page() {
 
       // Limpiar los parámetros URL después de usarlos
       window.history.replaceState({}, '', '/director');
+    } else if (view) {
+      // For other views, set directly and keep URL clean
+      setCurrentView(view as any);
+      window.history.replaceState({}, '', '/director');
     }
   }, []);
+
 
   // Inicializar sidebar después de hidratación (evita hydration mismatch)
   useEffect(() => {
@@ -454,6 +498,299 @@ export default function Page() {
       setSidebarOpen(saved === 'true');
     }
   }, []);
+
+  // Cargar notificaciones desde backend al iniciar
+  useEffect(() => {
+    loadNotificationsFromAPI();
+  }, []);
+
+  const READ_DELAY_MS = 800; // Esperar antes de marcar como leída para evitar marcados agresivos
+
+  // Helper: persist local read notifications to localStorage
+  const getPersistedLocalRead = (): NotificationItem[] => JSON.parse(localStorage.getItem('directorReadNotifications') || '[]');
+  const setPersistedLocalRead = (arr: NotificationItem[]) => localStorage.setItem('directorReadNotifications', JSON.stringify(arr));
+
+  // Marca una notificación como leída (hace POST al backend y mueve a la lista de "readItems")
+  const markNotificationRead = async (n: NotificationItem) => {
+    // If this is a local-only notification (created on client), skip server call and persist locally
+    if (n.isLocal) {
+      setNotifications(prev => {
+        if (prev.readItems.some(r => r.id === n.id)) return prev;
+        const unreadItems = prev.unreadItems.filter(u => u.id !== n.id);
+        const readItems = [{ ...n, read_at: new Date().toISOString() }, ...prev.readItems];
+
+        // Persist locally
+        const persisted = getPersistedLocalRead();
+        const merged = [{ ...n, read_at: new Date().toISOString(), isLocal: true }, ...persisted.filter(p => p.id !== n.id)];
+        setPersistedLocalRead(merged);
+
+        return { unread: unreadItems.length, unreadItems, readItems };
+      });
+
+      // Animate entrance
+      setTimeout(() => {
+        const readEl = document.getElementById(`read-notif-${n.id}`);
+        if (readEl) {
+          readEl.classList.add('opacity-0', 'translate-y-2');
+          // @ts-ignore
+          void (readEl as HTMLElement).offsetHeight;
+          readEl.classList.remove('opacity-0', 'translate-y-2');
+        }
+      }, 50);
+
+      return;
+    }
+
+    // Animate the unread item out first
+    const el = document.querySelector(`#notif-${n.id}`);
+    if (el) {
+      el.classList.add('transition-all', 'duration-200', 'opacity-0', '-translate-y-2');
+    }
+
+    // Delay a bit to allow navigation/UX and the leave animation
+    setTimeout(async () => {
+      try {
+        await apiClient.markNotificationRead(n.id);
+      } catch (e: any) {
+        console.error('Error marking notification read on server', e);
+        // If server returned 404 (notification not found for this user), fallback to local handling
+        if (e?.status === 404) {
+          console.warn('Notificación no encontrada en el servidor, aplicando cambio localmente');
+        } else {
+          warning('No se pudo marcar la notificación en el servidor');
+        }
+      }
+
+      // Move item from unread to read (optimistic)
+      setNotifications(prev => {
+        if (prev.readItems.some(r => r.id === n.id)) return prev;
+        const unreadItems = prev.unreadItems.filter(u => u.id !== n.id);
+        const readItems = [{ ...n, read_at: new Date().toISOString() }, ...prev.readItems];
+        return { unread: unreadItems.length, unreadItems, readItems };
+      });
+
+      // Add micro-enter animation to the newly-read item
+      setTimeout(() => {
+        const readEl = document.getElementById(`read-notif-${n.id}`);
+        if (readEl) {
+          // Start with invisible/translated state then trigger entrance
+          readEl.classList.add('opacity-0', 'translate-y-2');
+          // Force reflow
+          // @ts-ignore
+          void (readEl as HTMLElement).offsetHeight;
+          readEl.classList.remove('opacity-0', 'translate-y-2');
+        }
+      }, 50);
+
+      // Track just-read ids (useful for tests or extra CSS hooks)
+      setJustReadIds(ids => [n.id, ...ids]);
+      setTimeout(() => setJustReadIds(ids => ids.filter(id => id !== n.id)), 1000);
+    }, READ_DELAY_MS);
+  };
+
+  // Marcar todas como leídas (llama API) - ahora con actualización optimista y estado de carga
+  const markAllNotificationsRead = async () => {
+    if (markingAll) return;
+    setMarkingAll(true);
+
+    // Optimistic update: move all unread to read immediately for snappy UI
+    setNotifications(prev => {
+      const nowIso = new Date().toISOString();
+      const allRead = [...prev.unreadItems.map(i => ({ ...i, read_at: nowIso })), ...prev.readItems];
+      // Persist local-read for any local items in unread
+      const localReads = prev.unreadItems.filter(i => i.isLocal).map(i => ({ ...i, read_at: nowIso, isLocal: true }));
+      try {
+        const persisted = getPersistedLocalRead();
+        const merged = [...localReads, ...persisted.filter(p => !localReads.some(l => l.id === p.id))];
+        setPersistedLocalRead(merged);
+      } catch (err) {
+        console.warn('Could not persist local reads', err);
+      }
+      return { unread: 0, unreadItems: [], readItems: allRead };
+    });
+
+    try {
+      await apiClient.markAllNotificationsRead();
+      await loadNotificationsFromAPI();
+      success('Todas las notificaciones marcadas como leídas');
+    } catch (e) {
+      console.error('Error marking all notifications read', e);
+      warning('No se pudo marcar todas las notificaciones en el servidor; cambios aplicados localmente');
+      // If server failed, we already applied optimistic change; keep local state as fallback
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  // Marcar una notificación como no leída (vuelve a moverla a la sección de "No leídas")
+  const markNotificationUnread = async (n: NotificationItem) => {
+    // If this was a local notification, clear persisted local read
+    if (n.isLocal) {
+      const persisted = getPersistedLocalRead();
+      const newPersisted = persisted.filter(p => p.id !== n.id);
+      setPersistedLocalRead(newPersisted);
+
+      setNotifications(prev => {
+        if (prev.unreadItems.some(u => u.id === n.id)) return prev;
+        const readItems = prev.readItems.filter(r => r.id !== n.id);
+        const unreadItems = [{ ...n, read_at: null }, ...prev.unreadItems];
+        return { unread: unreadItems.length, unreadItems, readItems };
+      });
+
+      return;
+    }
+
+    try {
+      await apiClient.markNotificationUnread(n.id);
+    } catch (e: any) {
+      console.error('Error marking notification unread on server', e);
+      if (e?.status === 404) {
+        console.warn('Notificación no encontrada en servidor al marcar como no leído; actualizando localmente');
+      } else {
+        warning('No se pudo actualizar la notificación en el servidor');
+      }
+    }
+
+    setNotifications(prev => {
+      if (prev.unreadItems.some(u => u.id === n.id)) return prev;
+      const readItems = prev.readItems.filter(r => r.id !== n.id);
+      const unreadItems = [{ ...n, read_at: null }, ...prev.unreadItems];
+      return { unread: unreadItems.length, unreadItems, readItems };
+    });
+  };
+
+  // Borrar notificaciones leídas
+  const clearReadNotifications = async () => {
+    try {
+      await apiClient.clearReadNotifications();
+      // Clear persisted local reads too
+      try {
+        setPersistedLocalRead([]);
+      } catch (err) {
+        console.warn('Could not clear persisted local reads', err);
+      }
+      await loadNotificationsFromAPI();
+    } catch (e) {
+      console.error('Error clearing read notifications', e);
+      // Fallback local: remove read items and persisted
+      try {
+        setPersistedLocalRead([]);
+      } catch (err) {
+        console.warn('Could not clear persisted local reads', err);
+      }
+      setNotifications(prev => ({ ...prev, readItems: [] }));
+    }
+  }; 
+
+  // Cargar notificaciones desde backend (read/unread) — solicita list + unread en paralelo, unifica y deduplica
+  const loadNotificationsFromAPI = async (forceRetry = false) => {
+    setNotifLoading(true);
+    try {
+      console.log('🔁 Cargando notificaciones (list + unread) desde API...');
+
+      // Hacer dos peticiones en paralelo: listado (paginated) y unread (solo no leídas)
+      const [listResp, unreadResp] = await Promise.allSettled([
+        apiClient.getNotifications({ page_size: '1000' }),
+        apiClient.getUnreadNotifications()
+      ]);
+
+      let listItems: any[] = [];
+      let unreadItemsFromEndpoint: any[] = [];
+
+      if (listResp.status === 'fulfilled') {
+        const data: any = listResp.value as any;
+        listItems = Array.isArray(data) ? data : (data && (data.results ?? [])) || [];
+      } else {
+        console.warn('⚠️ getNotifications failed:', listResp.reason);
+      }
+
+      if (unreadResp.status === 'fulfilled') {
+        const data: any = unreadResp.value as any;
+        unreadItemsFromEndpoint = Array.isArray(data) ? data : (data && (data.results ?? [])) || [];
+      } else {
+        console.warn('⚠️ getUnreadNotifications failed:', unreadResp.reason);
+      }
+
+      // Combine both sources (listItems may already contain unread) and deduplicate by id
+      const combinedById = new Map<number, any>();
+      [...listItems, ...unreadItemsFromEndpoint].forEach((item: any) => {
+        if (item && item.id != null) combinedById.set(item.id, item);
+      });
+
+      // Also include any local alerts (created by dashboard) if they are missing
+      const localAlerts = (notifications.unreadItems || []).concat(notifications.readItems || []);
+      localAlerts.forEach((l: any) => {
+        if (l && l.id != null && !combinedById.has(l.id)) combinedById.set(l.id, l);
+      });
+
+      const combined = Array.from(combinedById.values());
+      const finalUnread = combined.filter((s: any) => s.read_at == null || s.read_at === undefined);
+      let finalRead = combined.filter((s: any) => s.read_at != null);
+
+      // Merge persisted local-read notifications (from localStorage) if any
+      try {
+        const persistedLocal = getPersistedLocalRead();
+        persistedLocal.forEach(p => {
+          if (!finalRead.some(r => r.id === p.id)) {
+            finalRead = [{ ...p, isLocal: true }, ...finalRead];
+          }
+          // Remove any persisted ids from unread
+          const idx = finalUnread.findIndex(u => u.id === p.id);
+          if (idx !== -1) finalUnread.splice(idx, 1);
+        });
+      } catch (e) {
+        console.warn('Could not read persisted local read notifications', e);
+      }
+
+      setNotifications({ unread: finalUnread.length, unreadItems: finalUnread, readItems: finalRead });
+
+      console.log('✅ Notificaciones cargadas:', { total: combined.length, unread: finalUnread.length, read: finalRead.length });
+
+      // Si no hay elementos y no forzamos retry, intentar otra vez (por si el servidor tarda en propagar)
+      if (combined.length === 0 && !forceRetry) {
+        console.info('ℹ️ No se encontraron notificaciones; reintentando una vez más...');
+        await loadNotificationsFromAPI(true);
+      }
+    } catch (e) {
+      console.error('Error loading notifications from API', e);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  // Manejar clicks sobre notificaciones y navegar a la vista/subvista correspondiente
+  const handleNotificationClick = (n: NotificationItem) => {
+    // Mark as read after a small delay to allow navigation and avoid aggressive marking
+    setTimeout(() => markNotificationRead(n), READ_DELAY_MS);
+
+    // Close dropdown immediately
+    setNotifOpen(false);
+
+    // Route completa (fallback más explícito)
+    if (n.route) {
+      router.push(n.route);
+      return;
+    }
+
+    // Navegación a Profiles con subview (p.ej. 'profiles-pending')
+    if (n.view === 'profiles') {
+      setProfilesInitialSubView((n.subview as ProfileView) || null);
+      setCurrentView('profiles');
+      const params = new URLSearchParams();
+      params.set('view', 'profiles');
+      if (n.subview) params.set('subview', n.subview);
+      if (n.profileId) params.set('profile', String(n.profileId));
+      router.push(`/director?${params.toString()}`);
+      return;
+    }
+
+    // Navegación genérica por vista
+    if (n.view) {
+      setCurrentView(n.view as any);
+      router.push(`/director?view=${n.view}${n.subview ? `&subview=${n.subview}` : ''}`);
+      return;
+    }
+  };
 
   // Listener para resize de ventana
   useEffect(() => {
@@ -694,7 +1031,10 @@ export default function Page() {
           id: 1,
           message: `${alertsData.pending_approval} perfil(es) requieren aprobación`,
           time: 'Pendiente',
-          icon: 'fas fa-user-check'
+          icon: 'fas fa-user-check',
+          view: 'profiles',
+          subview: 'profiles-pending',
+          isLocal: true
         });
       }
 
@@ -703,7 +1043,10 @@ export default function Page() {
           id: 2,
           message: `${alertsData.near_deadline} perfil(es) próximos a vencer`,
           time: 'Urgente',
-          icon: 'fas fa-exclamation-triangle'
+          icon: 'fas fa-exclamation-triangle',
+          view: 'profiles',
+          subview: 'profiles-list',
+          isLocal: true
         });
       }
 
@@ -712,14 +1055,42 @@ export default function Page() {
           id: 3,
           message: `${alertsData.pending_review} evaluación(es) pendientes de revisión`,
           time: 'Hoy',
-          icon: 'fas fa-clipboard-check'
+          icon: 'fas fa-clipboard-check',
+          view: 'evaluations',
+          isLocal: true
         });
       }
 
-      setNotifications({
-        unread: notificationsList.length,
-        items: notificationsList
-      });
+      // Try to load server-side notifications and merge with alerts
+      try {
+        await loadNotificationsFromAPI();
+
+        // Merge local alert-derived notifications (notificationsList) in case they are not present on server
+        setNotifications(prev => {
+          const existingIds = new Set<number>([...prev.unreadItems.map(i => i.id), ...prev.readItems.map(i => i.id)]);
+          const alertsToAdd = notificationsList.filter(n => !existingIds.has(n.id));
+          // Alerts are treated as unread by default unless they have read_at
+          const alertsUnread = alertsToAdd.filter(a => !a.read_at);
+          const unreadItems = [...alertsUnread, ...prev.unreadItems];
+          return { unread: unreadItems.length, unreadItems, readItems: prev.readItems };
+        });
+      } catch (e) {
+        // Fallback: merge with persisted local read state
+        const persistedRead: NotificationItem[] = JSON.parse(localStorage.getItem('directorReadNotifications') || '[]');
+        const persistedReadIds = new Set(persistedRead.map(r => r.id));
+
+        const unreadItems = notificationsList.filter(n => !persistedReadIds.has(n.id));
+        const mergedReadById = new Map<number, NotificationItem>();
+        persistedRead.forEach(r => mergedReadById.set(r.id, r));
+        notificationsList.filter(n => persistedReadIds.has(n.id)).forEach(n => mergedReadById.set(n.id, n));
+        const readItems = Array.from(mergedReadById.values());
+
+        setNotifications({
+          unread: unreadItems.length,
+          unreadItems,
+          readItems,
+        });
+      }
 
       // ========================================
       // ACTIVIDAD RECIENTE - MEJORADA
@@ -1554,28 +1925,96 @@ export default function Page() {
 
                 {notifOpen && (
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2">
-                    <div className="px-4 py-2 border-b border-gray-200">
+                    <div className="px-4 py-2 border-b border-gray-200 flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Notificaciones</h3>
+                      <div className="text-xs text-gray-500 flex items-center space-x-3">
+                        <span>{notifications.unread} sin leer • {notifications.readItems.length} leídas</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); loadNotificationsFromAPI(true); }}
+                          className="p-1 rounded hover:bg-blue-50 flex items-center"
+                          title="Recargar notificaciones"
+                          aria-label="Recargar notificaciones"
+                          aria-busy={notifLoading ? true : undefined}
+                        >
+                          {notifLoading ? (
+                            <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                          ) : (
+                            <i className="fas fa-sync-alt text-blue-600 inline-block" />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <div className="max-h-96 overflow-y-auto">
-                      {notifications.items.length === 0 ? (
-                        <div className="px-4 py-8 text-center text-gray-500">
-                          <i className="fas fa-bell text-3xl mb-2"></i>
-                          <p>No hay notificaciones</p>
+
+                    <div className="max-h-96 overflow-y-auto px-2">
+                      {/* Unread section */}
+                      <div className="py-2">
+                        <div className="flex items-center justify-between px-3 mb-2">
+                          <div className="text-sm font-medium text-gray-700">No leídas</div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); markAllNotificationsRead(); }}
+                            disabled={markingAll || notifications.unreadItems.length === 0}
+                            className={`text-xs ${markingAll ? 'text-gray-400' : 'text-blue-600 hover:underline'}`}
+                            title="Marcar todas como leídas"
+                            aria-busy={markingAll ? true : undefined}
+                          >
+                            {markingAll ? (
+                              <svg className="animate-spin h-4 w-4 text-blue-600 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                              </svg>
+                            ) : 'Marcar todas como leídas'}
+                          </button>
                         </div>
-                      ) : (
-                        notifications.items.map((n) => (
-                          <div key={n.id} className="px-4 py-3 hover:bg-gray-50 cursor-pointer">
-                            <div className="flex items-start space-x-3">
-                              <i className={`${n.icon} text-blue-600 text-sm mt-1`}></i>
-                              <div className="flex-1">
-                                <p className="text-sm text-gray-900">{n.message}</p>
-                                <p className="text-xs text-gray-500">{n.time}</p>
+
+                        {notifications.unreadItems.length === 0 ? (
+                          <div className="px-3 py-4 text-center text-sm text-gray-500">No hay notificaciones sin leer</div>
+                        ) : (
+                          notifications.unreadItems.map((n) => (
+                            <div id={`notif-${n.id}`} key={n.id} onClick={() => handleNotificationClick(n)} className="px-3 py-2 hover:bg-gray-50 cursor-pointer rounded">
+                              <div className="flex items-start space-x-3">
+                                <i className={`${n.icon} text-blue-600 text-sm mt-1`}></i>
+                                <div className="flex-1">
+                                  <p className="text-sm text-gray-900">{n.message}</p>
+                                  <p className="text-xs text-gray-500">{n.time}</p>
+                                </div>
                               </div>
                             </div>
+                          ))
+                        )}
+                      </div>
+
+                      <hr className="my-2 border-t border-gray-100" />
+
+                      {/* Read section */}
+                      <div className="py-2">
+                        <div className="flex items-center justify-between px-3 mb-2">
+                          <div className="text-sm font-medium text-gray-700">Leídas</div>
+                          <div className="flex items-center space-x-3">
+                            <button onClick={() => clearReadNotifications()} className="text-xs text-red-600 hover:underline">Borrar historial</button>
                           </div>
-                        ))
-                      )}
+                        </div>
+                        {notifications.readItems.length === 0 ? (
+                          <div className="px-3 py-4 text-center text-sm text-gray-500">No hay notificaciones leídas</div>
+                        ) : (
+                          notifications.readItems.map((n) => (
+                            <div id={`read-notif-${n.id}`} key={`read-${n.id}`} className="px-3 py-2 rounded hover:bg-gray-50 cursor-pointer opacity-80 flex items-start justify-between transition-all duration-300">
+                              <div onClick={() => handleNotificationClick(n)} className="flex items-start space-x-3 flex-1">
+                                <i className={`${n.icon} text-gray-400 text-sm mt-1`}></i>
+                                <div className="flex-1">
+                                  <p className="text-sm text-gray-700">{n.message}</p>
+                                  <p className="text-xs text-gray-500">{n.time}</p>
+                                </div>
+                              </div>
+                              <div className="ml-3 flex items-center space-x-2">
+                                <button onClick={() => markNotificationUnread(n)} className="text-xs text-blue-600 hover:underline">Marcar no leído</button>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
 
                     </div>
                   </div>
@@ -4006,6 +4445,8 @@ export default function Page() {
               <ProfilesMain
                 initialProfileId={profileToOpen.id}
                 initialAction={profileToOpen.action || undefined}
+                initialSubView={profilesInitialSubView || undefined}
+                initialHighlightId={profileToOpen.id || undefined}
               />
             )
           }

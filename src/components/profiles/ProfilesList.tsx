@@ -29,14 +29,16 @@ interface ProfilesListProps {
   onViewProfile?: (profileId: number) => void;
   onEditProfile?: (profileId: number) => void;
   onDeleteProfile?: (profileId: number) => void;
+  highlightId?: number | undefined;
 }
 
-export default function ProfilesList({ filterStatus, onViewProfile, onEditProfile, onDeleteProfile }: ProfilesListProps) {
+export default function ProfilesList({ filterStatus, onViewProfile, onEditProfile, onDeleteProfile, highlightId }: ProfilesListProps) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState(filterStatus || "");
   const [priorityFilter, setPriorityFilter] = useState("");
+  const [activeHighlight, setActiveHighlight] = useState<number | null>(null);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -45,6 +47,36 @@ export default function ProfilesList({ filterStatus, onViewProfile, onEditProfil
   useEffect(() => {
     loadProfiles();
   }, [statusFilter, priorityFilter, filterStatus]);
+
+  // Si se pasa un highlightId (p.ej. desde notificación), hacer scroll y resaltar temporalmente
+  useEffect(() => {
+    if (!highlightId) return;
+
+    const attempt = () => {
+      const exists = profiles.some(p => p.id === highlightId);
+      if (!exists) return false;
+
+      const el = document.getElementById(`profile-row-${highlightId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-orange-400', 'bg-orange-50');
+        setActiveHighlight(highlightId);
+        // Remove highlight after 5s
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-orange-400', 'bg-orange-50');
+          setActiveHighlight(null);
+        }, 5000);
+        return true;
+      }
+      return false;
+    };
+
+    // Si la lista no está cargada aún, esperar un poco y reintentar
+    if (!attempt()) {
+      const t = setTimeout(() => attempt(), 300);
+      return () => clearTimeout(t);
+    }
+  }, [highlightId, profiles]);
 
   const loadProfiles = async () => {
     setLoading(true);
@@ -248,7 +280,7 @@ export default function ProfilesList({ filterStatus, onViewProfile, onEditProfil
                 {filteredProfiles
                   .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                   .map((profile) => (
-                <tr key={profile.id} className="hover:bg-gray-50">
+                <tr key={profile.id} id={`profile-row-${profile.id}`} className={`hover:bg-gray-50 ${activeHighlight === profile.id ? 'ring-2 ring-orange-400 bg-orange-50' : ''}`}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="font-medium text-gray-900">{profile.position_title}</div>
                     <div className="text-sm text-gray-500">
