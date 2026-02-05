@@ -21,6 +21,7 @@ export default function ProfileGenerationModal({
   onClose, 
   onSuccess 
 }: ProfileGenerationModalProps) {
+  const { showAlert } = useModal();
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [transcription, setTranscription] = useState<string>("");

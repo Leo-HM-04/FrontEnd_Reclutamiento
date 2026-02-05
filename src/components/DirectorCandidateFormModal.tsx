@@ -11,6 +11,7 @@ interface DirectorCandidateFormModalProps {
 }
 
 export default function DirectorCandidateFormModal({ isOpen, onClose, onSuccess }: DirectorCandidateFormModalProps) {
+  const { showAlert } = useModal();
   const [showSocialNetworks, setShowSocialNetworks] = useState(false);
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   const [showMetadata, setShowMetadata] = useState(false);

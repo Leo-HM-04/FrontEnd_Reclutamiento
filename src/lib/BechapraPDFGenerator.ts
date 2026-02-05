@@ -11,6 +11,8 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { BECHAPRA_WATERMARK_B_BASE64 } from './watermarkBase64'
+// TODO: Restaurar cuando exista el archivo de tipos
+/*
 import { 
   ReporteData, 
   Modulo1Data, 
@@ -22,9 +24,35 @@ import {
   Modulo08Data,
   Modulo11Data
 } from '@/app/reportes/ver/components/types'
-import { BECHAPRA_LOGO_BASE64 } from './logoBase64'
-import { BAUSEN_LOGO_WHITE_BASE64 } from './logoWhiteBase64'
-import { formatCurrency, formatNumber, formatDate } from '../utils/formatters'
+*/
+
+// Tipos temporales mientras no exista el archivo de tipos
+type ReporteData = any;
+type Modulo1Data = any;
+type Modulo3Data = any;
+type Modulo6Data = any;
+type Modulo04Data = any;
+type Modulo05Data = any;
+type Modulo07Data = any;
+type Modulo08Data = any;
+type Modulo11Data = any;
+
+import { BAUSEN_LOGO_BASE64 } from './logo-base64'
+// TODO: Verificar si estos logos existen
+// import { BAUSEN_LOGO_WHITE_BASE64 } from './logoWhiteBase64'
+// import { formatCurrency, formatNumber, formatDate } from '../utils/formatters'
+
+// Funciones de formato temporales
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value || 0);
+};
+const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('es-MX').format(value || 0);
+};
+const formatDate = (date: string | Date): string => {
+  if (!date) return 'N/A';
+  return new Date(date).toLocaleDateString('es-MX');
+};
 
 // ============================================
 // TIPOS E INTERFACES
@@ -237,7 +265,7 @@ export class BechapraPDFGenerator {
 
     // Logo (Bausen) respetando aspect ratio y reutilizando alias para no re-embed
     try {
-      const imgData = BAUSEN_LOGO_WHITE_BASE64
+      const imgData = BAUSEN_LOGO_BASE64
       const props = (this.doc as any).getImageProperties(imgData)
       const pad = 1
       const maxW = logoCardW - (pad * 0.2)
@@ -422,7 +450,7 @@ export class BechapraPDFGenerator {
       return
     }
 
-    modulos.forEach(modulo => {
+    modulos.forEach((modulo: any) => {
       this.agregarCheckItem(modulo.titulo, modulo.descripcion || '')
     })
 
@@ -553,7 +581,7 @@ export class BechapraPDFGenerator {
     this.yPosition += 15
     this.agregarSubtitulo('Resumen por Estado de Cuenta')
 
-    const tableData = data.resultados.map(archivo => [
+    const tableData = data.resultados.map((archivo: any) => [
       archivo.filename || 'Sin nombre',
       archivo.datos?.banco || 'N/A',
       archivo.datos?.numero_cuenta || 'N/A',
@@ -621,7 +649,7 @@ export class BechapraPDFGenerator {
     this.agregarSubtitulo('Facturas Emitidas (Principales)')
     
     if (data.emitidas && data.emitidas.length > 0) {
-      const facturasEmitidas = data.emitidas.slice(0, 10).map(f => [
+      const facturasEmitidas = data.emitidas.slice(0, 10).map((f: any) => [
         f.uuid?.slice(0, 8) || 'N/A',
         f.fecha || 'N/A',
         f.nombre?.slice(0, 25) || 'N/A',
@@ -762,7 +790,7 @@ export class BechapraPDFGenerator {
       this.yPosition += 15
       this.agregarSubtitulo('Resumen por Empleado')
 
-      const empleadosData = data.empleados.slice(0, 15).map(emp => [
+      const empleadosData = data.empleados.slice(0, 15).map((emp: any) => [
         emp.numero || 'N/A',
         emp.nombre?.slice(0, 30) || 'N/A',
         emp.departamento || 'N/A',
@@ -819,7 +847,7 @@ export class BechapraPDFGenerator {
     // ALERTAS (si existen)
     // ============================================
     if (alertas && alertas.length > 0) {
-      alertas.forEach(alerta => {
+      alertas.forEach((alerta: any) => {
         const colorRGB = alerta.tipo === 'error' ? BECHAPRA_COLORS.red :
                         alerta.tipo === 'warning' ? BECHAPRA_COLORS.yellow :
                         BECHAPRA_COLORS.blue
@@ -967,7 +995,7 @@ export class BechapraPDFGenerator {
 
     // Agrupar trabajadores por no_fonacot
     const trabajadoresMap = new Map()
-    trabajadores?.forEach(t => {
+    trabajadores?.forEach((t: any) => {
       if (!trabajadoresMap.has(t.no_fonacot)) {
         trabajadoresMap.set(t.no_fonacot, {
           no_fonacot: t.no_fonacot,
@@ -1132,7 +1160,7 @@ export class BechapraPDFGenerator {
 
     // Tabla con autoTable
     if (trabajadores && trabajadores.length > 0) {
-      const tableData = trabajadores.map(credito => [
+      const tableData = trabajadores.map((credito: any) => [
         credito.nombre,
         credito.no_credito.toString(),
         `${credito.cuotas_pagadas}/${credito.plazo_total}`,
@@ -1408,7 +1436,7 @@ export class BechapraPDFGenerator {
       this.yPosition += 15
       this.agregarSubtitulo('Resumen Mensual de Impuestos')
 
-      const mesesData = meses.map(m => [
+      const mesesData = meses.map((m: any) => [
         m.mes || 'N/A',
         formatCurrency(m.isr_persona_moral || 0),
         formatCurrency(m.isr_retenciones || 0),
@@ -1441,7 +1469,7 @@ export class BechapraPDFGenerator {
       this.yPosition += 5
       this.agregarSubtitulo(`Declaraciones (${data.declaraciones.total})`)
       
-      const declData = data.declaraciones.declaraciones.slice(0, 8).map(d => [
+      const declData = data.declaraciones.declaraciones.slice(0, 8).map((d: any) => [
         d.mes || 'N/A',
         d.tipo || 'N/A',
         d.impuesto || 'N/A',
@@ -1549,7 +1577,7 @@ export class BechapraPDFGenerator {
       this.yPosition += 10
       this.agregarSubtitulo('Top 10 Proveedores')
 
-      const provData = proveedores.slice(0, 10).map(p => [
+      const provData = proveedores.slice(0, 10).map((p: any) => [
         p.nombre?.slice(0, 30) || 'N/A',
         formatCurrency(p.saldo || 0),
         `${(p.porcentaje || 0).toFixed(1)}%`
@@ -1831,7 +1859,7 @@ export class BechapraPDFGenerator {
 
 
   private agregarNumeracionPaginas(): void {
-    const totalPages = this.doc.internal.getNumberOfPages()
+    const totalPages = (this.doc as any).internal.getNumberOfPages()
 
     for (let i = 1; i <= totalPages; i++) {
       this.doc.setPage(i)
@@ -1945,7 +1973,7 @@ export class BechapraPDFGenerator {
 
   private calcularTotalDepositos(data: Modulo1Data): number {
     let total = 0
-    data.resultados?.forEach(archivo => {
+    data.resultados?.forEach((archivo: any) => {
       const depositos = parseFloat(archivo.datos?.total_depositos || '0')
       if (!isNaN(depositos)) total += depositos
     })
@@ -1954,7 +1982,7 @@ export class BechapraPDFGenerator {
 
   private calcularTotalRetiros(data: Modulo1Data): number {
     let total = 0
-    data.resultados?.forEach(archivo => {
+    data.resultados?.forEach((archivo: any) => {
       const retiros = parseFloat(archivo.datos?.total_retiros || '0')
       if (!isNaN(retiros)) total += retiros
     })

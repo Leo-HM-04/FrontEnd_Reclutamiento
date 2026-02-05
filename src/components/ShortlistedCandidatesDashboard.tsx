@@ -103,6 +103,7 @@ interface CandidateWithApplication {
 // ============================================================
 
 export default function ShortlistedCandidatesDashboard() {
+  const { showAlert } = useModal();
   // Estado de datos
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);

@@ -111,7 +111,7 @@ export default function ClientFullReport({ clientId, onBack, onViewProfile }: Pr
           total_candidates_managed: data.statistics.total_candidates_managed,
         },
         profiles: data.profiles.map(profile => ({
-          title: profile.position_title || profile.title || 'Sin título',
+          title: profile.title || 'Sin título',
           status_display: profile.status_display || 'N/A',
           priority: profile.priority || 'N/A',
           candidates_count: profile.candidates_count || 0,

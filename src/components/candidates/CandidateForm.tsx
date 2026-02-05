@@ -12,6 +12,7 @@ interface CandidateFormProps {
 export default function CandidateForm({ candidateId, onSuccess }: CandidateFormProps) {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
+  const { showAlert } = useModal();
   
   const [formData, setFormData] = useState({
     // Información Personal

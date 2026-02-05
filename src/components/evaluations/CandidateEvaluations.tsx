@@ -35,6 +35,7 @@ interface Candidate {
 }
 
 export default function CandidateEvaluations() {
+  const { showConfirm, showAlert } = useModal();
   const [evaluations, setEvaluations] = useState<CandidateEvaluation[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);

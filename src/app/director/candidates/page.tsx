@@ -554,6 +554,7 @@ function NoteFormModal({ candidates, existingNote, onClose, onSuccess }: NoteFor
     is_important: existingNote?.is_important || false,
   });
   const [submitting, setSubmitting] = useState(false);
+  const { showAlert } = useModal();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

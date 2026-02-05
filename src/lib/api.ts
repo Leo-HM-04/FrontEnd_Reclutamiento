@@ -352,6 +352,42 @@ class ApiClient {
     });
   }
 
+  // ====== DOCUMENT VALIDATION (OCR) ENDPOINTS ======
+
+  /**
+   * Validate a document using OCR before upload.
+   * Returns validation status, scores, and detected fields.
+   */
+  async validateDocument(formData: FormData) {
+    const token = localStorage.getItem('authToken');
+    const response = await fetch(`${this.baseURL}/api/documents/validate/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw {
+        message: errorData.error || errorData.message || 'Error al validar documento',
+        status: response.status,
+        details: errorData,
+      } as ApiError;
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Get document validation rules and configuration.
+   * Useful for showing which documents require validation.
+   */
+  async getValidationRules() {
+    return this.makeRequest('/api/documents/validation-rules/');
+  }
+
   // ====== NOTES ENDPOINTS ======
 
   /**
@@ -414,66 +450,6 @@ class ApiClient {
    */
   async getCeleryTaskGroups(): Promise<any> {
     return this.makeRequest<any>('/api/director/celery-groups/');
-  }
-
-  // ====== CLIENTS ENDPOINTS ======
-  
-  /**
-   * Get all clients
-   */
-  async getClients(params?: Record<string, string>) {
-    const cleanParams: Record<string, string> = {};
-    
-    if (params) {
-      if (params.search && params.search.trim() !== '') {
-        cleanParams.search = params.search;
-      }
-      if (params.status && params.status !== 'all') {
-        cleanParams.is_active = params.status === 'active' ? 'true' : 'false';
-      }
-    }
-    
-    const queryString = Object.keys(cleanParams).length > 0
-      ? '?' + new URLSearchParams(cleanParams).toString()
-      : '';
-    
-    return this.makeRequest<any>(`/api/clients/${queryString}`);
-  }
-
-  /**
-   * Get single client by ID
-   */
-  async getClient(id: number): Promise<any> {
-    return this.makeRequest<any>(`/api/clients/${id}/`);
-  }
-
-  /**
-   * Create new client
-   */
-  async createClient(clientData: any): Promise<any> {
-    return this.makeRequest<any>('/api/clients/', {
-      method: 'POST',
-      body: JSON.stringify(clientData),
-    });
-  }
-
-  /**
-   * Update client
-   */
-  async updateClient(id: number, clientData: any): Promise<any> {
-    return this.makeRequest<any>(`/api/clients/${id}/`, {
-      method: 'PUT',
-      body: JSON.stringify(clientData),
-    });
-  }
-
-  /**
-   * Delete client
-   */
-  async deleteClient(id: number): Promise<any> {
-    return this.makeRequest<any>(`/api/clients/${id}/`, {
-      method: 'DELETE',
-    });
   }
 
   // ====== CONTACTS ENDPOINTS ======
@@ -713,6 +689,15 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  /**
+   * Delete profile document
+   */
+  async deleteProfileDocument(id: number) {
+    return this.makeRequest(`/api/profiles/documents/${id}/`, {
+      method: 'DELETE',
+    });
   }
 
   /**
@@ -1339,6 +1324,215 @@ export const bulkUploadCVs = (formData: FormData) =>
 
 export const getBulkUploadStatus = (taskId: string) =>
   apiClient.getBulkUploadStatus(taskId);
+
+
+// ============================================================
+// DOCUMENT SHARE LINKS API
+// ============================================================
+
+export interface DocumentShareLink {
+  id: number;
+  token: string;
+  candidate: number;
+  candidate_name?: string;  // Campo del SummarySerializer
+  candidate_info?: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+    email: string;
+  };
+  requested_document_types: string[];
+  uploaded_documents: number[];
+  status: 'active' | 'expired' | 'revoked' | 'completed';
+  status_display: string;
+  expires_at: string;
+  message: string;
+  config: Record<string, any>;
+  created_by: number;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+  access_count: number;
+  last_accessed_at: string | null;
+  completed_at: string | null;
+  is_expired: boolean;
+  is_usable: boolean;
+  progress_percentage: number;
+  pending_document_types: string[];
+  share_url: string;
+}
+
+export interface DocumentShareLinkCreate {
+  candidate: number;
+  requested_document_types: string[];
+  message?: string;
+  config?: Record<string, any>;
+  expiration_days?: number;
+}
+
+export interface PublicDocumentShareLink {
+  token: string;
+  candidate_name: string;
+  message: string;
+  requested_documents_info: Array<{ type: string; label: string }>;
+  pending_documents: Array<{ type: string; label: string }>;
+  progress_percentage: number;
+  expires_at: string;
+}
+
+/**
+ * Obtiene todos los document share links
+ */
+export const getDocumentShareLinks = async (params?: Record<string, string>): Promise<DocumentShareLink[]> => {
+  const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+  const response = await fetch(`${API_BASE_URL}/api/documents/share-links/${queryString}`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+    },
+  });
+  if (!response.ok) throw new Error('Error al obtener links');
+  return response.json();
+};
+
+/**
+ * Obtiene un document share link por ID
+ */
+export const getDocumentShareLink = async (id: number): Promise<DocumentShareLink> => {
+  const response = await fetch(`${API_BASE_URL}/api/documents/share-links/${id}/`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+    },
+  });
+  if (!response.ok) throw new Error('Error al obtener link');
+  return response.json();
+};
+
+/**
+ * Crea un nuevo document share link
+ */
+export const createDocumentShareLink = async (data: DocumentShareLinkCreate): Promise<DocumentShareLink> => {
+  const response = await fetch(`${API_BASE_URL}/api/documents/share-links/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || error.message || 'Error al crear link');
+  }
+  return response.json();
+};
+
+/**
+ * Revoca un document share link
+ */
+export const revokeDocumentShareLink = async (id: number): Promise<{ message: string; link: DocumentShareLink }> => {
+  const response = await fetch(`${API_BASE_URL}/api/documents/share-links/${id}/revoke/`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+    },
+  });
+  if (!response.ok) throw new Error('Error al revocar link');
+  return response.json();
+};
+
+/**
+ * Elimina un document share link
+ */
+export const deleteDocumentShareLink = async (id: number): Promise<void> => {
+  const response = await fetch(`${API_BASE_URL}/api/documents/share-links/${id}/`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+    },
+  });
+  if (!response.ok) throw new Error('Error al eliminar link');
+};
+
+/**
+ * Obtiene links de un candidato específico
+ */
+export const getDocumentShareLinksByCandidate = async (candidateId: number): Promise<DocumentShareLink[]> => {
+  const response = await fetch(`${API_BASE_URL}/api/documents/share-links/by_candidate/${candidateId}/`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+    },
+  });
+  if (!response.ok) throw new Error('Error al obtener links del candidato');
+  return response.json();
+};
+
+/**
+ * Obtiene estadísticas de share links
+ */
+export const getDocumentShareLinksStats = async (): Promise<{
+  total: number;
+  active: number;
+  completed: number;
+  expired: number;
+  revoked: number;
+}> => {
+  const response = await fetch(`${API_BASE_URL}/api/documents/share-links/stats/`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN)}`,
+    },
+  });
+  if (!response.ok) throw new Error('Error al obtener estadísticas');
+  return response.json();
+};
+
+// ============================================================
+// PUBLIC DOCUMENT SHARE LINKS API (sin autenticación)
+// ============================================================
+
+/**
+ * Obtiene información pública de un share link (sin auth)
+ */
+export const getPublicDocumentShareLink = async (token: string): Promise<PublicDocumentShareLink> => {
+  const response = await fetch(`${API_BASE_URL}/api/public/documents/${token}/`);
+  if (response.status === 410) {
+    const error = await response.json();
+    throw new Error(error.error || 'Link no disponible');
+  }
+  if (!response.ok) throw new Error('Link no encontrado');
+  return response.json();
+};
+
+/**
+ * Sube un documento a través de un link público (sin auth)
+ */
+export const uploadPublicDocument = async (
+  token: string,
+  documentType: string,
+  file: File
+): Promise<{
+  message: string;
+  document: { id: number; type: string; type_label: string; filename: string };
+  progress: number;
+  is_complete: boolean;
+  pending_documents: Array<{ type: string; label: string }>;
+}> => {
+  const formData = new FormData();
+  formData.append('document_type', documentType);
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE_URL}/api/public/documents/${token}/`, {
+    method: 'POST',
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Error al subir documento');
+  }
+  return response.json();
+};
+
 
 // Export types for use in components
 export type { LoginCredentials, LoginResponse, ApiError };

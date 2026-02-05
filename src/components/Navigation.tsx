@@ -19,6 +19,7 @@ import {
   faStickyNote,
   faFolderOpen,
   faChartLine,
+  faLink,
 } from '@fortawesome/free-solid-svg-icons';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +32,7 @@ const navigation = {
     { name: 'Dashboard', href: '/dashboard', icon: faTachometerAlt },
     { name: 'Candidatos', href: '/dashboard/candidates', icon: faUsers },
     { name: 'Empleos', href: '/dashboard/jobs', icon: faBriefcase },
+    { name: 'Links Documentos', href: '/dashboard/document-links', icon: faLink },
     { name: 'Reportes', href: '/dashboard/reports', icon: faChartBar },
     { name: 'Panel Admin', href: '/admin', icon: faTools },
     { name: 'Configuración', href: '/dashboard/settings', icon: faCog },
@@ -40,6 +42,7 @@ const navigation = {
     { name: 'Candidatos', href: '/director/candidates', icon: faUsers },
     { name: 'Aplicaciones', href: '/director/candidates/applications', icon: faBriefcase },
     { name: 'Documentos', href: '/director/candidates/documents', icon: faFolderOpen },
+    { name: 'Links Documentos', href: '/director/document-links', icon: faLink },
     { name: 'Notas', href: '/director/candidates/notes', icon: faStickyNote },
     { name: 'Avance de Cliente', href: '/director/client-progress', icon: faChartLine },
     { name: 'Procesos', href: '/director/processes', icon: faBriefcase },
@@ -50,6 +53,7 @@ const navigation = {
     { name: 'Dashboard', href: '/dashboard', icon: faTachometerAlt },
     { name: 'Candidatos', href: '/dashboard/candidates', icon: faUsers },
     { name: 'Mis Empleos', href: '/dashboard/jobs', icon: faBriefcase },
+    { name: 'Links Documentos', href: '/dashboard/document-links', icon: faLink },
     { name: 'Entrevistas', href: '/dashboard/interviews', icon: faFileAlt },
   ],
   candidate: [

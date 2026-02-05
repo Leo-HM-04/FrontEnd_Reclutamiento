@@ -19,6 +19,7 @@ interface CVAnalysisModalProps {
 }
 
 export default function CVAnalysisModal({ isOpen, onClose, onSuccess }: CVAnalysisModalProps) {
+  const { showAlert } = useModal();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<string>("");
   const [cvFile, setCvFile] = useState<File | null>(null);

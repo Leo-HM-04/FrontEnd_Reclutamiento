@@ -20,6 +20,7 @@ interface Candidate {
 export default function CandidateNoteFormModal({ isOpen, onClose, onSuccess }: CandidateNoteFormModalProps) {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const { showAlert } = useModal();
   
   const [noteForm, setNoteForm] = useState({
     candidato: '',

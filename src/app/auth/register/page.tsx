@@ -31,6 +31,7 @@ export default function RegisterPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { showAlert } = useModal();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

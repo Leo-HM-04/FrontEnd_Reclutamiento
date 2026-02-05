@@ -23,17 +23,35 @@ import {
   faSortUp,
   faSortDown,
   faEye,
-  faCertificate
+  faCertificate,
+  faLink
 } from '@fortawesome/free-solid-svg-icons';
 import { apiClient } from '@/lib/api';
+import ShareDocumentLinkModal from '@/components/ShareDocumentLinkModal';
 
 // Tipos de documentos según el backend
 const DOCUMENT_TYPES = [
-  { value: 'cv', label: 'Curriculum Vitae', icon: faFileAlt, color: 'text-blue-600' },
-  { value: 'cover_letter', label: 'Carta de Presentación', icon: faFile, color: 'text-purple-600' },
-  { value: 'certificate', label: 'Certificado', icon: faCertificate, color: 'text-green-600' },
-  { value: 'portfolio', label: 'Portafolio', icon: faFolderOpen, color: 'text-orange-600' },
-  { value: 'other', label: 'Otro', icon: faFile, color: 'text-gray-600' },
+  // DOCUMENTACION
+  { value: 'estudio_socioeconomico', label: 'Estudio socioeconómico', icon: faFileAlt, color: 'text-blue-600', category: 'DOCUMENTACION' },
+  { value: 'estudio_laboratorio', label: 'Estudio de laboratorio', icon: faFileAlt, color: 'text-blue-600', category: 'DOCUMENTACION' },
+  { value: 'estudio_psicometrico', label: 'Estudio psicométrico', icon: faFileAlt, color: 'text-blue-600', category: 'DOCUMENTACION' },
+  { value: 'entrevistas_examenes', label: 'Entrevistas y exámenes', icon: faFileAlt, color: 'text-blue-600', category: 'DOCUMENTACION' },
+  
+  // INFORMACIÓN PERSONAL
+  { value: 'ine_pasaporte', label: 'Identificación oficial INE o pasaporte (no IFE)', icon: faCertificate, color: 'text-green-600', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'acta_nacimiento', label: 'Acta de nacimiento', icon: faCertificate, color: 'text-green-600', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'comprobante_domicilio', label: 'Comprobante de domicilio', icon: faFile, color: 'text-purple-600', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'situacion_fiscal', label: 'Constancia de situación fiscal', icon: faFile, color: 'text-purple-600', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'curp', label: 'CURP', icon: faCertificate, color: 'text-green-600', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'nss', label: 'Numero de Seguridad Social NSS', icon: faCertificate, color: 'text-green-600', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'estado_cuenta', label: 'Estado de cuenta bancario', icon: faFile, color: 'text-purple-600', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'cartas_recomendacion', label: 'Dos cartas de recomendación con números telefónicos', icon: faFile, color: 'text-purple-600', category: 'INFORMACIÓN PERSONAL' },
+  
+  // INFORMACIÓN DE GRADO ACADÉMICO
+  { value: 'titulo_profesional', label: 'Título profesional', icon: faCertificate, color: 'text-orange-600', category: 'INFORMACIÓN DE GRADO ACADÉMICO' },
+  { value: 'cedula_profesional', label: 'Cedula profesional', icon: faCertificate, color: 'text-orange-600', category: 'INFORMACIÓN DE GRADO ACADÉMICO' },
+  { value: 'cv', label: 'CV', icon: faFileAlt, color: 'text-orange-600', category: 'INFORMACIÓN DE GRADO ACADÉMICO' },
+  { value: 'cartas_trabajos_anteriores', label: 'Cartas de anteriores trabajos', icon: faFile, color: 'text-orange-600', category: 'INFORMACIÓN DE GRADO ACADÉMICO' },
 ];
 
 interface Document {
@@ -76,6 +94,7 @@ export default function DocumentsPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
   
   // Toast
   const [toast, setToast] = useState<{show: boolean, message: string, type: 'success' | 'error'}>({
@@ -276,13 +295,22 @@ export default function DocumentsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Documentos de Candidatos</h1>
             <p className="text-gray-600 mt-1">Gestiona CVs, certificados y documentos de los candidatos</p>
           </div>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <FontAwesomeIcon icon={faPlus} />
-            Subir Documento
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowShareLinkModal(true)}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faLink} />
+              Compartir Link
+            </button>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faPlus} />
+              Subir Documento
+            </button>
+          </div>
         </div>
       </div>
 
@@ -545,6 +573,16 @@ export default function DocumentsPage() {
           }}
         />
       )}
+
+      {/* Share Document Link Modal */}
+      <ShareDocumentLinkModal
+        isOpen={showShareLinkModal}
+        onClose={() => setShowShareLinkModal(false)}
+        onSuccess={(link) => {
+          setShowShareLinkModal(false);
+          showToast('Link generado exitosamente', 'success');
+        }}
+      />
     </div>
   );
 }
@@ -560,11 +598,12 @@ interface UploadDocumentModalProps {
 function UploadDocumentModal({ candidates, onClose, onSuccess }: UploadDocumentModalProps) {
   const [formData, setFormData] = useState({
     candidate: '',
-    document_type: 'cv',
+    document_type: 'estudio_socioeconomico',
     description: '',
     file: null as File | null,
   });
   const [uploading, setUploading] = useState(false);
+  const { showAlert } = useModal();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -652,11 +691,27 @@ function UploadDocumentModal({ candidates, onClose, onSuccess }: UploadDocumentM
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
-              {DOCUMENT_TYPES.map(type => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
+              <optgroup label="━━━ DOCUMENTACIÓN ━━━">
+                {DOCUMENT_TYPES.filter(type => type.category === 'DOCUMENTACION').map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="━━━ INFORMACIÓN PERSONAL ━━━">
+                {DOCUMENT_TYPES.filter(type => type.category === 'INFORMACIÓN PERSONAL').map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="━━━ INFORMACIÓN DE GRADO ACADÉMICO ━━━">
+                {DOCUMENT_TYPES.filter(type => type.category === 'INFORMACIÓN DE GRADO ACADÉMICO').map(type => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
 

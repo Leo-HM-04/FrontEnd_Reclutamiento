@@ -11,6 +11,7 @@ import ProfileDetail from "../profiles/ProfileDetail";
 import ProfileForm from "../profiles/ProfileForm";
 import ApplicationDetailView from "./ApplicationDetailView";
 import UploadDocumentModal from "./UploadDocumentModal";
+import ShareDocumentLinkModal from "@/components/ShareDocumentLinkModal";
 import Pagination from "../ui/Pagination";
 
 type CandidateView = 
@@ -41,6 +42,7 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
   
   // Data states
@@ -690,6 +692,13 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                   <h3 className="text-2xl font-bold text-gray-900">Documentos de Candidatos</h3>
                   <div className="flex gap-3">
                     <button 
+                      onClick={() => setShowShareLinkModal(true)}
+                      className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium flex items-center gap-2"
+                    >
+                      <i className="fas fa-link"></i>
+                      Compartir Link
+                    </button>
+                    <button 
                       onClick={() => setShowUploadModal(true)}
                       className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
                     >
@@ -920,6 +929,18 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                 }}
               />
             )}
+
+            {/* Share Document Link Modal */}
+            <ShareDocumentLinkModal
+              isOpen={showShareLinkModal}
+              onClose={() => setShowShareLinkModal(false)}
+              onSuccess={() => {
+                // NO cerrar el modal aquí - dejar que el usuario vea el link generado
+                // El modal se cerrará cuando el usuario haga clic en "Cerrar"
+                setSuccessMessage('Link de documento generado exitosamente');
+                setTimeout(() => setSuccessMessage(''), 3000);
+              }}
+            />
 
             {/* HISTORY */}
             {currentView === "history" && (

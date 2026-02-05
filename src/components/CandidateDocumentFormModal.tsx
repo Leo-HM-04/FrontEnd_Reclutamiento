@@ -18,11 +18,27 @@ interface Candidate {
 }
 
 const DOCUMENT_TYPES = [
-  { value: 'cv', label: 'Curriculum Vitae' },
-  { value: 'cover_letter', label: 'Carta de Presentación' },
-  { value: 'certificate', label: 'Certificados' },
-  { value: 'portfolio', label: 'Portafolio' },
-  { value: 'other', label: 'Otros' },
+  // DOCUMENTACION
+  { value: 'estudio_socioeconomico', label: 'Estudio socioeconómico', category: 'DOCUMENTACION' },
+  { value: 'estudio_laboratorio', label: 'Estudio de laboratorio', category: 'DOCUMENTACION' },
+  { value: 'estudio_psicometrico', label: 'Estudio psicométrico', category: 'DOCUMENTACION' },
+  { value: 'entrevistas_examenes', label: 'Entrevistas y exámenes', category: 'DOCUMENTACION' },
+  
+  // INFORMACIÓN PERSONAL
+  { value: 'ine_pasaporte', label: 'Identificación oficial INE o pasaporte (no IFE)', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'acta_nacimiento', label: 'Acta de nacimiento', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'comprobante_domicilio', label: 'Comprobante de domicilio', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'situacion_fiscal', label: 'Constancia de situación fiscal', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'curp', label: 'CURP', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'nss', label: 'Numero de Seguridad Social NSS', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'estado_cuenta', label: 'Estado de cuenta bancario', category: 'INFORMACIÓN PERSONAL' },
+  { value: 'cartas_recomendacion', label: 'Dos cartas de recomendación con números telefónicos', category: 'INFORMACIÓN PERSONAL' },
+  
+  // INFORMACIÓN DE GRADO ACADÉMICO
+  { value: 'titulo_profesional', label: 'Título profesional', category: 'INFORMACIÓN DE GRADO ACADÉMICO' },
+  { value: 'cedula_profesional', label: 'Cedula profesional', category: 'INFORMACIÓN DE GRADO ACADÉMICO' },
+  { value: 'cv', label: 'CV', category: 'INFORMACIÓN DE GRADO ACADÉMICO' },
+  { value: 'cartas_trabajos_anteriores', label: 'Cartas de anteriores trabajos', category: 'INFORMACIÓN DE GRADO ACADÉMICO' },
 ];
 
 export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess }: CandidateDocumentFormModalProps) {
@@ -31,7 +47,7 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
   
   const [documentForm, setDocumentForm] = useState({
     candidato: '',
-    tipoDocumento: 'cv',
+    tipoDocumento: 'estudio_socioeconomico',
     archivo: null as File | null,
     archivoNombre: '',
     descripcion: '',
@@ -41,6 +57,7 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
   const [showAIAnalysis, setShowAIAnalysis] = useState(false);
   const [showMetadata, setShowMetadata] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const { showAlert } = useModal();
 
   // Cargar candidatos cuando se abre el modal
   useEffect(() => {
@@ -65,7 +82,7 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
   const resetForm = () => {
     setDocumentForm({
       candidato: '',
-      tipoDocumento: 'cv',
+      tipoDocumento: 'estudio_socioeconomico',
       archivo: null,
       archivoNombre: '',
       descripcion: '',
@@ -241,9 +258,21 @@ export default function CandidateDocumentFormModal({ isOpen, onClose, onSuccess 
                       className="w-full px-3 py-2.5 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:outline-none text-gray-800 shadow-sm transition-colors"
                       required
                     >
-                      {DOCUMENT_TYPES.map(type => (
-                        <option key={type.value} value={type.value}>{type.label}</option>
-                      ))}
+                      <optgroup label="━━━ DOCUMENTACIÓN ━━━">
+                        {DOCUMENT_TYPES.filter(type => type.category === 'DOCUMENTACION').map(type => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="━━━ INFORMACIÓN PERSONAL ━━━">
+                        {DOCUMENT_TYPES.filter(type => type.category === 'INFORMACIÓN PERSONAL').map(type => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="━━━ INFORMACIÓN DE GRADO ACADÉMICO ━━━">
+                        {DOCUMENT_TYPES.filter(type => type.category === 'INFORMACIÓN DE GRADO ACADÉMICO').map(type => (
+                          <option key={type.value} value={type.value}>{type.label}</option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
 

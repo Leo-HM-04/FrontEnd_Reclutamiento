@@ -11,6 +11,7 @@ interface AddContactModalProps {
 }
 
 export default function AddContactModal({ clients, onClose, onSuccess }: AddContactModalProps) {
+  const { showAlert } = useModal();
   const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({

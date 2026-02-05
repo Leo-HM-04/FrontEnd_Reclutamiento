@@ -72,6 +72,7 @@ interface ProfileDetail extends Profile {
 // ============================================================
 
 export default function ProfilesStatusDashboard() {
+  const { showAlert } = useModal();
   // Estado de datos
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfiles, setSelectedProfiles] = useState<Set<number>>(new Set());

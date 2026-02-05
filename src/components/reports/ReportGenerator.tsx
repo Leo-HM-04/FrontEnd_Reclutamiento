@@ -19,6 +19,7 @@ interface ReportGeneratorProps {
 }
 
 export default function ReportGenerator({ onGenerate }: ReportGeneratorProps) {
+  const { showAlert } = useModal();
   const [selectedType, setSelectedType] = useState('monthly');
   const [selectedFormat, setSelectedFormat] = useState('pdf');
   const [loading, setLoading] = useState(false);

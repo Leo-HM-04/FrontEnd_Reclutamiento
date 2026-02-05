@@ -19,6 +19,7 @@ interface Contact {
 }
 
 export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFormModalProps) {
+  const { showAlert } = useModal();
   const [submitting, setSubmitting] = useState(false);
   
   const [clientForm, setClientForm] = useState({
@@ -95,6 +96,7 @@ export default function ClientFormModal({ isOpen, onClose, onSuccess }: ClientFo
 
       const clientData = {
         ...clientForm,
+        assigned_to: clientForm.assigned_to || undefined,
         contacts: contacts.length > 0 ? contacts : undefined,
       };
 

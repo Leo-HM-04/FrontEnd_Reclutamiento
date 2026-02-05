@@ -45,6 +45,7 @@ export default function SupervisorPage() {
   // Dropdowns
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const { showAlert } = useModal();
 
   // ===== Chart
   const doughnutRef = useRef<HTMLCanvasElement | null>(null);

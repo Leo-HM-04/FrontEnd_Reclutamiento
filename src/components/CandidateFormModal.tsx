@@ -8,12 +8,12 @@ interface Candidate {
   first_name: string;
   last_name: string;
   email: string;
-  phone: string;
-  city: string;
-  state: string;
+  phone?: string;
+  city?: string;
+  state?: string;
   country?: string;
-  current_position: string;
-  current_company: string;
+  current_position?: string;
+  current_company?: string;
   years_of_experience?: number;
   education_level?: string;
   university?: string;

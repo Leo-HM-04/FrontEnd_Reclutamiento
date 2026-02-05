@@ -97,6 +97,7 @@ export default function CandidatesStatusDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const { showAlert } = useModal();
   
   // Búsqueda
   const [searchTerm, setSearchTerm] = useState('');

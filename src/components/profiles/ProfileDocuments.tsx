@@ -31,7 +31,7 @@ export default function ProfileDocuments() {
     description: "",
     file: null as File | null,
   });
-  const { showConfirm, showSuccess, showError } = useModal();
+  const { showConfirm, showSuccess, showError, showAlert } = useModal();
 
   useEffect(() => {
     loadProfiles();

@@ -22,7 +22,9 @@ import ReportsDashboard from '@/components/ReportsDashboard';
 import IndividualReportsHub from '@/components/reports/IndividualReportsHub';
 import DirectorReportsHub from '@/components/reports/DirectorReportsHub';
 import ShareLinkModal from '@/components/ShareLinkModal';
+import ShareDocumentLinkModal from '@/components/ShareDocumentLinkModal';
 import EmailManagement from '@/components/EmailManagement';
+import DocumentShareLinksDashboard from '@/components/DocumentShareLinksDashboard';
 import NextImage from "next/image";
 
 import bausenLogo from "@/logos/bausen-logo.png";
@@ -261,7 +263,7 @@ export default function Page() {
   // ====== State principal (equivalente a directorApp) ======
   // Intentar restaurar la vista desde localStorage, si no existe usar "dashboard"
   const [currentView, setCurrentView] = useState<
-    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates" | "individual-reports" | "email-management"
+    "dashboard" | "processes" | "candidates" | "clients" | "team" | "approvals" | "reports" | "documents" | "applications" | "notes" | "history" | "tasks" | "client-list" | "client-contacts" | "client-progress" | "evaluations" | "profiles" | "profiles-status" | "candidates-status" | "shortlisted-candidates" | "selected-candidates" | "individual-reports" | "email-management" | "document-links"
   >("dashboard");
 
   // Restaurar vista guardada al montar el componente (PRIMERO)
@@ -409,6 +411,7 @@ export default function Page() {
   const [showRejectReason, setShowRejectReason] = useState(false);
   const [showCandidateForm, setShowCandidateForm] = useState(false);
   const [showDocumentForm, setShowDocumentForm] = useState(false);
+  const [showShareLinkModal, setShowShareLinkModal] = useState(false);
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
 
@@ -2302,6 +2305,36 @@ export default function Page() {
                       Gestión de Correos
                     </button>
                   </li>
+                  <li>
+                    {/* 13. LINKS DE DOCUMENTOS */}
+                    <button
+                      onClick={() => {
+                        setCurrentView("document-links");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("document-links")}`}
+                    >
+                      <i className="fas fa-link mr-3 w-5" />
+                      Links Documentos
+                    </button>
+                  </li>
+                  <li>
+                    {/* 13. LINKS DE DOCUMENTOS */}
+                    <button
+                      onClick={() => {
+                        setCurrentView("document-links");
+                        if (window.innerWidth < 1024) {
+                          setSidebarOpen(false);
+                        }
+                      }}
+                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("document-links")}`}
+                    >
+                      <i className="fas fa-link mr-3 w-5" />
+                      Links Documentos
+                    </button>
+                  </li>
                 </ul>
               </div>
             </div>
@@ -3942,6 +3975,10 @@ export default function Page() {
                       <i className="fas fa-search mr-2" />
                       Buscar
                     </button>
+                    <button onClick={() => setShowShareLinkModal(true)} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
+                      <i className="fas fa-link mr-2" />
+                      Compartir Link
+                    </button>
                     <button onClick={uploadDocument} className="px-4 py-2 btn-primary text-white rounded-lg">
                       <i className="fas fa-cloud-upload-alt mr-2" />
                       Subir Documento
@@ -4618,6 +4655,9 @@ export default function Page() {
 
           {currentView === "email-management" && <EmailManagement />}
 
+          {/* DOCUMENT SHARE LINKS */}
+          {currentView === "document-links" && <DocumentShareLinksDashboard />}
+
           {/* LISTA DE CONTACTOS */}
           {
             currentView === "client-contacts" && (
@@ -4814,6 +4854,16 @@ export default function Page() {
             clientName={selectedProfileForShare.clientName}
           />
         )}
+
+        {/* Modal Compartir Link de Documentos */}
+        <ShareDocumentLinkModal
+          isOpen={showShareLinkModal}
+          onClose={() => setShowShareLinkModal(false)}
+          onSuccess={() => {
+            // NO cerrar el modal aquí - dejar que el usuario vea y copie el link
+            success('Link de documento generado exitosamente');
+          }}
+        />
 
       </div>
     </div>

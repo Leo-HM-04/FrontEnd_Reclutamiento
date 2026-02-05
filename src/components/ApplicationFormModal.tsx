@@ -51,6 +51,7 @@ export default function ApplicationFormModal({
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const { showAlert } = useModal();
   
   const [formData, setFormData] = useState<ApplicationFormData>({
     candidato: '',

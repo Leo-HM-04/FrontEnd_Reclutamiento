@@ -32,6 +32,7 @@ export default function BulkCVUploadModal({
   onClose, 
   onSuccess 
 }: BulkCVUploadModalProps) {
+  const { showAlert } = useModal();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string>("");
   const [cvFiles, setCvFiles] = useState<File[]>([]);

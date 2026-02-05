@@ -9,6 +9,7 @@ import AlertsPanel from './AlertsPanel';
 import ReportGenerator from './ReportGenerator';
 
 export default function DirectorReportsHub() {
+  const { showAlert } = useModal();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
