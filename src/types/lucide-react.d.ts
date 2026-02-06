@@ -1,0 +1,1 @@
+// Deprecated shim for lucide-react (no longer used). Kept temporarily for compatibility.

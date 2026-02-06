@@ -357,14 +357,24 @@ class ApiClient {
   /**
    * Validate a document using OCR before upload.
    * Returns validation status, scores, and detected fields.
+   * Uses public endpoint if no auth token is available (for public document links).
    */
   async validateDocument(formData: FormData) {
     const token = localStorage.getItem('authToken');
-    const response = await fetch(`${this.baseURL}/api/documents/validate/`, {
+    
+    // Si no hay token de autenticación, usar el endpoint público
+    const endpoint = token 
+      ? `${this.baseURL}/api/documents/validate/`
+      : `${this.baseURL}/api/public/documents/validate/`;
+    
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+      headers: headers,
       body: formData,
     });
 
@@ -1342,24 +1352,27 @@ export interface DocumentShareLink {
     full_name: string;
     email: string;
   };
-  requested_document_types: string[];
-  uploaded_documents: number[];
+  requested_document_types?: string[];  // Solo en detail
+  uploaded_documents?: number[];  // Solo en detail
+  documents_count?: string;  // En summary: "0/4", "1/3", etc.
+  uploaded_count?: number; // Número explícito de documentos subidos
+  requested_count?: number; // Número explícito de documentos solicitados
   status: 'active' | 'expired' | 'revoked' | 'completed';
   status_display: string;
   expires_at: string;
-  message: string;
-  config: Record<string, any>;
-  created_by: number;
-  created_by_name: string;
+  message?: string;
+  config?: Record<string, any>;
+  created_by?: number;
+  created_by_name?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
   access_count: number;
-  last_accessed_at: string | null;
-  completed_at: string | null;
-  is_expired: boolean;
+  last_accessed_at?: string | null;
+  completed_at?: string | null;
+  is_expired?: boolean;
   is_usable: boolean;
   progress_percentage: number;
-  pending_document_types: string[];
+  pending_document_types?: string[];
   share_url: string;
 }
 

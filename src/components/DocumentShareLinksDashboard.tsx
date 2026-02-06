@@ -47,6 +47,24 @@ export default function DocumentShareLinksPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({
+    show: false,
+    message: '',
+    type: 'success',
+  });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3000);
+  };
 
   // ============================================================
   // CARGAR DATOS
@@ -83,8 +101,10 @@ export default function DocumentShareLinksPage() {
     try {
       await revokeDocumentShareLink(id);
       await loadData();
+      showToast('Link revocado exitosamente', 'success');
     } catch (err: any) {
       setError(err.message || 'Error al revocar link');
+      showToast(err.message || 'Error al revocar link', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -96,16 +116,92 @@ export default function DocumentShareLinksPage() {
       await deleteDocumentShareLink(id);
       setShowDeleteConfirm(null);
       await loadData();
+      showToast('Link eliminado exitosamente', 'success');
     } catch (err: any) {
       setError(err.message || 'Error al eliminar link');
+      showToast(err.message || 'Error al eliminar link', 'error');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleCopyLink = (url: string) => {
-    navigator.clipboard.writeText(url);
-    // Podríamos agregar un toast notification aquí
+  /**
+   * Copia el link al portapapeles con validación y feedback UX
+   * Incluye fallback para navegadores sin clipboard API
+   */
+  const handleCopyLink = async (url: string | undefined) => {
+    // Validación: verificar que el link existe
+    if (!url || url.trim() === '') {
+      showToast('No hay enlace disponible para este registro', 'error');
+      console.error('❌ Intento de copiar link vacío o undefined');
+      return;
+    }
+
+    try {
+      // Método moderno: Clipboard API (requiere HTTPS o localhost)
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+        showToast('✓ Enlace copiado al portapapeles', 'success');
+        console.log('✅ Link copiado:', url);
+      } else {
+        // Fallback para HTTP local o navegadores antiguos
+        copyToClipboardFallback(url);
+        showToast('✓ Enlace copiado al portapapeles', 'success');
+        console.log('✅ Link copiado (fallback):', url);
+      }
+    } catch (err) {
+      console.error('❌ Error al copiar:', err);
+      // Intentar fallback si falla el método moderno
+      try {
+        copyToClipboardFallback(url);
+        showToast('✓ Enlace copiado al portapapeles', 'success');
+      } catch (fallbackErr) {
+        showToast('Error al copiar. Por favor copia manualmente', 'error');
+        console.error('❌ Error en fallback:', fallbackErr);
+      }
+    }
+  };
+
+  /**
+   * Fallback para copiar al portapapeles sin Clipboard API
+   * Útil en HTTP local o Safari antiguo
+   */
+  const copyToClipboardFallback = (text: string) => {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    
+    textarea.focus();
+    textarea.select();
+    
+    try {
+      const successful = document.execCommand('copy');
+      if (!successful) throw new Error('execCommand failed');
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  };
+
+  /**
+   * Abre el link en nueva pestaña con validación
+   */
+  const handleOpenLink = (url: string | undefined) => {
+    if (!url || url.trim() === '') {
+      showToast('No hay enlace disponible para este registro', 'error');
+      console.error('❌ Intento de abrir link vacío o undefined');
+      return;
+    }
+    
+    try {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      console.log('✅ Abriendo link:', url);
+    } catch (err) {
+      console.error('❌ Error al abrir link:', err);
+      showToast('Error al abrir el enlace', 'error');
+    }
   };
 
   const handleLinkCreated = () => {
@@ -331,7 +427,10 @@ export default function DocumentShareLinksPage() {
                           </span>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          {link.uploaded_documents?.length || 0} de {link.requested_document_types?.length || 0} docs
+                          { (link.uploaded_count !== undefined || link.requested_count !== undefined)
+                              ? `${link.uploaded_count ?? 0} de ${link.requested_count ?? 0} docs`
+                              : (link.documents_count ? `${link.documents_count} docs` : `${link.uploaded_documents?.length || 0} de ${link.requested_document_types?.length || 0} docs`)
+                          }
                         </p>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
@@ -363,17 +462,15 @@ export default function DocumentShareLinksPage() {
                           </button>
                           
                           {/* Open in new tab */}
-                          <a
-                            href={link.share_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => handleOpenLink(link.share_url)}
                             className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                             title="Abrir link"
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                             </svg>
-                          </a>
+                          </button>
                           
                           {/* Revoke (only for active) */}
                           {link.status === 'active' && (
@@ -457,6 +554,29 @@ export default function DocumentShareLinksPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-4 right-4 z-50 animate-fade-in">
+          <div className={`rounded-lg shadow-xl px-6 py-4 max-w-md flex items-center gap-3 ${
+            toast.type === 'success' ? 'bg-emerald-600 text-white' :
+            toast.type === 'error' ? 'bg-red-600 text-white' :
+            'bg-blue-600 text-white'
+          }`}>
+            {toast.type === 'success' && (
+              <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            {toast.type === 'error' && (
+              <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <p className="font-medium">{toast.message}</p>
+          </div>
+        </div>
       )}
     </div>
   );

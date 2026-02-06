@@ -22,6 +22,8 @@ import ProfileTimelineReport from './ProfileTimelineReport';
 import CandidateFullReport from './CandidateFullReport';
 import ClientFullReport from './ClientFullReport';
 import FullConsolidatedReport from './FullConsolidatedReport';
+import ReportCard from '../ui/ReportCard';
+import SearchableSelect from '../ui/SearchableSelect';
 
 interface Profile {
   id: number;
@@ -196,18 +198,17 @@ export default function IndividualReportsHub() {
             <p className="text-sm text-gray-600 mb-4">
               Ve toda la información de una vacante específica
             </p>
-            <select
-              onChange={(e) => e.target.value && handleViewProfile(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              defaultValue=""
-            >
-              <option value="">Seleccionar perfil...</option>
-              {profiles.map(profile => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.position_title}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              options={profiles.map(p => ({
+                value: p.id,
+                label: p.position_title,
+                searchText: `${p.position_title} - ${p.client_name}`
+              }))}
+              onChange={(val) => handleViewProfile(Number(val))}
+              placeholder="Buscar perfil..."
+              emptyMessage="Sin resultados"
+              loading={loading}
+            />
           </div>
 
           {/* Candidatos de Perfil */}
@@ -221,18 +222,17 @@ export default function IndividualReportsHub() {
             <p className="text-sm text-gray-600 mb-4">
               Lista de candidatos que aplicaron a una vacante
             </p>
-            <select
-              onChange={(e) => e.target.value && handleViewCandidates(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              defaultValue=""
-            >
-              <option value="">Seleccionar perfil...</option>
-              {profiles.map(profile => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.position_title}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              options={profiles.map(p => ({
+                value: p.id,
+                label: p.position_title,
+                searchText: `${p.position_title} - ${p.client_name}`
+              }))}
+              onChange={(val) => handleViewCandidates(Number(val))}
+              placeholder="Buscar perfil..."
+              emptyMessage="Sin resultados"
+              loading={loading}
+            />
           </div>
 
           {/* Timeline de Perfil */}
@@ -246,18 +246,17 @@ export default function IndividualReportsHub() {
             <p className="text-sm text-gray-600 mb-4">
               Línea de tiempo completa de un perfil
             </p>
-            <select
-              onChange={(e) => e.target.value && handleViewTimeline(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              defaultValue=""
-            >
-              <option value="">Seleccionar perfil...</option>
-              {profiles.map(profile => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.position_title}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              options={profiles.map(p => ({
+                value: p.id,
+                label: p.position_title,
+                searchText: `${p.position_title} - ${p.client_name}`
+              }))}
+              onChange={(val) => handleViewTimeline(Number(val))}
+              placeholder="Buscar perfil..."
+              emptyMessage="Sin resultados"
+              loading={loading}
+            />
           </div>
 
           {/* Reporte de Candidato */}
@@ -271,18 +270,17 @@ export default function IndividualReportsHub() {
             <p className="text-sm text-gray-600 mb-4">
               Información completa de un candidato
             </p>
-            <select
-              onChange={(e) => e.target.value && handleViewCandidate(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              defaultValue=""
-            >
-              <option value="">Seleccionar candidato...</option>
-              {candidates.map(candidate => (
-                <option key={candidate.id} value={candidate.id}>
-                  {candidate.full_name}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              options={candidates.map(c => ({
+                value: c.id,
+                label: c.full_name,
+                searchText: `${c.full_name} - ${c.email}`
+              }))}
+              onChange={(val) => handleViewCandidate(Number(val))}
+              placeholder="Buscar candidato por nombre o email..."
+              emptyMessage="Sin resultados"
+              loading={loading}
+            />
           </div>
 
           {/* Reporte de Cliente */}
@@ -296,65 +294,35 @@ export default function IndividualReportsHub() {
             <p className="text-sm text-gray-600 mb-4">
               Historial completo de un cliente
             </p>
-            <select
-              onChange={(e) => e.target.value && handleViewClient(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              defaultValue=""
-            >
-              <option value="">Seleccionar cliente...</option>
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>
-                  {client.company_name}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              options={clients.map(c => ({
+                value: c.id,
+                label: c.company_name,
+                searchText: `${c.company_name} - ${c.industry || ''}`
+              }))}
+              onChange={(val) => handleViewClient(Number(val))}
+              placeholder="Buscar cliente por nombre..."
+              emptyMessage="Sin resultados"
+              loading={loading}
+            />
           </div>
 
-          {/* Reporte Final Consolidado */}
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-105 lg:col-span-3 md:col-span-2">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                    <i className="fas fa-file-contract text-white text-xl"></i>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">
-                      Reporte Final Consolidado
-                    </h3>
-                    <p className="text-white/80 text-sm">
-                      Toda la información en un solo documento
-                    </p>
-                  </div>
-                </div>
-                <p className="text-white/70 text-sm mb-4">
-                  Genera un reporte ejecutivo completo con todas las métricas, perfiles, candidatos y clientes. 
-                  Ideal para presentaciones y análisis gerencial.
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="px-2 py-1 bg-white/20 rounded text-white text-xs">
-                    <i className="fas fa-chart-pie mr-1"></i> Resumen Ejecutivo
-                  </span>
-                  <span className="px-2 py-1 bg-white/20 rounded text-white text-xs">
-                    <i className="fas fa-briefcase mr-1"></i> Todos los Perfiles
-                  </span>
-                  <span className="px-2 py-1 bg-white/20 rounded text-white text-xs">
-                    <i className="fas fa-users mr-1"></i> Todos los Candidatos
-                  </span>
-                  <span className="px-2 py-1 bg-white/20 rounded text-white text-xs">
-                    <i className="fas fa-building mr-1"></i> Todos los Clientes
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={handleViewConsolidated}
-                className="ml-4 px-6 py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-indigo-50 transition-colors shadow-md"
-              >
-                <i className="fas fa-arrow-right mr-2"></i>
-                Generar Reporte
-              </button>
-            </div>
-          </div>
+          {/* Reporte Final Consolidado - ahora card reutilizable (variant: featured) */}
+          <ReportCard
+            variant="featured"
+            badge="RECOMENDADO"
+            icon={<i className="fas fa-file-contract text-purple-600 text-xl"></i>}
+            title="Reporte Final Consolidado"
+            subtitle="Toda la información en un solo documento"
+            description={"Genera un reporte ejecutivo completo con todas las métricas, perfiles, candidatos y clientes. Ideal para presentaciones y análisis gerencial."}
+            chips={[
+              { icon: 'fa-chart-pie', label: 'Resumen Ejecutivo' },
+              { icon: 'fa-briefcase', label: 'Todos los Perfiles' },
+              { icon: 'fa-users', label: 'Todos los Candidatos' },
+              { icon: 'fa-building', label: 'Todos los Clientes' }
+            ]}
+            cta={{ label: 'Generar Reporte', onClick: handleViewConsolidated }}
+          />
 
         </div>
       </div>

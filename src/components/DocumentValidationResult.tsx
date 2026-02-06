@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import AnalysisResultCard from "./AnalysisResultCard";
 
 // =============================================================================
 // TIPOS
@@ -70,6 +71,9 @@ export default function DocumentValidationResult({
   
   // Estado de animación para el loader
   const [dots, setDots] = useState("");
+  // Estado interno para animar entre resultados
+  const [displayedResult, setDisplayedResult] = useState<ValidationResult | null>(result);
+  const [cardVisible, setCardVisible] = useState<boolean>(true);
   
   useEffect(() => {
     if (isValidating) {
@@ -79,6 +83,25 @@ export default function DocumentValidationResult({
       return () => clearInterval(interval);
     }
   }, [isValidating]);
+
+  // Handle smooth transition when `result` changes
+  useEffect(() => {
+    if (result === displayedResult) return;
+    // If no previous result, show immediately
+    if (!displayedResult) {
+      setDisplayedResult(result);
+      setCardVisible(true);
+      return;
+    }
+
+    // Hide current card, wait for exit animation, then swap
+    setCardVisible(false);
+    const t = setTimeout(() => {
+      setDisplayedResult(result);
+      setCardVisible(true);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [result, displayedResult]);
 
   // ==========================================================================
   // ESTADO: ANALIZANDO
@@ -112,402 +135,110 @@ export default function DocumentValidationResult({
   }
 
   // Si no hay resultado, no mostrar nada
-  if (!result) return null;
+  if (!displayedResult) return null;
 
   // ==========================================================================
-  // ESTADO: APROBADO ✅
+  // ESTADO: APROBADO / SKIPPED ✅ - usa AnalysisResultCard
   // ==========================================================================
-  if (result.status === "approved" || result.status === "skipped") {
+  if (displayedResult!.status === "approved" || displayedResult!.status === "skipped") {
     return (
-      <div className="bg-white border-2 border-green-200 rounded-lg p-6 shadow-sm">
-        {/* Header con badge */}
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-              <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">Documento validado</span>
-            </div>
-            <h4 className="text-lg font-semibold text-gray-900">
-              {result.user_message?.title?.replace(/✅|✓/g, '').trim() || "Documento validado"}
-            </h4>
-            <p className="text-sm text-gray-600 mt-1">
-              {result.user_message?.subtitle || "El documento parece correcto y legible."}
-            </p>
-          </div>
-          <div className="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </div>
-        </div>
-
-        {/* Campos detectados en grid compacto */}
-        {result.flags_detected && result.flags_detected.length > 0 && (
-          <div className="mt-5 pt-5 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              Información detectada
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {result.flags_detected.filter(f => f.detected).map((field, idx) => (
-                <div 
-                  key={idx}
-                  className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-100 rounded-md"
-                >
-                  <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
-                  </svg>
-                  <span className="text-sm text-gray-700 font-medium truncate">
-                    {formatFieldName(field.field_name)}
-                  </span>
-                  {field.value && (
-                    <span className="text-xs text-gray-500 ml-auto truncate max-w-[100px]">
-                      {field.value}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Scores en badges */}
-        <div className="mt-5 flex items-center gap-3 text-sm">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-md">
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-            </svg>
-            <span className="font-medium text-gray-700">{result.legibility_score.toFixed(0)}%</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-md">
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span className="font-medium text-gray-700">{result.match_score.toFixed(0)}%</span>
-          </div>
-        </div>
-
-        {/* Botón continuar - más prominente */}
-        <div className="mt-5 pt-5 border-t border-gray-100">
-          <button
-            onClick={onContinue}
-            className="w-full px-4 py-3 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2"
-          >
-            Continuar con la carga
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
+      <AnalysisResultCard
+        key={displayedResult!.status}
+        show={cardVisible}
+        variant="success"
+        statusLabel={"Documento validado"}
+        title={displayedResult!.user_message?.title?.replace(/✅|✓/g, '').trim() || "Documento validado"}
+        subtitle={displayedResult!.user_message?.subtitle || "El documento parece correcto y legible."}
+        detectedChips={(displayedResult!.flags_detected || []).filter(f => f.detected).map(f => ({ label: formatFieldName(f.field_name), value: f.value, ok: f.detected }))}
+        tips={displayedResult!.tips?.length ? displayedResult!.tips : undefined}
+        metrics={{ legibility: displayedResult!.legibility_score, match: displayedResult!.match_score }}
+        primaryAction={{ label: "Continuar con la carga", onClick: onContinue }}
+      />
     );
   }
 
-  // ==========================================================================
-  // ESTADO: ADVERTENCIA ⚠️
-  // ==========================================================================
-  if (result.status === "warning") {
+  if (displayedResult!.status === "warning") {
     return (
-      <div className="bg-white border-2 border-amber-200 rounded-lg p-6 shadow-sm">
-        {/* Header con badge */}
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Verificación parcial</span>
-            </div>
-            <h4 className="text-lg font-semibold text-gray-900">
-              {result.user_message?.title?.replace(/⚠️|⚠/g, '').trim() || "Verificación parcial"}
-            </h4>
-            <p className="text-sm text-gray-600 mt-1">
-              {result.user_message?.subtitle || "Detectamos el documento pero algunos elementos no son claros."}
-            </p>
-          </div>
-          <div className="flex-shrink-0 w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
-          </div>
-        </div>
-
-        {/* Campos en grid profesional */}
-        {result.flags_detected && result.flags_detected.length > 0 && (
-          <div className="mt-5 pt-5 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Estado de la validación</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {result.flags_detected.map((field, idx) => (
-                <div 
-                  key={idx}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md border ${
-                    field.detected 
-                      ? 'bg-green-50 border-green-100' 
-                      : 'bg-gray-50 border-gray-200'
-                  }`}
-                >
-                  {field.detected ? (
-                    <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"></path>
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"></path>
-                    </svg>
-                  )}
-                  <span className={`text-sm font-medium ${field.detected ? 'text-gray-700' : 'text-gray-500'}`}>
-                    {formatFieldName(field.field_name)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Tips profesionales */}
-        {result.tips && result.tips.length > 0 && (
-          <div className="mt-5 pt-5 border-t border-gray-100">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Recomendaciones</p>
-            <ul className="space-y-2">
-              {result.tips.slice(0, 3).map((tip, idx) => (
-                <li key={idx} className="text-sm text-gray-600 flex items-start gap-2 pl-1">
-                  <span className="text-amber-500 font-bold">·</span>
-                  {tip}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Scores */}
-        <div className="mt-5 flex items-center gap-3 text-sm">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-md">
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-            </svg>
-            <span className="font-medium text-gray-700">{result.legibility_score.toFixed(0)}%</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-md">
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span className="font-medium text-gray-700">{result.match_score.toFixed(0)}%</span>
-          </div>
-        </div>
-
-        {/* Botones (solo si showActions=true) */}
-        {showActions && (
-          <div className="mt-5 pt-5 border-t border-gray-100 grid grid-cols-2 gap-3">
-            <button
-              onClick={onRetry}
-              className="px-4 py-3 bg-white border-2 border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-all duration-200"
-            >
-              Reintentar
-            </button>
-            <button
-              onClick={onContinue}
-              className="px-4 py-3 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-all duration-200 shadow-sm hover:shadow-md"
-            >
-              Continuar
-            </button>
-          </div>
-        )}
-      </div>
+      <AnalysisResultCard
+        key={displayedResult!.status}
+        show={cardVisible}
+        variant="warning"
+        statusLabel={"Verificación parcial"}
+        title={displayedResult!.user_message?.title?.replace(/⚠️|⚠/g, '').trim() || "Verificación parcial"}
+        subtitle={displayedResult!.user_message?.subtitle || "Detectamos el documento pero algunos elementos no son claros."}
+        detectedChips={(displayedResult!.flags_detected || []).map(f => ({ label: formatFieldName(f.field_name), value: f.value, ok: f.detected }))}
+        tips={displayedResult!.tips?.slice(0,3) ?? undefined}
+        metrics={{ legibility: displayedResult!.legibility_score, match: displayedResult!.match_score }}
+        primaryAction={{ label: "Continuar", onClick: onContinue }}
+        secondaryAction={{ label: "Reintentar", onClick: onRetry }}
+      />
     );
   }
 
-  // ==========================================================================
-  // ESTADO: RECHAZADO - ILEGIBLE ❌
-  // ==========================================================================
-  if (result.status === "rejected_illegible") {
+  if (displayedResult!.status === "rejected_illegible") {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-        {/* Header */}
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <i className="fas fa-eye-slash text-red-600 text-2xl"></i>
-          </div>
-          <div className="flex-1">
-            <h4 className="text-lg font-semibold text-red-900">
-              {result.user_message?.title || "❌ Documento ilegible"}
-            </h4>
-            <p className="text-sm text-red-700 mt-1">
-              {result.user_message?.subtitle || "No pudimos leer el contenido del documento."}
-            </p>
-          </div>
-        </div>
-
-        {/* Tips para mejorar */}
-        <div className="mt-4 pt-4 border-t border-red-200">
-          <p className="text-sm font-medium text-red-800 mb-3">
-            <i className="fas fa-lightbulb mr-2"></i>
-            Para mejorar la calidad:
-          </p>
-          <ul className="space-y-2">
-            {(result.tips?.length ? result.tips : [
-              "Usa buena iluminación, sin sombras",
-              "Captura el documento completo sin recortar bordes",
-              "Evita reflejos, usa fondo liso",
-              "Enfoca bien y no muevas al tomar la foto",
-              "Si tiene varias páginas, sube el PDF completo"
-            ]).map((tip, idx) => (
-              <li key={idx} className="text-sm text-red-700 flex items-start gap-3 bg-red-100/50 px-3 py-2 rounded-lg">
-                <i className="fas fa-check-circle text-red-400 mt-0.5"></i>
-                {tip}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Score */}
-        <div className="mt-4 text-sm text-red-700">
-          <i className="fas fa-eye mr-1"></i>
-          Legibilidad: {result.legibility_score.toFixed(0)}%
-        </div>
-
-        {/* Botones (solo si showActions=true) */}
-        {showActions && (
-          <div className="mt-4 pt-4 border-t border-red-200 flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={onRetry}
-              className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
-            >
-              <i className="fas fa-redo mr-2"></i>
-              Volver a subir
-            </button>
-            {showForceUpload && result.next_actions?.includes("force_upload") && (
-              <button
-                onClick={onForceUpload}
-                className="flex-1 px-4 py-2.5 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-100 transition-colors text-sm"
-              >
-                <i className="fas fa-upload mr-2"></i>
-                Subir de todos modos (revisión manual)
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <AnalysisResultCard
+        key={displayedResult!.status}
+        show={cardVisible}
+        variant="error"
+        statusLabel={"Documento incorrecto"}
+        title={displayedResult!.user_message?.title?.replace(/[✅✓❌✖️✖]/g, '').trim() || "Documento incorrecto"}
+        subtitle={displayedResult!.user_message?.subtitle || "No se alcanza a leer con claridad. Intenta con una foto más nítida o sube el PDF."}
+        detectedChips={[]}
+        tips={displayedResult!.tips && displayedResult!.tips.length ? displayedResult!.tips : [
+          "Asegúrate de que se vea completo (sin recortes)",
+          "Evita reflejos y sombras",
+          "Usa buena iluminación",
+          "Enfoca y evita movimiento",
+          "Si es INE, incluye ambas caras",
+        ]}
+        metrics={{ legibility: displayedResult!.legibility_score, match: displayedResult!.match_score }}
+        primaryAction={{ label: "Volver a subir", onClick: onRetry }}
+        secondaryAction={displayedResult!.next_actions?.includes("force_upload") && showForceUpload ? { label: "Subir de todos modos", onClick: onForceUpload } : undefined}
+      />
     );
   }
 
-  // ==========================================================================
-  // ESTADO: RECHAZADO - TIPO INCORRECTO ❌
-  // ==========================================================================
-  if (result.status === "rejected_wrong_type" || result.status === "rejected_exclusion") {
+  if (displayedResult!.status === "rejected_wrong_type" || displayedResult!.status === "rejected_exclusion") {
+    const expected = formatDocumentType(displayedResult!.document_type || "");
+    const probable = displayedResult!.probable_document_type ? formatDocumentType(displayedResult!.probable_document_type) : undefined;
+    const subtitle = displayedResult!.user_message?.subtitle || `Este archivo no parece ser: ${expected}.${probable ? ` Detectamos señales de: ${probable}.` : ""}`;
+
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-        {/* Header */}
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <i className="fas fa-file-excel text-red-600 text-2xl"></i>
-          </div>
-          <div className="flex-1">
-            <h4 className="text-lg font-semibold text-red-900">
-              {result.user_message?.title || "❌ Documento incorrecto"}
-            </h4>
-            <p className="text-sm text-red-700 mt-1">
-              {result.user_message?.subtitle || "Este archivo no corresponde al tipo de documento seleccionado."}
-            </p>
-          </div>
-        </div>
-
-        {/* Tipo detectado */}
-        {result.probable_document_type && (
-          <div className="mt-4 pt-4 border-t border-red-200">
-            <p className="text-sm text-red-700">
-              <i className="fas fa-info-circle mr-2"></i>
-              Parece que este documento podría ser: 
-              <strong className="ml-1">{formatDocumentType(result.probable_document_type)}</strong>
-            </p>
-          </div>
-        )}
-
-        {/* Tips específicos */}
-        {result.tips && result.tips.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-red-200">
-            <p className="text-sm font-medium text-red-800 mb-2">
-              <i className="fas fa-lightbulb mr-2"></i>
-              Ten en cuenta:
-            </p>
-            <ul className="space-y-1">
-              {result.tips.map((tip, idx) => (
-                <li key={idx} className="text-sm text-red-700 flex items-start gap-2">
-                  <span className="text-red-400 mt-1">•</span>
-                  {tip}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Scores */}
-        <div className="mt-4 flex gap-4 text-sm text-red-700">
-          <span>
-            <i className="fas fa-eye mr-1"></i>
-            Legibilidad: {result.legibility_score.toFixed(0)}%
-          </span>
-          <span>
-            <i className="fas fa-bullseye mr-1"></i>
-            Coincidencia: {result.match_score.toFixed(0)}%
-          </span>
-        </div>
-
-        {/* Botones (solo si showActions=true) */}
-        {showActions && (
-          <div className="mt-4 pt-4 border-t border-red-200 flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={onRetry}
-              className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
-            >
-              <i className="fas fa-redo mr-2"></i>
-              Subir documento correcto
-            </button>
-            {showForceUpload && result.next_actions?.includes("force_upload") && (
-              <button
-                onClick={onForceUpload}
-                className="flex-1 px-4 py-2.5 border border-red-300 text-red-700 rounded-lg font-medium hover:bg-red-100 transition-colors text-sm"
-              >
-                <i className="fas fa-upload mr-2"></i>
-                Subir de todos modos
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <AnalysisResultCard
+        key={displayedResult!.status}
+        show={cardVisible}
+        variant="error"
+        statusLabel={"Documento incorrecto"}
+        title={displayedResult!.user_message?.title?.replace(/[✅✓❌✖️✖]/g, '').trim() || "Documento incorrecto"}
+        subtitle={subtitle}
+        detectedChips={(displayedResult!.flags_detected || []).map(f => ({ label: formatFieldName(f.field_name), value: f.value, ok: f.detected }))}
+        tips={displayedResult!.tips && displayedResult!.tips.length ? displayedResult!.tips : [
+          "Asegúrate de que se vea completo (sin recortes)",
+          "Evita reflejos y sombras",
+          "Usa buena iluminación",
+          "Enfoca y evita movimiento",
+          "Si es INE, incluye ambas caras",
+        ]}
+        metrics={{ legibility: displayedResult!.legibility_score, match: displayedResult!.match_score }}
+        primaryAction={{ label: "Subir documento correcto", onClick: onRetry }}
+        secondaryAction={displayedResult!.next_actions?.includes("force_upload") && showForceUpload ? { label: "Subir de todos modos", onClick: onForceUpload } : undefined}
+      />
     );
   }
 
-  // ==========================================================================
-  // ESTADO: ERROR
-  // ==========================================================================
-  if (result.status === "error") {
+  if (displayedResult!.status === "error") {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <i className="fas fa-exclamation-circle text-gray-600 text-2xl"></i>
-          </div>
-          <div className="flex-1">
-            <h4 className="text-lg font-semibold text-gray-900">
-              {result.user_message?.title || "Error de procesamiento"}
-            </h4>
-            <p className="text-sm text-gray-600 mt-1">
-              {result.user_message?.subtitle || "Ocurrió un error al analizar el documento."}
-            </p>
-          </div>
-        </div>
-
-        {showActions && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <button
-              onClick={onRetry}
-              className="w-full px-4 py-2.5 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors"
-            >
-              <i className="fas fa-redo mr-2"></i>
-              Intentar de nuevo
-            </button>
-          </div>
-        )}
-      </div>
+      <AnalysisResultCard
+        show={cardVisible}
+        variant="info"
+        statusLabel={"Error"}
+        title={displayedResult!.user_message?.title?.replace(/[✅✓❌✖️✖]/g, '').trim() || "Error de procesamiento"}
+        subtitle={displayedResult!.user_message?.subtitle || "Ocurrió un error al analizar el documento."}
+        detectedChips={[]}
+        tips={displayedResult!.tips && displayedResult!.tips.length ? displayedResult!.tips : ["Intenta con otra foto o reintenta más tarde"]}
+        primaryAction={{ label: "Intentar de nuevo", onClick: onRetry }}
+      />
     );
   }
 

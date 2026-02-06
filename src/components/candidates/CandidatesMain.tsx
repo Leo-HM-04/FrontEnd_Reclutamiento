@@ -12,6 +12,7 @@ import ProfileForm from "../profiles/ProfileForm";
 import ApplicationDetailView from "./ApplicationDetailView";
 import UploadDocumentModal from "./UploadDocumentModal";
 import ShareDocumentLinkModal from "@/components/ShareDocumentLinkModal";
+import DocumentShareLinksDashboard from '@/components/DocumentShareLinksDashboard';
 import Pagination from "../ui/Pagination";
 
 type CandidateView = 
@@ -66,6 +67,7 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
   const [applicationsPerPage, setApplicationsPerPage] = useState(10);
   const [documentsPage, setDocumentsPage] = useState(1);
   const [documentsPerPage, setDocumentsPerPage] = useState(10);
+  const [documentsTab, setDocumentsTab] = useState<'documents'|'links'>('documents');
   const [notesPage, setNotesPage] = useState(1);
   const [notesPerPage, setNotesPerPage] = useState(12);
   
@@ -209,6 +211,12 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
       description: "CVs y documentos de candidatos"
     },
     {
+      id: "links",
+      label: "Links de Documentos",
+      icon: "fa-link",
+      description: "Enlaces públicos para entrega de documentos"
+    },
+    {
       id: "notes",
       label: "Notas",
       icon: "fa-sticky-note",
@@ -265,6 +273,8 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                     onClick={() => {
                       setCurrentView(item.id);
                       setSelectedCandidateId(null);
+                      // ensure documents tab is default when navigating to documents
+                      if (item.id === 'documents') setDocumentsTab('documents');
                     }}
                     className={`w-full flex items-start px-3 py-3 text-sm font-medium rounded-lg transition-all ${getNavClass(
                       item.id
@@ -278,6 +288,8 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                       </div>
                     </div>
                   </button>
+
+
 
                   {/* Botón Crear Nuevo Candidato después del primer item */}
                   {index === 0 && (
@@ -689,29 +701,43 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
             {currentView === "documents" && (
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900">Documentos de Candidatos</h3>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">Documentos de Candidatos</h3>
+                    {/* Small breadcrumb/context */}
+                    <div className="mt-2 text-xs text-gray-500">
+                      Candidatos / <span className="text-gray-700">Documentos</span>{documentsTab === 'links' && <span className="text-gray-400"> / Links de Documentos</span>}
+                    </div>
+                  </div>
+
                   <div className="flex gap-3">
-                    <button 
-                      onClick={() => setShowShareLinkModal(true)}
-                      className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium flex items-center gap-2"
-                    >
-                      <i className="fas fa-link"></i>
-                      Compartir Link
-                    </button>
-                    <button 
-                      onClick={() => setShowUploadModal(true)}
-                      className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
-                    >
-                      <i className="fas fa-upload"></i>
-                      Subir Documento
-                    </button>
-                    <button 
-                      onClick={loadData}
-                      className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
-                    >
-                      <i className="fas fa-sync"></i>
-                      Actualizar
-                    </button>
+                    {documentsTab === 'documents' && (
+                      <>
+                        <button 
+                          onClick={() => setShowUploadModal(true)}
+                          className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2"
+                        >
+                          <i className="fas fa-upload"></i>
+                          Subir Documento
+                        </button>
+                        <button 
+                          onClick={loadData}
+                          className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+                        >
+                          <i className="fas fa-sync"></i>
+                          Actualizar
+                        </button>
+                      </>
+                    )}
+
+                    {documentsTab === 'links' && (
+                      <button 
+                        onClick={() => setShowShareLinkModal(true)}
+                        className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium flex items-center gap-2"
+                      >
+                        <i className="fas fa-link"></i>
+                        Crear Link
+                      </button>
+                    )}
                   </div>
                 </div>
                 
@@ -720,7 +746,7 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="text-gray-500 mt-4">Cargando documentos...</p>
                   </div>
-                ) : documents.length === 0 ? (
+                ) : documents.length === 0 && documentsTab === 'documents' ? (
                   <div className="text-center py-12 text-gray-500">
                     <i className="fas fa-folder-open text-5xl mb-4 text-gray-300"></i>
                     <p className="text-lg">No hay documentos registrados</p>
@@ -833,6 +859,39 @@ export default function CandidatesMain({ onClose }: CandidatesMainProps) {
                     />
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* LINKS */}
+            {currentView === "links" && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">Links de Documentos</h3>
+                    <div className="mt-2 text-xs text-gray-500">Candidatos / <span className="text-gray-700">Links de Documentos</span></div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setShowShareLinkModal(true)}
+                      className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium flex items-center gap-2"
+                    >
+                      <i className="fas fa-link"></i>
+                      Crear Link
+                    </button>
+                    <button 
+                      onClick={loadData}
+                      className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+                    >
+                      <i className="fas fa-sync"></i>
+                      Actualizar
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <DocumentShareLinksDashboard />
+                </div>
               </div>
             )}
 

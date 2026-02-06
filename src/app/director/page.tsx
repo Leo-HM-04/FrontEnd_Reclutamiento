@@ -2305,36 +2305,7 @@ export default function Page() {
                       Gestión de Correos
                     </button>
                   </li>
-                  <li>
-                    {/* 13. LINKS DE DOCUMENTOS */}
-                    <button
-                      onClick={() => {
-                        setCurrentView("document-links");
-                        if (window.innerWidth < 1024) {
-                          setSidebarOpen(false);
-                        }
-                      }}
-                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("document-links")}`}
-                    >
-                      <i className="fas fa-link mr-3 w-5" />
-                      Links Documentos
-                    </button>
-                  </li>
-                  <li>
-                    {/* 13. LINKS DE DOCUMENTOS */}
-                    <button
-                      onClick={() => {
-                        setCurrentView("document-links");
-                        if (window.innerWidth < 1024) {
-                          setSidebarOpen(false);
-                        }
-                      }}
-                      className={`sidebar-item flex items-center px-3 py-2 text-sm font-medium rounded-lg cursor-pointer transition-all w-full ${getNavItemClass("document-links")}`}
-                    >
-                      <i className="fas fa-link mr-3 w-5" />
-                      Links Documentos
-                    </button>
-                  </li>
+
                 </ul>
               </div>
             </div>

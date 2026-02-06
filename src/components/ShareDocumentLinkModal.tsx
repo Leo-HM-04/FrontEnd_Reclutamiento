@@ -532,7 +532,12 @@ export default function ShareDocumentLinkModal({
                     </div>
                     <div>
                       <dt className="text-gray-500">Documentos solicitados</dt>
-                      <dd className="font-medium text-gray-900">{generatedLink.requested_document_types.length}</dd>
+                      <dd className="font-medium text-gray-900">
+                        {(generatedLink.uploaded_count !== undefined || generatedLink.requested_count !== undefined)
+                          ? `${generatedLink.uploaded_count ?? 0} de ${generatedLink.requested_count ?? 0} docs`
+                          : (generatedLink.documents_count ? `${generatedLink.documents_count} docs` : `${generatedLink.uploaded_documents?.length || 0} de ${generatedLink.requested_document_types?.length || 0} docs`)
+                        }
+                      </dd>
                     </div>
                     <div>
                       <dt className="text-gray-500">Expira</dt>
